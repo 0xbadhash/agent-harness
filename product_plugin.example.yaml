@@ -1,0 +1,37 @@
+# Copy to product repo as `.agents/product_plugin.yaml` and fill in.
+# Global harness reads this for smoke paths, vault, and domain notes.
+
+product_id: my-product
+product_name: My Product
+repo_root: .   # product git root when scripts run from product
+
+# Roadmap / backlog (product-owned files)
+product_roadmap: BACKEND_ROADMAP.md
+harness_backlog: .agents/BACKLOG.md
+
+# Smoke commands (cwd = product root unless cwd set)
+smoke:
+  - name: health
+    cmd: ["true"]   # e.g. ["php", "bin/health.php"] with cwd: migration
+    cwd: null
+  - name: unit
+    cmd: ["python3", "-m", "pytest", "-q"]
+  - name: validate
+    cmd: ["python3", "scripts/validate.py", "full"]
+
+# Optional vault (sync_docs / notes)
+vault:
+  root_env: PRODUCT_VAULT_ROOT
+  default_root: /opt/second-brain/vault
+  dev_log_rel: 01-Projects/my-product/dev-log.md
+  project_label: my-product
+
+# Paths treated as "product code" for large-diff / cross_review heuristics
+product_path_prefixes:
+  - src/
+  - app/
+
+# Domain specialist hints for /cross_review (free text)
+domain_review_hints:
+  - correctness of core domain rules
+  - no secret leakage
