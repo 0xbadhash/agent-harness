@@ -21,34 +21,35 @@ When invoked with `/execute_dev`:
    - If working tree dirty (`git status --porcelain` non-empty, ignore `__pycache__` if policy allows) → `🛑 DIRTY TREE. Commit or stash changes first.` and halt.
 1. **Load task:**
    - If user args specify a task → use that (acceptance must be clear).
-   - Else product: first open Shaping / P0–P1 in `BACKEND_ROADMAP.md`.
+   - Else product: first open priority item in the product roadmap file (see `product_plugin.yaml` → `product_roadmap`).
    - Else harness: first open row in `.agents/BACKLOG.md`.
    - If none → `✅ ROADMAP EMPTY.`
 2. **Spec check:** Missing acceptance criteria → `🛑 SPEC MISSING.` and halt.
 3. **TDD (mandatory for behavior/code changes) — Red → Green → Refactor:**
    1. **Red:** Add or extend failing tests that express the public contract *before* (or with) the first implementation edit.
       - Python: `scripts/scaffold_tests.py --task "<name>" --module "<target>"` then edit until the new tests fail for the right reason.
-      - PHP: add/adjust PHPUnit under `migration/tests/` (or Node under `migration/tests/*.test.js` for desk JS).
+      - Use the product's test layout and runner(s) from `product_plugin.yaml` → `stack` / project conventions.
       - Pure docs/policy-only: skip Red/Green but say so in handoff/worksheet (no silent skip of code paths).
    2. **Prove Red:** Run the new/changed tests — they **must fail**. If they pass → `❌ OVER-SPECIFICATION` / wrong test; fix tests first.
    3. **Green:** Implement the minimum to make those tests pass. One sub-task only.
    4. **Refactor:** Clean up with tests still green.
    5. **Regression:** Run targeted suite + (for product) `php bin/health.php` when runtime surface changes.
 4. **Implement constraints:**
-   - **Product UI is allowed** when the task is desk/watchlist UX (PHP SSR + local JS under `migration/`). No SPA/Bootstrap/CDN.
-   - Backend/API/CLI for non-UI product work; harness-only changes stay under `.agents/` + `scripts/`.
-   - Do not put harness ORCH items into product Shaping.
+   - **UI is allowed** when the product task is user-facing UI (use the product's own stack from `product_plugin.yaml`). Prefer progressive enhancement over unnecessary SPA rewrites unless the product already is an SPA.
+   - Non-UI product work: APIs, services, CLIs, data paths as the product defines.
+   - Harness-only changes stay under `.agents/` + `scripts/`.
+   - Do not put harness backlog items into the product roadmap.
 5. **Run the app (Principle 3 — after significant product change):**
-   - `cd migration && php bin/health.php` → exit 0
-   - Plus targeted suite: PHPUnit, `node migration/tests/…`, or pytest for the module under change
+   - Run **smoke** commands from `.agents/product_plugin.yaml` (or the product's documented health check).
+   - Plus targeted unit/integration tests for the module under change (tooling from the product's stack).
 6. **Validate (diff-first):**
    - `scripts/validate full` (and hygiene as needed)
    - If exit ≠ 0 → `❌ VALIDATION FAILED` and halt. Do NOT auto-fix.
 7. **Handoff:**
-   - Mark product task ✅ in `BACKEND_ROADMAP.md` or harness item in `.agents/BACKLOG.md`
+   - Mark product task ✅ in the product roadmap or harness item in `.agents/BACKLOG.md`
    - Update `WORKFLOW_DOCUMENTATION.md` DRIFT TRACKER when product-facing
    - `scripts/pipeline_state set-phase ready_for_review --score <X>`
-   - **Obsidian (unless ephemeral):**  
+   - **vault/second-brain (optional) (unless ephemeral):**  
      `python3 scripts/sync_vault_devlog.py --note "<task title>" --bullet "…"`  
      Never raw `cat >>` vault; never hand-write `… synced`. See `AGENTS.md` Option A.
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`

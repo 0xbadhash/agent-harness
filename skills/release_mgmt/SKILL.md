@@ -19,7 +19,7 @@ When invoked with `/release_mgmt`:
 3. **Infra gate (mandatory):** Run `/vps_infra_ops --verify` in this session, or confirm `.agents/artifacts/INFRA_RUNBOOK.md` exists with all critical checks **PASS** and timestamp within 24h. On fail → `🛑 INFRA BLOCKED` and halt (do not set `shipped`).
 4. **Bump version** per semver (patch unless BACKEND_ROADMAP declares minor/major).
 5. **Run smoke tests** (all must pass — suite size grows over time; require **green**, not fixed historic counts):
-   - `cd migration && php bin/health.php` → exit 0
+   - `cd migration && product health smoke (from product_plugin)` → exit 0
    - `cd migration && vendor/bin/phpunit` → exit 0 (currently ~262 tests; 0 failures)
    - `PYTHONPATH=. .venv/bin/python -m pytest -q` → exit 0 (currently ~92 tests)
    - `python3 scripts/validate.py full` → 4/4

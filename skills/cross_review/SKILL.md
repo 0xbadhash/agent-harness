@@ -17,7 +17,7 @@ When invoked with `/cross_review`:
 2. Run **three personas** (each ≥3 concrete findings or explicit “none”):
    - **Security Guru** — auth, CSRF, secrets, injection, SSRF, cache poisoning (`docs/SECURITY.md`)
    - **Maintainability Expert** — coupling, dead code, testability, file boundaries (`GEMINI.md`)
-   - **Domain Specialist** — watchlist/risk correctness, stale data honesty, desk UX contracts
+   - **Domain Specialist** — product domain correctness (see product_plugin `domain_review_hints`)
 3. Merge into a single report with severity: `blocker` | `major` | `nit`
 4. Include §9 (≥3 entries) for intentional oddities.
 5. Write evidence for soft gate (either):

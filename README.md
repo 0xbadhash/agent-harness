@@ -1,83 +1,168 @@
-# agent-harness (global)
+# agent-harness
 
-**Portable AI agentic workflow** — skills, ship pipeline scripts, and policy.  
-**Not a product.** Products (watchlist, etc.) plug in via `.agents/product_plugin.yaml`.
+**Reusable agent workflows for shipping software.**  
+Not a framework. Not an app stack. A small set of **skills**, **scripts**, and **policy** you install into *any* product repo so the agent follows the same process every time.
 
-## Why
+> A prompt is a one-time instruction.  
+> A **skill** is a reusable workflow file the agent loads when the task matches.  
+> This repo is a **harness**: the skills + ship pipeline that sit beside your product—never inside another product’s domain code.
 
-| Layer | Location | Changes when? |
-|-------|----------|----------------|
-| **Harness** | this repo (`AGENTS_HARNESS_ROOT`) | Process/skills improve |
-| **Product** | each product git repo | Features, UI, domain |
+**Tech stack is not prescribed.** Python, TypeScript, Go, Rust, PHP—whatever you choose is declared at **bootstrap** in the product plugin. The harness only cares about: tests exist, gates pass, releases are intentional.
 
-Start a new product → install harness → fill product plugin → develop without touching other products.
+---
 
-## Layout
-
-```
-agent-harness/
-  README.md
-  product_plugin.example.yaml
-  install_into_product.sh
-  policy/          # ENGINEERING_ASSURANCE, AGENT_WORKFLOW, base_constraints, …
-  skills/          # portable SKILL.md (execute_dev, pr_review, …)
-  scripts/         # pipeline_state, validate, pr_validator, vault sync, …
-  templates/       # pipeline.json
-  docs/HARNESS.md  # conceptual home
-```
-
-**Not included (product-specific):**
-
-- `vps_infra_ops` (hosts, deploy topology)
-- Product roadmap, design docs, app source
-- Live pipeline state (lives in each product)
-
-## Install into a product
+## Quickstart (2 minutes)
 
 ```bash
-export AGENTS_HARNESS_ROOT=/home/debian/agent-harness   # or your clone path
-cd /path/to/your-product
-"$AGENTS_HARNESS_ROOT/install_into_product.sh"
-cp "$AGENTS_HARNESS_ROOT/product_plugin.example.yaml" .agents/product_plugin.yaml
-# edit product_plugin.yaml for smoke/vault/paths
+# 1. Clone the harness (once per machine)
+git clone https://github.com/0xbadhash/agent-harness.git
+export AGENTS_HARNESS_ROOT="$PWD/agent-harness"   # or install path
+
+# 2. Create or open a product repo
+mkdir my-product && cd my-product && git init
+
+# 3. Install the harness into that product
+"$AGENTS_HARNESS_ROOT/install_into_product.sh" .
+
+# 4. Bootstrap product identity + stack (edit the generated file)
+$EDITOR .agents/product_plugin.yaml
 ```
 
-What install does:
+Then open the product in your coding agent and run the ship skills (`/execute_dev` → `/pr_review` → …).
 
-1. Ensures `.agents/state/pipeline.json`, `traces/`, `artifacts/`
-2. **Rsyncs** portable `skills/` and `scripts/` into the product (overwrites harness files)
-3. Copies policy into `.agents/policy/` (reference; product may keep root ENGINEERING_ASSURANCE)
-4. Does **not** remove product-only skills (e.g. `vps_infra_ops`)
+**Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
-## Ship sequence (same as before)
-
-```
-/execute_dev → /cross_review → /pr_review --validate
-→ product infra skill (if any) → /release_mgmt → /sync_docs
+```bash
+git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.git
 ```
 
-## Environment
+---
 
-| Var | Purpose |
-|-----|---------|
-| `AGENTS_HARNESS_ROOT` | Global harness clone |
-| `PRODUCT_VAULT_ROOT` / product plugin | Vault root for release notes |
-| Product `scripts/` | Prefer product-local copies after install (run from product root) |
+## What you get
 
-## TDD
+| Piece | Role |
+|-------|------|
+| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: implement (TDD), review, release, sync docs, sweep |
+| **Scripts** (`scripts/`) | Deterministic gates: pipeline FSM, validate, PR score, vault notes |
+| **Policy** (`policy/`) | Always-on engineering rules the skills inherit |
+| **Product plugin** | *Your* stack, smoke commands, vault path—never hard-coded in the harness |
 
-`/execute_dev` step 3 is mandatory **Red → Green → Refactor** for code changes (see `skills/execute_dev/SKILL.md`).
+### What you do **not** get
 
-## Updating harness → all products
+- A web framework or UI kit  
+- A forced language or package manager  
+- Another product’s source tree  
+- Secrets, hosts, or deploy topology (those stay product-local)
 
-1. Change this global repo
-2. In each product: re-run `install_into_product.sh` (or pin submodule and pull)
-3. Commit vendor refresh in the product repo
+---
 
-## Watchlist
+## Mental model (push vs pull)
 
-Product lives at `/home/debian/watchlist` with:
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Always-on (push)                                       │
+│  policy/  ·  product AGENTS.md  ·  product_plugin.yaml  │
+└─────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  On demand (pull) — skills                              │
+│  /execute_dev  /cross_review  /pr_review                │
+│  /release_mgmt  /sync_docs  /sweep                      │
+└─────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  Product code (your repo only)                          │
+│  src / app / services / …  chosen by you at bootstrap   │
+└─────────────────────────────────────────────────────────┘
+```
 
-- `.agents/product_plugin.yaml` — watchlist smoke/vault/paths
-- `.agents/skills/vps_infra_ops/` — **product-only** (not in global)
-- Installed portable skills/scripts from this tree
+---
+
+## Ship flow
+
+```text
+init
+  → /execute_dev          # TDD: red → green → refactor
+  → /cross_review         # multi-persona (soft gate on large diffs)
+  → /pr_review --validate # score ≥ 95
+  → [product infra skill] # optional, product-owned
+  → /release_mgmt         # smoke from product_plugin + tag
+  → /sync_docs            # docs + optional vault release entry
+  → init
+```
+
+Blocked path: `ready_for_review` → `blocked` → fix → re-run review.
+
+---
+
+## Documentation (start here)
+
+Docs are **progressive**: short skill bodies, deep material only when linked.
+
+| Doc | When to read |
+|-----|----------------|
+| [docs/overview.md](docs/overview.md) | Architecture & boundaries |
+| [docs/bootstrap.md](docs/bootstrap.md) | Clone → install → plugin → first task |
+| [docs/product-plugin.md](docs/product-plugin.md) | Stack, smoke, vault (bootstrap choices) |
+| [docs/ship-flow.md](docs/ship-flow.md) | FSM, phases, artifacts |
+| [docs/skills-catalog.md](docs/skills-catalog.md) | Each skill: purpose, when to fire |
+| [docs/tdd.md](docs/tdd.md) | How `/execute_dev` enforces red→green |
+| [docs/writing-skills.md](docs/writing-skills.md) | How to add a skill (Pocock-style minimal) |
+| [docs/security.md](docs/security.md) | Third-party skills & secrets |
+| [CHANGELOG.md](CHANGELOG.md) | Versions |
+
+---
+
+## Skills catalog (one line each)
+
+| Skill | Job |
+|-------|-----|
+| `/execute_dev` | One task, **TDD mandatory**, single sub-task |
+| `/cross_review` | Security · maintainability · domain personas |
+| `/pr_review` | Deterministic compliance score (≥95) |
+| `/release_mgmt` | Smoke (from plugin), version, tag |
+| `/sync_docs` | Drift reset, optional vault **release** entry |
+| `/sweep` | Hygiene pass |
+| `/feedback` | Session notes (harness only) |
+| `/audit_repo` | Policy gap scan |
+| `/plan_backend` | Roadmap from gaps |
+| `/test_automation` | Suite orchestration |
+
+Product-only skills (deploy, host topology) live **in the product repo**, not here.
+
+---
+
+## Updating the harness
+
+```bash
+cd "$AGENTS_HARNESS_ROOT" && git pull   # or checkout a newer tag
+cd /path/to/product
+"$AGENTS_HARNESS_ROOT/install_into_product.sh" .
+# commit refreshed scripts/skills in the product if you vendor them
+```
+
+---
+
+## Design principles
+
+1. **Skills over prompts** — encode process once; reuse forever.  
+2. **Product never owns another product** — plugin + install only.  
+3. **Stack at bootstrap** — harness stays language-agnostic.  
+4. **Progressive disclosure** — name/description first; full skill when needed.  
+5. **Small skills** — one job per `SKILL.md`; link out for depth.  
+6. **Deterministic gates** — scripts score; agents don’t freestyle release.  
+7. **TDD for code** — red before green in `/execute_dev`.
+
+Inspired by the Agent Skills open format and the “workflow in markdown” approach popularized by engineering skill packs (e.g. composable, failure-mode-driven skills).
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Version
+
+**v1.0.0** — first stable bootstrap. Use the tag for production installs.

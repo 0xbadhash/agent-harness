@@ -1,37 +1,43 @@
-# Copy to product repo as `.agents/product_plugin.yaml` and fill in.
-# Global harness reads this for smoke paths, vault, and domain notes.
+# Product plugin — copy to .agents/product_plugin.yaml in YOUR product repo.
+# Stack is chosen here. The harness does not assume a language or framework.
 
 product_id: my-product
 product_name: My Product
-repo_root: .   # product git root when scripts run from product
+repo_root: .
 
-# Roadmap / backlog (product-owned files)
-product_roadmap: BACKEND_ROADMAP.md
+# Free-form metadata for the agent (not executed)
+stack:
+  languages: []          # e.g. [typescript], [python], [go], [rust], …
+  package_manager: ""    # e.g. pnpm, npm, poetry, cargo, go
+  test_runners: []       # e.g. [vitest], [pytest], [go test]
+  app_layout: ""         # e.g. src/, app/, cmd/+internal/
+
+product_roadmap: ROADMAP.md
 harness_backlog: .agents/BACKLOG.md
 
-# Smoke commands (cwd = product root unless cwd set)
+# Executed at release / smoke (argv arrays; cwd relative to product root)
 smoke:
-  - name: health
-    cmd: ["true"]   # e.g. ["php", "bin/health.php"] with cwd: migration
-    cwd: null
   - name: unit
-    cmd: ["python3", "-m", "pytest", "-q"]
-  - name: validate
-    cmd: ["python3", "scripts/validate.py", "full"]
+    cmd: ["echo", "replace-with-your-test-command"]
+    cwd: .
+  # - name: typecheck
+  #   cmd: ["your", "typechecker"]
+  #   cwd: .
 
-# Optional vault (sync_docs / notes)
+# Optional knowledge vault for release notes
 vault:
   root_env: PRODUCT_VAULT_ROOT
-  default_root: /opt/second-brain/vault
+  default_root: ""
   dev_log_rel: 01-Projects/my-product/dev-log.md
   project_label: my-product
 
-# Paths treated as "product code" for large-diff / cross_review heuristics
+# Paths that count as product code (large-diff / review heuristics)
 product_path_prefixes:
   - src/
-  - app/
 
-# Domain specialist hints for /cross_review (free text)
 domain_review_hints:
-  - correctness of core domain rules
+  - domain correctness
   - no secret leakage
+
+# Names of skills that exist only in this product (not in agent-harness)
+product_skills: []
