@@ -33,7 +33,7 @@ When invoked with `/execute_dev`:
    2. **Prove Red:** Run the new/changed tests — they **must fail**. If they pass → `❌ OVER-SPECIFICATION` / wrong test; fix tests first.
    3. **Green:** Implement the minimum to make those tests pass. One sub-task only.
    4. **Refactor:** Clean up with tests still green.
-   5. **Regression:** Run targeted suite + (for product) `php bin/health.php` when runtime surface changes.
+   5. **Regression:** Run targeted suite + product smoke (from `product_plugin.yaml`) when runtime surface changes.
 4. **Implement constraints:**
    - **UI is allowed** when the product task is user-facing UI (use the product's own stack from `product_plugin.yaml`). Prefer progressive enhancement over unnecessary SPA rewrites unless the product already is an SPA.
    - Non-UI product work: APIs, services, CLIs, data paths as the product defines.
