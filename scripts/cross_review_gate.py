@@ -4,15 +4,13 @@
 Does **not** block approval by default (soft). Use --strict to exit 1 when missing.
 
 Evidence of cross_review (any one):
-  - PR_DRAFT.md contains 'CROSS-REVIEW' or '## Cross-review' (case-insensitive header/marker)
+  - PR_DRAFT.md contains 'CROSS-REVIEW' or '## Cross-review'
   - .agents/artifacts/CROSS_REVIEW.md exists and is non-empty
 
 Large diff heuristic (any one):
   - changed file count >= LARGE_FILES (default 8)
   - insertions+deletions >= LARGE_LINES (default 200)
-  - product paths touched: migration/ or docs/DESIGN_ or docs/PRODUCT
-
-Harness-only / docs-only small changes are not large unless files/lines thresholds hit.
+  - >=3 paths under product_plugin.product_path_prefixes (stack-agnostic)
 """
 from __future__ import annotations
 
@@ -21,6 +19,11 @@ import re
 import subprocess
 from pathlib import Path
 
+from product_plugin import (  # type: ignore
+    load_product_path_prefixes,
+    path_matches_product_prefixes,
+)
+
 ROOT = Path(__file__).resolve().parent.parent
 PR_DRAFT = ROOT / "PR_DRAFT.md"
 CROSS_ARTIFACT = ROOT / ".agents" / "artifacts" / "CROSS_REVIEW.md"
@@ -28,11 +31,6 @@ _UNSET = object()
 
 LARGE_FILES = 8
 LARGE_LINES = 200
-
-PRODUCT_PATH_RE = re.compile(
-    r"^(migration/|docs/DESIGN_|docs/PRODUCT)",
-    re.I,
-)
 
 
 def _git_diff_stat(diff: str | None) -> tuple[list[str], int]:
@@ -53,7 +51,6 @@ def _git_diff_stat(diff: str | None) -> tuple[list[str], int]:
             continue
         a, b, path = parts[0], parts[1], parts[2]
         if a == "-" or b == "-":
-            # binary
             paths.append(path)
             continue
         try:
@@ -69,11 +66,6 @@ def has_cross_review_evidence(
     *,
     artifact: Path | None | object = _UNSET,
 ) -> bool:
-    """True if PR draft and/or artifact file shows a completed cross_review.
-
-    Pass ``artifact=None`` to ignore the harness artifact path
-    (useful for unit tests that only exercise PR_DRAFT detection).
-    """
     art: Path | None
     if artifact is _UNSET:
         art = CROSS_ARTIFACT
@@ -91,17 +83,18 @@ def has_cross_review_evidence(
 def is_large_diff(diff: str | None) -> tuple[bool, str]:
     paths, churn = _git_diff_stat(diff)
     n = len(paths)
-    product = [p for p in paths if PRODUCT_PATH_RE.search(p)]
+    prefixes = load_product_path_prefixes(ROOT)
+    product = [p for p in paths if path_matches_product_prefixes(p, prefixes)]
     reasons: list[str] = []
     if n >= LARGE_FILES:
         reasons.append(f"files={n}>={LARGE_FILES}")
     if churn >= LARGE_LINES:
         reasons.append(f"churn={churn}>={LARGE_LINES}")
-    if len(product) >= 3:
+    if prefixes and len(product) >= 3:
         reasons.append(f"product_paths={len(product)}")
     if reasons:
         return True, ", ".join(reasons)
-    return False, f"files={n} churn={churn} product_paths={len(product)}"
+    return False, f"files={n} churn={churn} product_paths={len(product)} prefixes={len(prefixes)}"
 
 
 def evaluate(

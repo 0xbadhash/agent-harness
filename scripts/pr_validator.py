@@ -11,8 +11,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RUBRIC = {
-    "tdd_evidence": 25,       # Red→Green visible
-    "gate_clean": 25,         # type/lint/test pass
+    # Suite green when compliance_engine (pytest/type/lint) exits 0.
+    # This is NOT proof of red-first TDD — that remains process-enforced in /execute_dev.
+    "suite_green": 25,
+    "gate_clean": 25,         # type/lint/test pass (same engine; kept for score shape)
     "section_9": 20,          # §9 present + ≥3 entries
     "no_hardcode": 15,        # hardcode scan clean
     "pr_hygiene": 15,         # single roadmap item, atomic commit
@@ -59,7 +61,7 @@ def score(diff: str | None, pr_draft: Path) -> dict:
                        cwd=ROOT, capture_output=True)
     if r.returncode == 0:
         breakdown["gate_clean"] = RUBRIC["gate_clean"]
-        breakdown["tdd_evidence"] = RUBRIC["tdd_evidence"]
+        breakdown["suite_green"] = RUBRIC["suite_green"]
     else:
         violations.append("compliance gates failed")
 

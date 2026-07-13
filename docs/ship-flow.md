@@ -54,7 +54,10 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 ## Soft gates
 
 - **Cross-review:** large diffs warn without evidence; optional `--strict-cross-review`  
+  - Product paths come from `product_plugin.product_path_prefixes` (not hard-coded stack paths)
 - **TDD:** process gate in execute_dev (red must fail before green)
+- **Smoke:** `python3 scripts/product_smoke.py` reads plugin smoke[] at release
+- **PR score `suite_green`:** green type/lint/test suite only — **not** red-first proof
 
 ## Related
 

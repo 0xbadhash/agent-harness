@@ -19,9 +19,12 @@ When invoked with `/release_mgmt`:
    - Confirm latest verify PASS within 24h, or run the product's infra skill.
    - If product has no infra surface → skip with note in RELEASE_RUNBOOK.
 4. **Bump version** per product semver policy (patch unless roadmap says minor/major).
-5. **Run smoke from `.agents/product_plugin.yaml` → `smoke[]`:**
-   - For each entry: run `cmd` with optional `cwd` (product root relative).
-   - All must exit 0. **Do not** hard-code a language or test runner in this skill.
+5. **Run smoke (plugin-driven):**
+   ```bash
+   python3 scripts/product_smoke.py --root .
+   ```
+   - Loads `.agents/product_plugin.yaml` → `smoke[]` (argv + optional cwd).
+   - All steps must exit 0. Empty smoke → warn (do not invent a stack).
    - Also run `python3 scripts/validate.py full` when the product vendors harness scripts.
 6. **Generate `RELEASE_RUNBOOK.md`** with smoke table, infra reference (if any), rollback, §9 (≥3).
 7. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`

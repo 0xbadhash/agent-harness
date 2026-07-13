@@ -25,9 +25,9 @@ When invoked with `/execute_dev`:
 2. **Spec check:** Missing acceptance criteria → `🛑 SPEC MISSING.` and halt.
 3. **TDD (mandatory for behavior/code changes) — Red → Green → Refactor:**
    1. **Red:** Add or extend failing tests that express the public contract *before* (or with) the first implementation edit.
-      - Python: `scripts/scaffold_tests.py --task "<name>" --module "<target>"` then edit until the new tests fail for the right reason.
-      - Use the product's test layout and runner(s) from `product_plugin.yaml` → `stack` / project conventions.
-      - Pure docs/policy-only: skip Red/Green but say so in handoff/worksheet (no silent skip of code paths).
+      - Optional helper: `scripts/scaffold_tests.py --task "<name>" --module "<target>"` (adapt to product layout).
+      - Use the product's test runners from `product_plugin.yaml` → `stack` / project conventions.
+      - Pure docs/policy-only: skip Red/Green but say so in handoff (no silent skip of code paths).
    2. **Prove Red:** Run the new/changed tests — they **must fail**. If they pass → `❌ OVER-SPECIFICATION` / wrong test; fix tests first.
    3. **Green:** Implement the minimum to make those tests pass. One sub-task only.
    4. **Refactor:** Clean up with tests still green.
@@ -53,6 +53,7 @@ When invoked with `/execute_dev`:
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
    - Output: `📦 READY FOR REVIEW. Prefer /cross_review then /pr_review --validate` + vault status  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")
+   - Prefer filling **Red-proof** in `PR_DRAFT.md` (`red_cmd` / `green_cmd` — see harness `templates/PR_DRAFT.md`)
 
 **Timeout & Failure Handling:**
 - If any step exceeds `timeout-seconds` → halt with `⏱️ TIMEOUT` and preserve partial artifacts

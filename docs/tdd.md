@@ -48,7 +48,17 @@ Then edit until Red is real, then implement.
 - Which command went green  
 - Or explicit TDD N/A  
 
+Optional **Red-proof** block in `PR_DRAFT.md` (template: `templates/PR_DRAFT.md`):
+
+```text
+red_cmd: <command that failed>
+green_cmd: <command that passed>
+```
+
+`pr_validator` scores **`suite_green`** (suite passes), not red-first. Red-proof is process honesty for humans/agents.
+
 ## Related
 
 - Skill: `skills/execute_dev/SKILL.md`  
 - Policy: `policy/base_constraints.md`  
+- Smoke: `scripts/product_smoke.py`  
