@@ -7,12 +7,10 @@ max-retries: 0
 timeout-seconds: 600
 preserve-artifacts-on-failure: true
 ---
-# Pipeline Reference: docs/ARCHITECTURE.md § Agentic Pipeline Flow
-# Handoff Contract:
-#   Reads: BACKEND_ROADMAP.md (product) or .agents/BACKLOG.md (harness), .agents/state/pipeline.json
-#   Writes: task tracker + pipeline → ready_for_review
-# Anti-patterns & §9: docs/AGENT_REFERENCE.md
-# Boundary: docs/PRODUCT_BOUNDARY.md
+# Pipeline: docs/ship-flow.md (in harness) / product docs
+# Reads: product_plugin.yaml, product roadmap, .agents/BACKLOG.md, pipeline.json
+# Writes: task tracker + pipeline → ready_for_review
+# Anti-patterns: policy/AGENT_REFERENCE.md
 
 When invoked with `/execute_dev`:
 0. **Pre-condition Check:**
@@ -47,11 +45,11 @@ When invoked with `/execute_dev`:
    - If exit ≠ 0 → `❌ VALIDATION FAILED` and halt. Do NOT auto-fix.
 7. **Handoff:**
    - Mark product task ✅ in the product roadmap or harness item in `.agents/BACKLOG.md`
-   - Update `WORKFLOW_DOCUMENTATION.md` DRIFT TRACKER when product-facing
+   - Update product workflow/drift docs if the product uses them
    - `scripts/pipeline_state set-phase ready_for_review --score <X>`
-   - **vault/second-brain (optional) (unless ephemeral):**  
+   - **Optional notes vault (unless ephemeral):**  
      `python3 scripts/sync_vault_devlog.py --note "<task title>" --bullet "…"`  
-     Never raw `cat >>` vault; never hand-write `… synced`. See `AGENTS.md` Option A.
+     Never raw-append; never hand-write a release `… synced` block (that is `/sync_docs` only).
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
    - Output: `📦 READY FOR REVIEW. Prefer /cross_review then /pr_review --validate` + vault status  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")

@@ -10,7 +10,7 @@ preserve-artifacts-on-failure: true
 # Reads: .agents/AGENT_FEEDBACK.md, .agents/AGENT_WORKFLOW.md
 # Writes: .agents/AGENT_FEEDBACK.md (prepend entry)
 # Anti-patterns: docs/AGENT_REFERENCE.md
-# Not product: feedback is meta; product backlog is BACKEND_ROADMAP.md
+# Not product: feedback is meta; product backlog is the product roadmap file
 
 When invoked with `/feedback`:
 1. Summarize the session (task, outcome, friction, harness gap, follow-up).
