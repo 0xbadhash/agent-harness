@@ -53,7 +53,9 @@ When invoked with `/execute_dev`:
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
    - Output: `📦 READY FOR REVIEW. Prefer /cross_review then /pr_review --validate` + vault status  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")
-   - Prefer filling **Red-proof** in `PR_DRAFT.md` (`red_cmd` / `green_cmd` — see harness `templates/PR_DRAFT.md`)
+   - Prefer filling `PR_DRAFT.md` from harness `templates/PR_DRAFT.md`:
+     **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence**,
+     plus **Red-proof** (`red_cmd` / `green_cmd`) when TDD applies
 
 **Timeout & Failure Handling:**
 - If any step exceeds `timeout-seconds` → halt with `⏱️ TIMEOUT` and preserve partial artifacts

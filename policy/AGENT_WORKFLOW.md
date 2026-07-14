@@ -45,9 +45,12 @@
 
 ### Phase 5 — Cross-review (when non-trivial / large)
 - [ ] Invoke `/cross_review` **before** `/pr_review` when diff is large
+- [ ] Fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` narrative sections:
+  - **What Problem This Solves** · **Why This Change Was Made** · **User Impact** · **Evidence**
+  - Plus **Red-proof**, **Cross-review**, **Test plan**, §9 (min 3)
 - [ ] Record `## Cross-review` in `PR_DRAFT.md` or `.agents/artifacts/CROSS_REVIEW.md`
 - [ ] Soft gate: `python3 scripts/cross_review_gate.py --diff <range>` (warn only)
-- [ ] Personas: Security · Maintainability · Domain (watchlist/risk)
+- [ ] Personas: Security · Maintainability · Domain (product-specific)
 
 ### Phase 6 — Self-heal & document
 - [ ] Update only files allowed by skill Writes line

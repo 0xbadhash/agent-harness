@@ -6,9 +6,39 @@
 
 - …
 
+## What Problem This Solves
+
+[description]
+
+What is broken, missing, or painful **before** this change? Be concrete (user-visible bug, agent friction, security gap, process hole). Not a restatement of the diff.
+
+## Why This Change Was Made
+
+[description]
+
+Why **this** approach (and not alternatives)? Link to decision, spike, or constraint when useful. Keep rationale short.
+
+## User Impact
+
+[description]
+
+Who notices, and how? (desk operator, agent session, ops, none if harness-only). Call out breaking changes or “no user-visible change.”
+
+## Evidence
+
+[description]
+
+How we know it works: tests (red→green), live smoke, screenshots/logs, validator score, or `TDD N/A (docs-only)` with what was checked instead.
+
+```text
+red_cmd: <exact command that failed, if any>
+green_cmd: <exact command that passed after fix>
+# or: live: curl / puppeteer / health …
+```
+
 ## Red-proof (optional Phase 2 — process honesty)
 
-Record the failing test command that was red **before** green. Not scored by pr_validator; required by team policy when enabled.
+Same commands as Evidence when TDD applies. Not scored by pr_validator; required by team policy when enabled.
 
 ```text
 red_cmd: <exact command that failed>

@@ -40,6 +40,18 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 5. `/release_mgmt` — smoke from **product_plugin**, tag  
 6. `/sync_docs` — docs + optional vault **release** entry  
 
+## PR_DRAFT narrative (template)
+
+Implementers fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` before `/pr_review`:
+
+| Section | Intent |
+|---------|--------|
+| **What Problem This Solves** | Pain / bug / gap before the change |
+| **Why This Change Was Made** | Rationale and rejected alternatives |
+| **User Impact** | Who notices (operator, agent, ops, none) |
+| **Evidence** | Tests, live smoke, validator — how we know it works |
+| Red-proof / Cross-review / §9 | Existing process gates |
+
 ## Artifacts
 
 | Artifact | Owner |

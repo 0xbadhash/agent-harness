@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **PR_DRAFT template:** narrative sections **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence** (plus existing Red-proof / Cross-review / §9). Wired into `AGENT_WORKFLOW` Phase 5, `execute_dev` handoff, `pr_review` soft check, `base_constraints`, `docs/ship-flow.md`.
+
 ## v1.0.0 — 2026-07-13
 
 First **stable public bootstrap**.

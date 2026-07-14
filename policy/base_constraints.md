@@ -33,7 +33,8 @@ things_that_look_bad_but_are_fine:
 - Red → Green → Refactor for every behavior/code change
 - New tests must fail before implementation lands
 - Docs-only: explicit TDD N/A in handoff
-- Optional **Red-proof** in PR_DRAFT (see templates/PR_DRAFT.md): command that failed before green
+- PR_DRAFT narrative (see `templates/PR_DRAFT.md`): **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence**
+- Optional **Red-proof** in PR_DRAFT: command that failed before green
 
 ## Anti-Patterns
 - Never skip validation gates
