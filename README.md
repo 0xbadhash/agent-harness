@@ -28,7 +28,7 @@ mkdir my-product && cd my-product && git init
 $EDITOR .agents/product_plugin.yaml
 ```
 
-Then open the product in your coding agent and run the ship skills (`/execute_dev` → `/pr_review` → …).
+Then open the product in your coding agent and run the ship skills (`/spec` → `/execute_dev` → `/pr_review` → …).
 
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
@@ -42,7 +42,7 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
 
 | Piece | Role |
 |-------|------|
-| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: implement (TDD), review, release, sync docs, sweep |
+| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, implement (TDD), review, release, sync docs, sweep |
 | **Scripts** (`scripts/`) | Deterministic gates: pipeline FSM, validate, PR score, vault notes |
 | **Policy** (`policy/`) | Always-on engineering rules the skills inherit |
 | **Product plugin** | *Your* stack, smoke commands, vault path—never hard-coded in the harness |
@@ -67,7 +67,7 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
                          ▼
 ┌─────────────────────────────────────────────────────────┐
 │  On demand (pull) — skills                              │
-│  /execute_dev  /cross_review  /pr_review                │
+│  /spec  /execute_dev  /cross_review  /pr_review         │
 │  /release_mgmt  /sync_docs  /sweep                      │
 └─────────────────────────────────────────────────────────┘
                          │
@@ -84,6 +84,7 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
 
 ```text
 init
+  → /spec                 # interview → acceptance + roadmap OPEN (optional)
   → /execute_dev          # TDD: red → green → refactor
   → /cross_review         # multi-persona (soft gate on large diffs)
   → /pr_review --validate # score ≥ 95
@@ -119,6 +120,7 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 
 | Skill | Job |
 |-------|-----|
+| `/spec` | Interview/synthesize → acceptance criteria + roadmap OPEN item |
 | `/execute_dev` | One task, **TDD mandatory**, single sub-task |
 | `/cross_review` | Security · maintainability · domain personas |
 | `/pr_review` | Deterministic compliance score (≥95) |

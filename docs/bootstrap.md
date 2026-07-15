@@ -86,14 +86,15 @@ Product-only skill directories (names not in the harness) are **not deleted**.
 
 1. Point the agent at the product repo.  
 2. Confirm skills are visible under `.agents/skills/`.  
-3. Run `/execute_dev` with a tiny task that has clear acceptance criteria.  
-4. Expect **TDD**: failing tests first for code changes.
+3. Prefer `/spec "tiny idea"` first so acceptance criteria land on the product roadmap.  
+4. Run `/execute_dev` (loads OPEN roadmap item or args). Expect **TDD**: failing tests first for code changes.
 
 ## Verify install
 
 ```bash
 test -f .agents/product_plugin.yaml && echo plugin_ok
 test -f .agents/skills/execute_dev/SKILL.md && echo skills_ok
+test -f .agents/skills/spec/SKILL.md && echo spec_ok
 python3 scripts/pipeline_state.py get 2>/dev/null || cat .agents/state/pipeline.json
 python3 scripts/verify_skills.py
 ```
