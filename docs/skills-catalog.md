@@ -6,7 +6,7 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
-| `spec` | Before coding a new idea | Interview/synthesize → `.agents/specs/` + roadmap OPEN item (does not advance pipeline) |
+| `spec` | Before coding a new idea | Constitution → interview → draft → clarify → `.agents/specs/` (+ optional plan/tickets) + roadmap OPEN (no pipeline advance) |
 | `execute_dev` | Building one task | TDD, implement, validate, handoff → `ready_for_review` |
 | `cross_review` | Before score on non-trivial diffs | Multi-persona review + evidence file |
 | `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review warn |

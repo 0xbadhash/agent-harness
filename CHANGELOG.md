@@ -4,6 +4,12 @@
 
 - **PR_DRAFT template:** narrative sections **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence** (plus existing Red-proof / Cross-review / §9). Wired into `AGENT_WORKFLOW` Phase 5, `execute_dev` handoff, `pr_review` soft check, `base_constraints`, `docs/ship-flow.md`.
 
+## v1.2.0 — 2026-07-15
+
+- **`/spec` v2:** constitution read (`.agents/CONSTITUTION.md` / AGENTS.md / policy), structured **clarify** pass, optional **`--plan`** technical plan file, Spec Kit **bridge notes** (detect `.specify/` only — no install)
+- Templates: `templates/CONSTITUTION.example.md`; `skills/spec/references/{plan-template,clarify-checklist,speckit-bridge}.md`
+- Docs: skills catalog + ship flow updated
+
 ## v1.1.0 — 2026-07-15
 
 - **Portable skill `/spec`**: interview or synthesize → `.agents/specs/` + product-roadmap OPEN item for `/execute_dev` (Finn Loop + Matt Pocock patterns; optional Linear/GitHub/tickets)

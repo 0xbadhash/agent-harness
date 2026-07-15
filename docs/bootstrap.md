@@ -86,8 +86,9 @@ Product-only skill directories (names not in the harness) are **not deleted**.
 
 1. Point the agent at the product repo.  
 2. Confirm skills are visible under `.agents/skills/`.  
-3. Prefer `/spec "tiny idea"` first so acceptance criteria land on the product roadmap.  
-4. Run `/execute_dev` (loads OPEN roadmap item or args). Expect **TDD**: failing tests first for code changes.
+3. Prefer `/spec "tiny idea"` first (constitution + clarify; optional `--plan` / `--tickets`) so acceptance criteria land on the product roadmap.  
+4. Optionally copy `templates/CONSTITUTION.example.md` → product `.agents/CONSTITUTION.md`.  
+5. Run `/execute_dev` (loads OPEN roadmap item or args). Expect **TDD**: failing tests first for code changes.
 
 ## Verify install
 

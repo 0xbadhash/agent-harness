@@ -33,7 +33,7 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 
 ## Recommended order
 
-0. `/spec` — interview/synthesize; write `.agents/specs/` + roadmap OPEN item (pipeline unchanged)  
+0. `/spec` — constitution + interview + **clarify**; write `.agents/specs/` (+ optional `-plan.md` / tickets) + roadmap OPEN (pipeline unchanged)  
 1. `/execute_dev` — one task, TDD for code  
 2. `/cross_review` — large diffs (record evidence)  
 3. `/pr_review --validate` — score ≥ 95  

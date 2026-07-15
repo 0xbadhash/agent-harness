@@ -1,6 +1,7 @@
 # Spec template (`/spec`)
 
-Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`. Fill every section; use `N/A` only with a reason.
+Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`.  
+**What / why** only. Technical **how** goes in optional `-plan.md` when using `--plan`.
 
 ---
 
@@ -9,10 +10,12 @@ Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`. Fill every section; use `N/A` o
 
 - **Product:** <product_id from product_plugin>
 - **Created:** <ISO date>
-- **Status:** ready-for-agent
+- **Status:** draft | ready-for-agent
 - **Priority:** P0 | P1 | P2
 - **Roadmap:** <product_plugin.product_roadmap path> → Open work
+- **Plan:** `.agents/specs/<…>-plan.md` | none
 - **Tracker:** local | Linear <url> | GitHub <url>
+- **Constitution:** .agents/CONSTITUTION.md | AGENTS.md | policy defaults
 
 ## Problem Statement
 
@@ -30,17 +33,17 @@ Numbered, extensive enough for the slice:
 
 ## Implementation Decisions
 
-- Modules / surfaces — names and behavior (avoid fragile line-level paths)
-- Stack constraints from `product_plugin.yaml` → `stack`
-- Explicit non-goals
-- Contracts (API/schema) only if the product has them
+Light-touch only (surfaces, non-goals). Prefer `-plan.md` for stack/architecture when non-trivial.
+
+- Modules / surfaces — names and behavior
+- Explicit non-goals that affect the experience
+- Pointers to constitution constraints that apply
 
 ## Testing Decisions
 
 - External behavior, not internals
 - Seams (highest useful public contract)
-- Commands: product `smoke[]` from plugin + any manual path
-- Prior art in the codebase
+- Commands: product `smoke[]` + any manual path
 - Docs-only? → TDD N/A for `/execute_dev`
 
 ## Acceptance Criteria
@@ -56,9 +59,15 @@ Checkable pass/fail only:
 
 Bullet list. Protects `/execute_dev` from scope creep.
 
+## Clarifications
+
+### <ISO date>
+- Q: …
+  - A: …
+
 ## Further Notes
 
-Risks, interview decisions, links.
+Risks, constitution tensions, links.
 
 ## Handoff
 

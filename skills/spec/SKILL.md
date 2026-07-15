@@ -1,150 +1,192 @@
 ---
 name: spec
 description: >
-  Interview the user until the idea is buildable, then write a detailed spec with
-  acceptance criteria and a product-roadmap OPEN item for /execute_dev. Optional
-  Linear/GitHub publish and ticket split. Use for /spec, "write a spec",
-  "spec this idea", before coding. Not for implementation (/execute_dev), not for
-  compliance scoring (/pr_review), not product-only host/deploy skills.
+  Constitution-aware interview and clarify pass that produces a buildable spec
+  (what/why), optional technical plan (how), tickets, and a product-roadmap OPEN
+  item for /execute_dev. Use for /spec, "write a spec", "spec this idea", before
+  coding. Optional --plan. If Spec Kit (.specify/) is present, prefer the bridge
+  skill or map to /speckit.* then return here for roadmap/handoff. Not for
+  implementation (/execute_dev) or compliance scoring (/pr_review).
 disable-model-invocation: true
 user-invocable: true
 max-retries: 0
-timeout-seconds: 600
+timeout-seconds: 900
 preserve-artifacts-on-failure: true
 ---
-# Reads: product_plugin.yaml, product roadmap (plugin path), pipeline.json, product layout (explore)
-# Writes: .agents/specs/<slug>.md, product roadmap OPEN item, optional .agents/specs/<slug>/tickets/
+# Reads: product_plugin.yaml, constitution (see §0), product roadmap, pipeline.json, product layout
+# Writes: .agents/specs/<slug>.md, optional …-plan.md, optional tickets/, roadmap OPEN item
 # Anti-patterns: policy/AGENT_REFERENCE.md
-# Sources: Finn Loop /spec · Matt Pocock to-spec + grill + to-tickets · Fable-style autonomous brief
-# Depth: references/spec-template.md · references/provenance.md
+# Depth: references/spec-template.md · plan-template.md · clarify-checklist.md · provenance.md
+# Bridge: references/speckit-bridge.md (when .specify/ exists — do not install Spec Kit from this skill)
 
-When invoked with `/spec` (optional args: idea text, `--from-conversation`, `--no-interview`, `--tickets`, `--linear`, `--github`):
+When invoked with `/spec` (args: idea text, `--from-conversation`, `--no-interview`,
+`--no-clarify`, `--plan`, `--tickets`, `--linear`, `--github`, `--skip-constitution-warn`):
 
-## 0. Pre-condition
+## 0. Pre-condition + constitution
 
 1. Read `.agents/product_plugin.yaml` — `product_roadmap`, `stack`, `smoke`, `product_path_prefixes`, `domain_review_hints`.
-2. Read `.agents/state/pipeline.json` — **do not change phase**. `/spec` only prepares work.
-   - If `phase` ∉ {`init`, `blocked`, `shipped`} → warn an in-flight ship exists; still allow a *future* roadmap item; do not start `/execute_dev` until the pipeline is free.
-3. Dirty working tree: note it; do **not** block (spec is docs-only).
+2. Read `.agents/state/pipeline.json` — **do not change phase**.
+   - If `phase` ∉ {`init`, `blocked`, `shipped`} → warn in-flight ship; still allow a *future* roadmap item.
+3. Dirty working tree: note only (spec is docs-only).
+4. **Constitution read (required attempt):** load the first file that exists:
+   1. `.agents/CONSTITUTION.md`
+   2. `AGENTS.md` (product root)
+   3. `.agents/policy/base_constraints.md` + skim `ENGINEERING_ASSURANCE.md` headers
+   - Hold principles for the whole run (quality, TDD, security, scope discipline).
+   - If none found and not `--skip-constitution-warn` → print once:  
+     `⚠️ No CONSTITUTION.md — using policy defaults. Consider adding .agents/CONSTITUTION.md (see templates/CONSTITUTION.example.md).`
+5. **Spec Kit detect (optional bridge):** if `.specify/` exists → read `references/speckit-bridge.md` and either:
+   - Hand off to Spec Kit commands for specify/clarify/plan/tasks, then resume at §6 (roadmap OPEN pointing at `specs/…`), **or**
+   - Stay on this skill but prefer Spec Kit artifact paths if the user already produced them.
 
 ## 1. Mode selection
 
 | Flag / situation | Mode |
 |------------------|------|
-| Default `/spec "idea"` | **Interview** (Finn + Matt grill), then synthesize |
-| `--from-conversation` or rich prior chat | **Synthesize** (Matt `to-spec`); interview only for remaining gaps |
-| `--no-interview` + enough text in args | Synthesize only; halt `🛑 SPEC MISSING` if acceptance still vague |
-| Complex / multi-slice after draft | Offer **`--tickets`** (Matt `to-tickets`) |
+| Default `/spec "idea"` | Interview → **draft** → **clarify** → finalize |
+| `--from-conversation` | Synthesize draft → **clarify** (only remaining gaps) |
+| `--no-interview` + enough text | Draft only; halt `🛑 SPEC MISSING` if acceptance vague |
+| `--no-clarify` | Skip structured clarify (spikes only — say so in the spec) |
+| `--plan` | Also write technical plan file after clarify |
+| Complex / multi-slice | Offer **`--tickets`** after plan (or after spec if no plan) |
 
 ## 2. Explore before asking
 
-Look up what you can in the **product** tree (layout from plugin `stack.app_layout` / `product_path_prefixes`).  
-**Ask only for decisions and unknowns** — not for facts the repo already holds.  
-Use the product’s domain vocabulary from docs/glossary if present.
+Look up facts in the product tree (`stack.app_layout` / `product_path_prefixes`).  
+**Ask only decisions and unknowns.** Use product domain vocabulary.
 
-## 3. Interview (Finn “super plan mode” + Matt grilling)
+## 3. Interview (what / why — not stack)
 
-Goals: enough clarity that `/execute_dev` will **not** hit `SPEC MISSING`.
+Goals: enough clarity for a **draft** spec (problem, solution, stories, acceptance draft).
 
 Rules:
-- Ask **one question at a time**; wait for the answer.
-- For each question, give a **recommended default** using plugin stack + product context.
-- Prefer a short decision tree over a long questionnaire.
-- Stop when you can write: problem, solution, checkable acceptance criteria, out of scope, verify/smoke plan.
+- One question at a time; recommended default each time.
+- Prefer short decision tree; stop when draft is possible.
+- **Do not** lock tech stack here unless the user forces it (stack belongs in `--plan` or plugin defaults).
 
-Minimum coverage (skip any already answered):
+Minimum coverage (skip answered):
 
-1. **Outcome** — what “done” looks like for the user/operator  
-2. **Scope** — in / out  
-3. **Surfaces** — modules/areas under `product_path_prefixes`  
-4. **Constraints** — security, a11y, brand, platform limits from product  
-5. **Risks** — secrets, deploy, third-party integrations  
-6. **Verify** — how we know it works (plugin `smoke[]` + any manual path)  
-7. **Priority** — P0/P1/P2 and blockers  
+1. Outcome — done looks like…  
+2. Scope — in / out  
+3. Surfaces — product areas  
+4. Constraints — from constitution + product (security, a11y, brand)  
+5. Risks  
+6. Verify — smoke + manual  
+7. Priority  
 
-If the user says “you decide” → apply recommended defaults and state them under Implementation Decisions.
+If user says “you decide” → apply recommended defaults; record under Implementation Decisions or plan.
 
-Large features: after a draft, ask whether to split into tracer-bullet tickets (`--tickets`).
+## 4. Draft the spec (what / why)
 
-## 4. Seams (Matt / TDD handoff)
-
-Sketch **test seams** at the highest useful public contract. Prefer few seams; confirm when non-obvious.  
-Record under **Testing Decisions**. `/execute_dev` drives red→green (or docs-only N/A).  
-If the product has no unit suite yet, default seam = observable behavior + plugin smoke commands.
-
-## 5. Write the spec artifact
+Write draft:
 
 ```text
 .agents/specs/<YYYY-MM-DD>-<slug>.md
 ```
 
-Use `skills/spec/references/spec-template.md` (installed as `.agents/skills/spec/references/spec-template.md`).
+Use `references/spec-template.md`. Status line: `draft` until clarify completes.
 
 Rules:
-- Domain language over fragile file paths.  
-- Avoid stale code snippets; exception: small decision-rich shapes from a prototype.  
-- Acceptance criteria must be **checkable** (pass/fail).
+- Domain language over fragile paths.
+- Acceptance criteria **checkable** (pass/fail).
+- Align with constitution (call out any tension under Further Notes).
 
-## 6. Roadmap item (required — feeds `/execute_dev`)
+## 5. Clarify pass (required unless `--no-clarify`)
 
-Append or update an open item in `product_plugin.yaml` → `product_roadmap`.
+Structured gap-closing **after** draft, **before** ready-for-agent / plan / tickets.
+
+1. Read `references/clarify-checklist.md`.
+2. Scan draft for underspecification (actors, edge cases, non-goals, verify, data, permissions, failure modes).
+3. Ask **one** clarifying question at a time (max ~8 unless user invites more).
+4. Append answers under `## Clarifications` in the same spec file:
+
+```markdown
+## Clarifications
+
+### 2026-07-15
+- Q: …?
+  - A: …
+```
+
+5. Update Problem / Solution / Acceptance / Out of Scope to match answers.
+6. Set status to `ready-for-agent` when acceptance is checkable.
+
+Halt `🛑 SPEC MISSING` if clarify cannot produce checkable acceptance.
+
+## 6. Optional technical plan (`--plan` or agent recommendation)
+
+When the change needs architecture/stack choices (new modules, APIs, multi-layer), or user passed `--plan`:
+
+Write:
+
+```text
+.agents/specs/<YYYY-MM-DD>-<slug>-plan.md
+```
+
+Use `references/plan-template.md`. **How**, not what — stack from `product_plugin` + user constraints.  
+Link plan from the main spec (`**Plan:** …`).  
+Skip plan for pure copy/IA micro-changes unless asked.
+
+## 7. Seams (TDD handoff)
+
+Highest useful public contract → Testing Decisions (or plan).  
+No unit suite → behavior + plugin smoke. `/execute_dev` owns red→green.
+
+## 8. Roadmap item (required)
+
+Append OPEN item to `product_plugin.product_roadmap`:
 
 ```markdown
 ### [OPEN] <short title>
 - **Status:** open
 - **Priority:** P0 | P1 | P2
 - **Spec:** `.agents/specs/<file>.md`
+- **Plan:** `.agents/specs/<file>-plan.md`   # if any
 - **Acceptance:**
   - [ ] …
-  - [ ] …
-- **Smoke:** product smoke from plugin + any manual path in the spec
+- **Smoke:** product smoke from plugin + manual path from spec
 - **Notes:** one-line context
 ```
 
-Ensure a `## Open work` section exists in the roadmap file if missing.  
-One primary OPEN item should be the default for the next `/execute_dev` unless the user names another (`**Next:** true` or first under Open work).
+Ensure `## Open work` exists. Mark `**Next:** true` or place first for default `/execute_dev` target.
 
-## 7. Optional ticket split (`--tickets`)
+## 9. Optional tickets (`--tickets`)
 
-1. Propose vertical tracer-bullet tickets (demoable; blocking edges).  
+After clarify (and plan if any):
+
+1. Vertical tracer bullets + blockers.  
 2. User approves granularity.  
-3. Write `.agents/specs/<slug>/tickets/01-….md` …  
-4. Roadmap item lists the ticket dir; `/execute_dev` takes **one** unblocked ticket at a time.
+3. `.agents/specs/<slug>/tickets/01-….md`  
+4. Roadmap lists ticket dir; `/execute_dev` one unblocked ticket at a time.
 
-Wide mechanical refactors: expand/contract notes — do not force into fake vertical slices.
+## 10. Optional tracker publish
 
-## 8. Optional tracker publish
+Default **local**. `--linear` / `--github` if credentials exist; else paste-ready body. No secrets in issues.
 
-**Default: local only.**
-
-| Flag | Action |
-|------|--------|
-| `--linear` | If credentials available, create issue(s); else paste-ready markdown |
-| `--github` | `gh issue create` when authenticated; else paste-ready body |
-
-Never invent credentials. Never put secrets in issue bodies.
-
-## 9. Handoff (do not implement)
+## 11. Handoff (do not implement)
 
 ```text
 ✅ SPEC READY
-   next: /execute_dev
-   then: /cross_review (if large) → /pr_review → /release_mgmt → /sync_docs
+   spec:  .agents/specs/<…>.md
+   plan:  .agents/specs/<…>-plan.md   # if any
+   next:  /execute_dev
+   then:  /cross_review (if large) → /pr_review → /release_mgmt → /sync_docs
 ```
 
-- **Do not** edit product source, run TDD, or advance `pipeline.json`.  
-- Show paths to the spec file + roadmap section.
+- Do **not** edit product source, run TDD, or advance `pipeline.json`.  
+- Constitution tensions resolved or documented.
 
 ## Failure modes
 
 | Halt | When |
 |------|------|
-| `🛑 SPEC MISSING` | Cannot write checkable acceptance |
-| `🛑 ROADMAP WRITE FAILED` | Cannot update plugin roadmap path |
-| `⏱️ TIMEOUT` | Preserve partial `.agents/specs/` draft |
+| `🛑 SPEC MISSING` | No checkable acceptance after clarify |
+| `🛑 ROADMAP WRITE FAILED` | Cannot update roadmap path |
+| `⏱️ TIMEOUT` | Preserve draft under `.agents/specs/` |
 
 ## Pipeline position
 
 ```text
-/spec → /execute_dev → /cross_review → /pr_review → /release_mgmt → /sync_docs
+/spec (+ constitution, clarify, optional plan/tickets)
+  → /execute_dev → /cross_review → /pr_review → /release_mgmt → /sync_docs
 ```

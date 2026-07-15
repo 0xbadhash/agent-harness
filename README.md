@@ -84,7 +84,7 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
 
 ```text
 init
-  → /spec                 # interview → acceptance + roadmap OPEN (optional)
+  → /spec                 # constitution + clarify → acceptance (+ optional plan) + roadmap OPEN
   → /execute_dev          # TDD: red → green → refactor
   → /cross_review         # multi-persona (soft gate on large diffs)
   → /pr_review --validate # score ≥ 95
@@ -120,7 +120,7 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 
 | Skill | Job |
 |-------|-----|
-| `/spec` | Interview/synthesize → acceptance criteria + roadmap OPEN item |
+| `/spec` | Constitution + interview + clarify → spec (+ optional plan/tickets) + roadmap OPEN |
 | `/execute_dev` | One task, **TDD mandatory**, single sub-task |
 | `/cross_review` | Security · maintainability · domain personas |
 | `/pr_review` | Deterministic compliance score (≥95) |
