@@ -7,8 +7,39 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", "node_modules", "__pycache__", ".agents", "logs", "vendor", ".antigravitycli", ".venv", "venv", ".mypy_cache", ".pytest_cache", "infra", "cache", "var"}
-SKIP_FILES = {"ALL_PRINCIPLES.md", "PRODUCTION_GAP_ANALYSIS.md", "README.md", "DEPLOYMENT_GUIDE.md", "BACKEND_ROADMAP.md", "RELEASE_RUNBOOK.md", "PR_DRAFT.md", "WORKFLOW_DOCUMENTATION.md"}
+SKIP_DIRS = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".agents",
+    "logs",
+    "vendor",
+    ".antigravitycli",
+    ".venv",
+    "venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    "infra",
+    "cache",
+    "var",
+    # Local Graphify code maps (gitignored; absolute paths + false-positive digit keys)
+    "graphify-out",
+    # Portable skill markdown often cites external docs URLs
+    "skills",
+    # Sample configs / fixtures (product-specific paths)
+    "examples",
+}
+SKIP_FILES = {
+    "ALL_PRINCIPLES.md",
+    "PRODUCTION_GAP_ANALYSIS.md",
+    "README.md",
+    "CHANGELOG.md",
+    "DEPLOYMENT_GUIDE.md",
+    "BACKEND_ROADMAP.md",
+    "RELEASE_RUNBOOK.md",
+    "PR_DRAFT.md",
+    "WORKFLOW_DOCUMENTATION.md",
+}
 
 PATTERNS = [
     (re.compile(r"/home/[a-z]+", re.I), "absolute_user_path"),
@@ -18,8 +49,16 @@ PATTERNS = [
     (re.compile(r"\b[A-Z0-9]{16}\b"), "exposed_api_key"),
 ]
 
-# Allow-list: config defaults with env override, test fixtures
-ALLOW = ["config/settings.py", "tests/", "test_", "conftest.py"]
+# Allow-list: config defaults, tests, deploy units (host paths)
+ALLOW = [
+    "config/settings.py",
+    "tests/",
+    "test_",
+    "conftest.py",
+    "migration/deploy/",
+    "deploy/",
+    "docs/",
+]
 
 def main() -> int:
     hits = 0

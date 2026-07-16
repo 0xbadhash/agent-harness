@@ -1,0 +1,12 @@
+[Unit]
+Description=Multi-product night_shift readiness daily at 03:15 HKT (19:15 UTC)
+
+[Timer]
+# Host clock is UTC; 03:15 Asia/Hong_Kong == 19:15 UTC (HKT = UTC+8).
+# Explicit UTC avoids systemd ignoring Timezone= on some hosts.
+OnCalendar=*-*-* 19:15:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

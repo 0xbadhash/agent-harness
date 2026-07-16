@@ -1,0 +1,21 @@
+[Unit]
+Description=Agent harness multi-product night_shift readiness (ORCH-P3)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+WorkingDirectory=/home/debian/agent-harness
+Environment=PRODUCT_VAULT_ROOT=/opt/second-brain/vault
+Environment=WATCHLIST_VAULT_ROOT=/opt/second-brain/vault
+Environment=NIGHT_SHIFT_PRODUCTS_FILE=/home/debian/agent-harness/config/night_shift_products.yaml
+Environment=PATH=/home/debian/watchlist/.venv/bin:/usr/local/bin:/usr/bin:/bin
+# Prefer watchlist venv (has pytest/mypy); fall back to system python3
+ExecStart=/usr/bin/python3 /home/debian/agent-harness/bin/night_shift_all_products.py
+# Exit 1 = some product failed gates; still a completed overnight run
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

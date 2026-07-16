@@ -1,0 +1,10 @@
+# Products for overnight readiness (03:15 HKT = 19:15 UTC).
+# Format: product_id: path  (expanduser applied)
+# Override file: $NIGHT_SHIFT_PRODUCTS_FILE
+
+watchlist: ~/watchlist
+email-detach: ~/email-detach
+substack-push: ~/substack-push
+second-brain: ~/second-brain
+catalyxt: ~/catalyxt.ltd
+agent-harness: ~/agent-harness
