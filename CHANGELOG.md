@@ -2,15 +2,14 @@
 
 ## Unreleased
 
+### Added
+- **`/anti_slop_design`** skill: full [pols.dev anti-slop design law](https://pols.dev/slop.md) as a harness skill (`skills/anti_slop_design/`). Mandatory confirm → build → point-by-point pre-ship re-check for any UI work. Law body + `references/slop.md` mirror.
+
 ### Changed
 - Vault / second-brain integration is **optional and off by default** (public harness stays vault-agnostic).
 - SoT for skills/policies documented (`docs/source-of-truth.md`).
 - Optional vault adapter docs (`docs/second-brain-optional.md`); `scripts/vault_resolve.py`.
 - Removed hardcoded `/opt/second-brain` and watchlist-only paths from portable sync scripts/skills.
-
-
-## Unreleased
-
 - **PR_DRAFT template:** narrative sections **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence** (plus existing Red-proof / Cross-review / §9). Wired into `AGENT_WORKFLOW` Phase 5, `execute_dev` handoff, `pr_review` soft check, `base_constraints`, `docs/ship-flow.md`.
 
 ## v1.2.0 — 2026-07-15

@@ -42,7 +42,7 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
 
 | Piece | Role |
 |-------|------|
-| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, implement (TDD), review, release, sync docs, sweep |
+| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, implement (TDD), review, release, sync docs, anti-slop UI design, sweep |
 | **Scripts** (`scripts/`) | Deterministic gates: pipeline FSM, validate, PR score, vault notes |
 | **Policy** (`policy/`) | Always-on engineering rules the skills inherit |
 | **Product plugin** | *Your* stack, smoke commands, vault path—never hard-coded in the harness |
@@ -132,6 +132,7 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 |-------|-----|
 | `/spec` | Constitution + interview + clarify → spec (+ optional plan/tickets) + roadmap OPEN |
 | `/execute_dev` | One task, **TDD mandatory**, single sub-task |
+| `/anti_slop_design` | UI/UX design law (pols.dev): confirm, build without AI slop, pre-ship audit |
 | `/cross_review` | Security · maintainability · domain personas |
 | `/pr_review` | Deterministic compliance score (≥95) |
 | `/release_mgmt` | Smoke (from plugin), version, tag |

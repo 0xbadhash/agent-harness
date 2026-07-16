@@ -17,6 +17,7 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
+| `anti_slop_design` | Any UI/UX/frontend design or polish | pols.dev anti-slop law: confirm → build → point-by-point pre-ship audit ([slop.md](https://pols.dev/slop.md)) |
 | `sweep` | Hygiene pass | Status, drift, skills audit, whole-repo obsolete/cleanup (evidence only) |
 | `feedback` | End of session | Harness feedback log |
 | `audit_repo` | Policy gaps | Gap analysis + whole-repo obsolete/cleanup (evidence only) |
