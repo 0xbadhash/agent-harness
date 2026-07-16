@@ -20,18 +20,20 @@ smoke:
   - name: unit
     cmd: ["echo", "replace-with-your-test-command"]
     cwd: .
-  # - name: typecheck
-  #   cmd: ["your", "typechecker"]
-  #   cwd: .
 
-# Optional knowledge vault for release notes
+# Optional knowledge vault (second-brain / Obsidian / anything).
+# DEFAULT: disabled — this public harness is vault-agnostic.
+# Enable only on machines that have a vault; never commit secrets or host-only paths
+# as required defaults for all consumers of this plugin file.
 vault:
-  root_env: PRODUCT_VAULT_ROOT
-  default_root: ""
-  dev_log_rel: 01-Projects/my-product/dev-log.md
+  enabled: false
+  root_env: PRODUCT_VAULT_ROOT   # set this env var when enabled
+  default_root: ""               # leave empty in committed examples
   project_label: my-product
+  dev_log_rel: 01-Projects/my-product/dev-log.md
+  # optional allowlist of repo-relative docs; empty → product discovery defaults
+  mirror_docs: []
 
-# Paths that count as product code (large-diff / review heuristics)
 product_path_prefixes:
   - src/
 
@@ -39,5 +41,5 @@ domain_review_hints:
   - domain correctness
   - no secret leakage
 
-# Names of skills that exist only in this product (not in agent-harness)
+# Skills that exist only in this product (not in agent-harness)
 product_skills: []

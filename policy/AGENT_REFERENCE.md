@@ -25,6 +25,9 @@
 | release_mgmt | approved (≥95) + infra verify PASS | shipped |
 | sync_docs | shipped | init (+ vault dev-log via `scripts/sync_vault_devlog.py`) |
 | feedback | any | none (writes `.agents/AGENT_FEEDBACK.md`) |
-| sweep | any | none (hygiene report) |
+| sweep | any | none (hygiene report + obsolete scan) |
+| audit_repo | init/shipped/blocked | none (gap analysis + obsolete scan) |
 
 Session phases (non-FSM): `.agents/AGENT_WORKFLOW.md`. Harness home: `.agents/README.md`. Product: `docs/PRODUCT.md`. Principle index: `GEMINI.md`.
+
+Obsolete / cleanup (evidence only): `.agents/policy/OBSOLETE_CLEANUP_SCAN.md` — wired into `/sweep`, `/cross_review` (scoped), `/audit_repo`.

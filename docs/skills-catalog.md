@@ -8,18 +8,18 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 |-------|--------------|------|
 | `spec` | Before coding a new idea | Constitution → interview → draft → clarify → `.agents/specs/` (+ optional plan/tickets) + roadmap OPEN (no pipeline advance) |
 | `execute_dev` | Building one task | TDD, implement, validate, handoff → `ready_for_review` |
-| `cross_review` | Before score on non-trivial diffs | Multi-persona review + evidence file |
+| `cross_review` | Before score on non-trivial diffs | Multi-persona review + scoped obsolete/cleanup scan + evidence file |
 | `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review warn |
 | `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` |
-| `sync_docs` | After ship | Drift/docs/vault release entry → `init` |
+| `sync_docs` | After ship | Full repo+vault doc sync (workflow, mirrors, wiki, release log) → `init` |
 
 ## Support
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
-| `sweep` | Hygiene pass | Status, drift, skills audit |
+| `sweep` | Hygiene pass | Status, drift, skills audit, whole-repo obsolete/cleanup (evidence only) |
 | `feedback` | End of session | Harness feedback log |
-| `audit_repo` | Policy gaps | Gap analysis doc |
+| `audit_repo` | Policy gaps | Gap analysis + whole-repo obsolete/cleanup (evidence only) |
 | `plan_backend` | After audit | Roadmap structure (product fills content) |
 | `test_automation` | Suite orchestration | Run/scaffold tests |
 

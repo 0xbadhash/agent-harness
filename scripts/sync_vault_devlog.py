@@ -24,11 +24,46 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_VAULT = Path("/opt/second-brain/vault")
-DEV_LOG_REL = Path("01-Projects/watchlist/dev-log.md")
+# Vault optional — never hardcode a host path (public harness is vault-agnostic).
+DEFAULT_VAULT = None
+
+
+def _project_label() -> str:
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from vault_resolve import load_vault_config
+
+        return load_vault_config(ROOT).get("project_label") or "product"
+    except Exception:
+        plugin = ROOT / ".agents" / "product_plugin.yaml"
+        if plugin.is_file():
+            m = re.search(r"^\s*project_label:\s*(.+)$", plugin.read_text(), re.M)
+            if m:
+                return m.group(1).strip().strip("\"'")
+            m = re.search(r"^\s*product_id:\s*(.+)$", plugin.read_text(), re.M)
+            if m:
+                return m.group(1).strip().strip("\"'")
+        return "product"
+
+
+def _dev_log_rel() -> Path:
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from vault_resolve import load_vault_config
+
+        rel = (load_vault_config(ROOT).get("dev_log_rel") or "").strip()
+        if rel:
+            return Path(rel)
+    except Exception:
+        pass
+    return Path(f"01-Projects/{_project_label()}/dev-log.md")
+
+
+DEV_LOG_REL = _dev_log_rel()
+_LABEL = _project_label()
 DEV_LOG_HEADER = (
-    "# Watchlist dev log\n\n"
-    "Agent-appended development notes (watchlist repo → Syncthing → Obsidian).\n\n"
+    f"# {_LABEL} dev log\n\n"
+    f"Agent-appended development notes ({_LABEL} → optional knowledge vault).\n\n"
 )
 SHAPING_MAX = 3
 ROADMAP_PATH = ROOT / "BACKEND_ROADMAP.md"
@@ -382,7 +417,7 @@ def build_note_entry(
 
         ## YYYY-MM-DD — {short title}
 
-        - **Repo**: watchlist
+        - **Repo**: {_project_label()}
         - bullet...
     """
     t = (title or "").strip()
@@ -403,7 +438,7 @@ def build_note_entry(
     lines = [
         f"## {day} — {t}",
         "",
-        "- **Repo**: watchlist",
+        f"- **Repo**: {_project_label()}",
     ]
     for b in bullets or []:
         s = str(b).strip()
@@ -475,10 +510,8 @@ def main() -> int:
     ap.add_argument(
         "--vault",
         type=Path,
-        default=Path(
-            __import__("os").environ.get("WATCHLIST_VAULT_ROOT", str(DEFAULT_VAULT))
-        ),
-        help="Obsidian vault root (default: WATCHLIST_VAULT_ROOT or /opt/second-brain/vault)",
+        default=None,
+        help="Optional vault root (or set PRODUCT_VAULT_ROOT; vault off if unset)",
     )
     ap.add_argument("--dry-run", action="store_true", help="Print entry without writing")
     ap.add_argument("--check", action="store_true", help="Exit 1 if current tag not logged")
@@ -498,7 +531,16 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    vault = args.vault.expanduser().resolve()
+    try:
+        from vault_resolve import resolve_vault_root
+
+        resolved = resolve_vault_root(cli_vault=args.vault, product_root=ROOT, require_enabled=False)
+    except Exception:
+        resolved = args.vault
+    if resolved is None:
+        print("⚠️  VAULT SKIP: vault not configured (set PRODUCT_VAULT_ROOT or --vault; optional)", file=sys.stderr)
+        return 0
+    vault = Path(resolved).expanduser().resolve()
     if not vault.is_dir() and not args.dry_run:
         print(f"⚠️  VAULT SKIP: {vault} not found", file=sys.stderr)
         return 0

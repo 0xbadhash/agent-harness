@@ -70,9 +70,12 @@
 | Infra verify | `/vps_infra_ops --verify` |
 | Tag & smoke | `/release_mgmt` |
 | Docs + vault release | `/sync_docs` |
-| Multi-persona review | `/cross_review` |
-| Hygiene sweep | `/sweep` |
+| Multi-persona review | `/cross_review` (scoped obsolete/cleanup under Maintainability) |
+| Hygiene + whole-repo obsolete scan | `/sweep` |
+| Policy gaps + whole-repo obsolete scan | `/audit_repo` |
 | Session feedback | `/feedback` |
+
+Obsolete protocol (evidence only, no deletes): `.agents/policy/OBSOLETE_CLEANUP_SCAN.md`
 
 ## Anti-patterns
 

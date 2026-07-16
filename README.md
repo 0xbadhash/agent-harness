@@ -54,6 +54,16 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
 - Another product’s source tree  
 - Secrets, hosts, or deploy topology (those stay product-local)
 
+
+## Source of truth (skills & policies)
+
+**This repository** is the SoT for shared agent **skills** and **policies**.  
+Products install a copy via `install_into_product.sh`; re-run install to refresh.
+
+Personal knowledge vaults (e.g. second-brain / Obsidian) are **optional** and **off by default**.  
+See `docs/source-of-truth.md` and `docs/second-brain-optional.md`. Never commit host-only vault paths as harness defaults.
+
+
 ---
 
 ## Mental model (push vs pull)
