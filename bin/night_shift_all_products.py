@@ -278,6 +278,19 @@ def main() -> int:
     total = len(rows)
     overall = "PASS" if passed == total else "FAIL"
     print(f"{'✅' if overall == 'PASS' else '❌'} night_shift_all {overall} ({passed}/{total})")
+    
+    # Rotate vault FAIL spam when latest is PASS; rebuild SUMMARY
+    try:
+        rot = HARNESS_ROOT / "scripts" / "rotate_night_shift_logs.py"
+        if rot.is_file() and not dry_run:
+            subprocess.run(
+                [sys.executable, str(rot), "--vault", str(vault)],
+                cwd=str(HARNESS_ROOT),
+                check=False,
+            )
+    except Exception as exc:  # noqa: BLE001
+        print(f"⚠️ rotate_night_shift_logs: {exc}")
+
     return 0 if overall == "PASS" else 1
 
 
