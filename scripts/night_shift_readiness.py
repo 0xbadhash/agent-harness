@@ -267,10 +267,17 @@ def run_gates(
 
     # ORCH-P3b: real coverage thresholds (soft skip if pytest-cov not installed)
     if (SCRIPTS / "check_module_coverage.py").is_file():
-        cov_args = ["--run", "--soft-if-missing"]
         ns = plugin.get("night_shift") or {}
-        if str(ns.get("coverage_soft", "1")).lower() in ("0", "false", "no"):
-            cov_args = ["--run"]
+        soft = str(ns.get("coverage_soft", "1")).lower() not in ("0", "false", "no")
+        do_run = str(ns.get("coverage_run", "1")).lower() not in ("0", "false", "no")
+        cov_args: list[str] = []
+        if do_run:
+            cov_args.append("--run")
+        if soft:
+            cov_args.append("--soft-if-missing")
+        # Prefer existing coverage.json when not forcing a long pytest run
+        if not do_run and (ROOT / "coverage.json").is_file():
+            cov_args.extend(["--json-report", str(ROOT / "coverage.json")])
         results.append(
             _run(
                 "coverage",

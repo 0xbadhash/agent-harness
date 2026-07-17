@@ -33,6 +33,7 @@ DEFAULT_PRODUCTS = [
     ("second-brain", _HOME / "second-brain"),
     ("catalyxt", _HOME / "catalyxt.ltd"),
     ("agent-harness", HARNESS_ROOT),
+    ("ocr-ledger", _HOME / "ocr-ledger"),
 ]
 
 
