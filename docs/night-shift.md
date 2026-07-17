@@ -214,11 +214,11 @@ Example shape: `policy/TEST_MATRIX.example.md` in this repo.
 ### Install / enable (once)
 
 ```bash
-HARNESS=/path/to/agent-harness   # e.g. /home/debian/agent-harness
+HARNESS="$HOME/agent-harness"   # or wherever the harness checkout lives
 sudo cp "$HARNESS/deploy/night-shift-all.service" \
         "$HARNESS/deploy/night-shift-all.timer" \
         /etc/systemd/system/
-# Edit paths in the service if the harness lives elsewhere.
+# Units use systemd %h (user home) — no hardcoded /home/<user> paths.
 sudo systemctl daemon-reload
 sudo systemctl enable --now night-shift-all.timer
 ```

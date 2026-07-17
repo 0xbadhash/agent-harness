@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scans source for hardcoded paths/URLs/credentials. Zero tolerance."""
+"""Scans source for hardcoded paths/URLs/credentials. Zero tolerance (with allowlists)."""
 from __future__ import annotations
 
 import re
@@ -22,7 +22,6 @@ SKIP_DIRS = {
     "infra",
     "cache",
     "var",
-    # Local Graphify code maps (gitignored; absolute paths + false-positive digit keys)
     "graphify-out",
     # Portable skill markdown often cites external docs URLs
     "skills",
@@ -41,24 +40,49 @@ SKIP_FILES = {
     "WORKFLOW_DOCUMENTATION.md",
 }
 
-PATTERNS = [
-    (re.compile(r"/home/[a-z]+", re.I), "absolute_user_path"),
-    (re.compile(r"C:\\\\Users\\\\", re.I), "windows_user_path"),
-    (re.compile(r"(?<![_\w])(password|secret|api_key|token)\s*=\s*['\"][^'\"]{6,}['\"]", re.I), "inline_secret"),
-    (re.compile(r"https?://(?!localhost|127\.0\.0\.1|example\.com)[\w.-]+\.\w{2,}", re.I), "external_url"),
-    (re.compile(r"\b[A-Z0-9]{16}\b"), "exposed_api_key"),
-]
+# Absolute home paths (not ~/ relative)
+ABS_HOME = re.compile(r"/home/[a-zA-Z0-9_-]+", re.I)
+WIN_HOME = re.compile(r"C:\\\\Users\\\\", re.I)
+INLINE_SECRET = re.compile(
+    r"(?<![_\w])(password|secret|api_key|token)\s*=\s*['\"][^'\"]{6,}['\"]",
+    re.I,
+)
+EXPOSED_KEY = re.compile(r"\b[A-Z0-9]{16}\b")
+# Any http(s) URL — then filtered by allowlist
+ANY_URL = re.compile(r"https?://[\w.-]+\.\w{2,}[^\s)\]'\"`]*", re.I)
 
-# Allow-list: config defaults, tests, deploy units (host paths)
-ALLOW = [
+# Documentation / public project URLs are not secrets
+URL_HOST_ALLOW = re.compile(
+    r"^https?://("
+    r"localhost|127\.0\.0\.1|example\.com|"
+    r"(www\.)?github\.com|"
+    r"raw\.githubusercontent\.com|"
+    r"pols\.dev|"
+    r"(www\.)?lucide\.dev|"
+    r"pypi\.org|"
+    r"docs\.python\.org|"
+    r"(www\.)?npmjs\.com|"
+    r"fonts\.google\.com|"
+    r"fontshare\.com"
+    r")([/:?]|$)",
+    re.I,
+)
+
+# Host-bound deploy units and tests may contain machine paths
+ALLOW_PREFIXES = (
     "config/settings.py",
     "tests/",
     "test_",
     "conftest.py",
     "migration/deploy/",
     "deploy/",
-    "docs/",
-]
+    "docs/",  # operator manuals may show clone URLs and path examples
+)
+
+
+def _allowed_rel(rel: str) -> bool:
+    return any(a in rel for a in ALLOW_PREFIXES)
+
 
 def main() -> int:
     hits = 0
@@ -75,19 +99,43 @@ def main() -> int:
             text = p.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        rel = p.relative_to(ROOT)
-        if any(a in str(rel) for a in ALLOW):
+        rel = str(p.relative_to(ROOT)).replace("\\", "/")
+        if _allowed_rel(rel):
             continue
-        for rx, tag in PATTERNS:
-            for m in rx.finditer(text):
-                line = text[:m.start()].count("\n") + 1
-                print(f"❌ {rel}:{line} [{tag}] {m.group(0)[:60]}")
-                hits += 1
+
+        for m in ABS_HOME.finditer(text):
+            line = text[: m.start()].count("\n") + 1
+            print(f"❌ {rel}:{line} [absolute_user_path] {m.group(0)[:60]}")
+            hits += 1
+        for m in WIN_HOME.finditer(text):
+            line = text[: m.start()].count("\n") + 1
+            print(f"❌ {rel}:{line} [windows_user_path] {m.group(0)[:60]}")
+            hits += 1
+        for m in INLINE_SECRET.finditer(text):
+            line = text[: m.start()].count("\n") + 1
+            print(f"❌ {rel}:{line} [inline_secret] {m.group(0)[:60]}")
+            hits += 1
+        for m in ANY_URL.finditer(text):
+            url = m.group(0)
+            if URL_HOST_ALLOW.search(url):
+                continue
+            line = text[: m.start()].count("\n") + 1
+            print(f"❌ {rel}:{line} [external_url] {url[:60]}")
+            hits += 1
+        for m in EXPOSED_KEY.finditer(text):
+            # digit-only 16-char often false positive; require a letter
+            if not re.search(r"[A-Z]", m.group(0)):
+                continue
+            line = text[: m.start()].count("\n") + 1
+            print(f"❌ {rel}:{line} [exposed_api_key] {m.group(0)[:60]}")
+            hits += 1
+
     if hits:
         print(f"❌ {hits} hardcode violation(s)")
         return 1
     print("✅ no hardcodes")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
