@@ -34,7 +34,9 @@ python3 scripts/night_shift_readiness.py \
 
 Flags: `--quick` · `--skip-live` · `--dry-run` · `--root <path>` (when invoking harness SoT copy)
 
-Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate full, product_smoke, **coverage** (`check_module_coverage.py --run --soft-if-missing`), optional security, optional live probes from `product_plugin.night_shift`.
+Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate full, product_smoke, **coverage** (ORCH-P3b: `check_module_coverage.py --run --soft-if-missing`), optional security, optional live probes from `product_plugin.night_shift`.
+
+**ORCH-TOOLS:** `tools/bin/lint_and_test.sh` → `validate full` (+ optional `--coverage`).
 
 **Vault (per product_plugin.vault.project_label):**
 

@@ -83,8 +83,16 @@ def _run(
 
 
 def _venv_python(root: Path = ROOT) -> str:
-    v = root / ".venv" / "bin" / "python"
-    return str(v) if v.is_file() else sys.executable
+    """Prefer project virtualenv (``.venv`` or ``venv``), else current interpreter."""
+    for candidate in (
+        root / ".venv" / "bin" / "python",
+        root / "venv" / "bin" / "python",
+        root / ".venv" / "bin" / "python3",
+        root / "venv" / "bin" / "python3",
+    ):
+        if candidate.is_file():
+            return str(candidate)
+    return sys.executable
 
 
 def _load_plugin(root: Path = ROOT) -> dict[str, Any]:

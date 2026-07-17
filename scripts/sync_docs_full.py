@@ -357,18 +357,27 @@ def run_full_sync(
         notes.append(stamp_current_release(README_PATH, version, dry_run=dry_run))
 
     if not skip_vault:
-        if not vault.is_dir() and not dry_run:
+        if vault is None:
+            print("⚠️  VAULT SKIP: no vault path resolved", file=sys.stderr)
+            notes.append("vault: skipped (no path)")
+        elif not vault.is_dir() and not dry_run:
             print(f"⚠️  VAULT SKIP: {vault} not found", file=sys.stderr)
+            notes.append(f"vault: skipped (missing {vault})")
         else:
+            vault_path: Path = vault
             mirrors = _load_plugin_mirrors()
             try:
                 mnotes = mirror_to_vault(
-                    vault, mirrors, version=version, project_label=_project_label(), dry_run=dry_run
+                    vault_path,
+                    mirrors,
+                    version=version,
+                    project_label=_project_label(),
+                    dry_run=dry_run,
                 )
                 notes.extend(mnotes)
                 notes.append(
                     update_wiki_index(
-                        vault,
+                        vault_path,
                         version=version,
                         scope=scope,
                         mirrored=mnotes,
@@ -377,7 +386,9 @@ def run_full_sync(
                     )
                 )
                 notes.append(
-                    run_release_devlog(vault, dry_run=dry_run, force=force_devlog)
+                    run_release_devlog(
+                        vault_path, dry_run=dry_run, force=force_devlog
+                    )
                 )
             except PermissionError as exc:
                 notes.append(f"⚠️ VAULT SKIP: {exc}")

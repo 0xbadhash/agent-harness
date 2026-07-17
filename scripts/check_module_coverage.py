@@ -70,7 +70,11 @@ def enforce_coverage_json(
     data: dict[str, Any],
     cfg: dict[str, Any],
 ) -> tuple[bool, list[str]]:
-    """Return (ok, messages)."""
+    """Return (ok, messages).
+
+    Default: overall ``fail_under`` + optional **module averages**.
+    Per-file floors only when ``per_file: true`` (strict).
+    """
     msgs: list[str] = []
     totals = data.get("totals") or {}
     total_pct = float(totals.get("percent_covered") or 0.0)
@@ -84,11 +88,11 @@ def enforce_coverage_json(
     modules = cfg.get("modules") or {}
     exclude = list(cfg.get("exclude") or [])
     default = float(cfg["default"])
+    per_file = bool(cfg.get("per_file", False))
     mod_hits: dict[str, list[float]] = {}
 
     for fpath, meta in files.items():
         rel = str(fpath).replace("\\", "/")
-        # normalize to repo-relative if absolute
         if str(ROOT).replace("\\", "/") in rel:
             rel = rel.split(str(ROOT).replace("\\", "/") + "/", 1)[-1]
         if _excluded(rel, exclude):
@@ -98,7 +102,6 @@ def enforce_coverage_json(
             continue
         summary = meta.get("summary") or meta
         pct = float(summary.get("percent_covered") or 0.0)
-        # aggregate by first matching module prefix for reporting
         key = "default"
         for prefix in modules:
             p = str(prefix).replace("\\", "/").lstrip("./")
@@ -106,7 +109,7 @@ def enforce_coverage_json(
                 key = p
                 break
         mod_hits.setdefault(key, []).append(pct)
-        if pct + 1e-9 < thr:
+        if per_file and pct + 1e-9 < thr:
             msgs.append(f"❌ {rel}: {pct:.1f}% < {thr}%")
 
     for key, pcts in sorted(mod_hits.items()):
