@@ -22,7 +22,6 @@ SKIP_DIRS = {
     "infra",
     "cache",
     "var",
-    "graphify-out",
     # Portable skill markdown often cites external docs URLs
     "skills",
     # Sample configs / fixtures (product-specific paths)

@@ -41,7 +41,6 @@ DEFAULT_MIRRORS = [
     "docs/PRODUCT.md",
     "docs/PRODUCT_BOUNDARY.md",
     "docs/ARCHITECTURE.md",
-    "docs/GRAPHIFY.md",
     "docs/SECURITY.md",
     "docs/TESTING.md",
     "RELEASE_RUNBOOK.md",

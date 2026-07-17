@@ -29,7 +29,7 @@ Find assets that are **obsolete, redundant, or useless**, with:
 
 Run enough of the following to support each claim (adapt to product layout via `product_plugin.yaml` / `docs/PRODUCT.md`):
 
-1. **Tracked cruft** — `git ls-files` vs `.gitignore` (e.g. `__pycache__`, `*.pyc`, `graphify-out/` if ignored).
+1. **Tracked cruft** — `git ls-files` vs `.gitignore` (e.g. `__pycache__`, `*.pyc` if ignored).
 2. **Orphan candidates** — root/diagnostic scripts, re-export-only tests, mocks, spike docs; count inbound refs (`rg`, pytest, bin entrypoints, nginx, docs).
 3. **Stale comments** — “stub”, “later PRs”, “PR1”, “TODO remove” on code that is already implemented.
 4. **False-positive guards** — if a path is named in pytest scaffolds, `bin/*`, product hub, `docs/PRODUCT.md`, or deploy units → confidence of “delete” must be **≤ 0.2** unless user redefines product boundary.

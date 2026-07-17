@@ -420,7 +420,7 @@ def recommendations_from(
             f"`/execute_dev` (set AC in product roadmap Shaping)."
         )
         recs.append(
-            f"[{product_id}] Optional: refresh golden fixtures / graphify map after large refactors."
+            f"[{product_id}] Optional: refresh golden fixtures after large refactors."
         )
         return recs
 
