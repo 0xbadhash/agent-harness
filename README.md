@@ -78,7 +78,7 @@ See `docs/source-of-truth.md` and `docs/second-brain-optional.md`. Never commit 
 ┌─────────────────────────────────────────────────────────┐
 │  On demand (pull) — skills                              │
 │  /spec  /execute_dev  /cross_review  /pr_review         │
-│  /release_mgmt  /sync_docs  /sweep                      │
+│  /release_mgmt  /sync_docs  /night_shift  /sweep        │
 └─────────────────────────────────────────────────────────┘
                          │
                          ▼

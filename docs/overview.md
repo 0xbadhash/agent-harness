@@ -51,9 +51,11 @@ Keep skill bodies short. Put long checklists in `docs/` and link them.
 | “Looks fine” ship | `/pr_review` score + `/cross_review` |
 | Docs / vault drift | `/sync_docs` + Option A note vs release entries |
 | Entropy | `/sweep`, architecture notes in product |
+| Red suite blocking next work | `/night_shift` readiness (report + TODO; no auto-ship) — [night-shift.md](night-shift.md) |
 
 ## Related
 
 - [Bootstrap](bootstrap.md)  
 - [Product plugin](product-plugin.md)  
 - [Ship flow](ship-flow.md)  
+- [Night shift](night-shift.md)  

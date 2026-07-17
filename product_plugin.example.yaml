@@ -42,11 +42,13 @@ domain_review_hints:
   - no secret leakage
 
 # Optional overnight readiness (scripts/night_shift_readiness.py — harness SoT)
+# Full ops: docs/night-shift.md  ·  multi-product timer: deploy/night-shift-all.*
 night_shift:
   default_host: ""          # e.g. app.example.com (no scheme); or set PRODUCT_BASE_URL
   live_path: ""             # path under https://default_host
   live_urls: []             # full URLs for HTTP probes
   live_expect_code: "200"
+  coverage_soft: "1"        # "0" = hard-fail if coverage tooling missing
 
 # Skills that exist only in this product (not in agent-harness)
 product_skills: []

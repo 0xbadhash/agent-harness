@@ -41,6 +41,18 @@ cd /path/to/second-brain
 python3 scripts/sync_projects_vault.py --only agent-harness --only my-product
 ```
 
+## Night shift vault paths
+
+When `/night_shift` runs with a resolvable vault root, it may write:
+
+| Path | Writer |
+|------|--------|
+| `01-Projects/<project_label>/night-shift-log.md` | per-product readiness |
+| `01-Projects/<project_label>/TODO.md` | auto recommendations |
+| `01-Projects/harness-night-shift/{SUMMARY,TODO,log}.md` | multi-product orchestrator |
+
+Details: [night-shift.md](night-shift.md). Still optional: missing vault → report only under `.agents/artifacts/`.
+
 ## What stays vault-agnostic
 
 | In harness git (public) | Not default |

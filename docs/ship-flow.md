@@ -72,7 +72,18 @@ Implementers fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` before `/pr_review`
 - **Smoke:** `python3 scripts/product_smoke.py` reads plugin smoke[] at release
 - **PR score `suite_green`:** green type/lint/test suite only — **not** red-first proof
 
+## Off-pipeline: night readiness (`/night_shift`)
+
+**Not** a ship FSM phase. Overnight (or on-demand) **readiness** so the next `/execute_dev` can start on green surfaces.
+
+- Does **not** advance `pipeline.json`  
+- Does **not** release or tag  
+- Writes reports + optional vault TODO only  
+
+Full ops doc: **[night-shift.md](night-shift.md)**.
+
 ## Related
 
 - [TDD](tdd.md)  
+- [Night shift](night-shift.md)  
 - [Skills catalog](skills-catalog.md)  

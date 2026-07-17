@@ -61,6 +61,20 @@ product_skills:
 | `vault` | no | Second-brain / release note location |
 | `domain_review_hints` | no | Domain persona cues for `/cross_review` |
 | `product_skills` | no | Names of skills that live only in the product |
+| `night_shift` | no | Optional live probes + coverage softness for `/night_shift` — [night-shift.md](night-shift.md) |
+
+### Optional `night_shift` block
+
+```yaml
+night_shift:
+  default_host: ""           # hostname only; prefer PRODUCT_BASE_URL env
+  live_path: ""              # path under https://default_host
+  live_urls: []              # full URLs to probe
+  live_expect_code: "200"
+  coverage_soft: "1"         # "0" = fail if coverage tooling missing
+```
+
+Used only by `scripts/night_shift_readiness.py`. Full schedule, gates, and systemd: **[night-shift.md](night-shift.md)**.
 
 ## Rules
 

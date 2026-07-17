@@ -96,8 +96,14 @@ night_shift:
 
 Coverage config (product or harness): `config/coverage_config.json` (see `config/coverage_config.example.json`).
 
+## Full documentation
+
+**Operator manual:** [`docs/night-shift.md`](../../docs/night-shift.md)  
+(architecture, gates, vault paths, systemd install/ops, plugin knobs, hard-stops)
+
 ## Related
 
 - Install: `./install_into_product.sh /path/to/product`
 - Hygiene: `/sweep`
-- Ship: `/execute_dev` → … → `/sync_docs`
+- Ship: `/execute_dev` → … → `/sync_docs` (night_shift is **off** the ship FSM)
+
