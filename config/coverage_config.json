@@ -1,0 +1,15 @@
+{
+  "default": 10,
+  "fail_under": 10,
+  "modules": {
+    "scripts/": 10,
+    "bin/": 0,
+    "tests/": 0
+  },
+  "exclude": [
+    "tests/",
+    "__init__.py",
+    "build_principles.py"
+  ],
+  "source": ["scripts"]
+}

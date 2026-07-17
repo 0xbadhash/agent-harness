@@ -757,6 +757,8 @@ def main(argv: list[str] | None = None) -> int:
 
     plugin = _load_plugin(ROOT)
     product_id = str(plugin.get("product_id") or ROOT.name)
+    if product_id in ("product", "my-product", "example-api", "example"):
+        product_id = ROOT.name
     when = _now()
     mode = "quick" if args.quick else ("full-no-live" if args.skip_live else "full")
     results = run_gates(quick=args.quick, skip_live=args.skip_live, plugin=plugin)

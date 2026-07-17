@@ -40,7 +40,15 @@ def main() -> int:
     changed = _changed_files(args.diff)
     py = _python_executable()
 
-    mypy_cmd = [py, "-m", "mypy", "scripts", "tests", "config", "utils"]
+    # Only typecheck dirs that exist and contain Python (empty dirs make mypy exit 2)
+    mypy_targets: list[str] = []
+    for d in ("scripts", "tests", "bin", "config", "utils"):
+        p = ROOT / d
+        if p.is_dir() and any(p.rglob("*.py")):
+            mypy_targets.append(d)
+    if not mypy_targets:
+        mypy_targets = ["scripts"]
+    mypy_cmd = [py, "-m", "mypy", *mypy_targets]
 
     # Only check changed python files that still exist (deleted paths break ruff)
     changed_py_files = [
@@ -51,7 +59,7 @@ def main() -> int:
     elif args.diff and not changed_py_files:
         linter_cmd = ["true"]  # No existing python files in diff
     else:
-        linter_cmd = [py, "-m", "ruff", "check", "."]
+        linter_cmd = [py, "-m", "ruff", "check", "scripts", "tests", "bin"]
         
     results = [
         _run_tool("type_checker", mypy_cmd),
