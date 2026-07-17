@@ -34,7 +34,7 @@ python3 scripts/night_shift_readiness.py \
 
 Flags: `--quick` · `--skip-live` · `--dry-run` · `--root <path>` (when invoking harness SoT copy)
 
-Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate full, product_smoke, optional security, optional live probes from `product_plugin.night_shift`.
+Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate full, product_smoke, **coverage** (`check_module_coverage.py --run --soft-if-missing`), optional security, optional live probes from `product_plugin.night_shift`.
 
 **Vault (per product_plugin.vault.project_label):**
 
@@ -89,7 +89,10 @@ night_shift:
   live_path: "migration/watchlist.php"
   live_urls: []                 # full URLs to probe for HTTP 200
   live_expect_code: "200"
+  coverage_soft: "1"            # "0" = fail hard if coverage tooling missing
 ```
+
+Coverage config (product or harness): `config/coverage_config.json` (see `config/coverage_config.example.json`).
 
 ## Related
 

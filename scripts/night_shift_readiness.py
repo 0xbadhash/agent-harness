@@ -250,6 +250,20 @@ def run_gates(
             )
         )
 
+    # ORCH-P3b: real coverage thresholds (soft skip if pytest-cov not installed)
+    if (SCRIPTS / "check_module_coverage.py").is_file():
+        cov_args = ["--run", "--soft-if-missing"]
+        ns = plugin.get("night_shift") or {}
+        if str(ns.get("coverage_soft", "1")).lower() in ("0", "false", "no"):
+            cov_args = ["--run"]
+        results.append(
+            _run(
+                "coverage",
+                [py, str(SCRIPTS / "check_module_coverage.py"), *cov_args],
+                timeout=900,
+            )
+        )
+
     # Optional security pytest files if present
     sec_py = [
         p
@@ -419,6 +433,13 @@ def recommendations_from(
             recs.append(f"[{product_id}] Hardcode scan failed — remove secrets/absolute paths.")
         elif name == "repo_hygiene":
             recs.append(f"[{product_id}] Repo hygiene failed — MagicMock/TODO policy.")
+        elif name == "coverage":
+            recs.append(
+                f"[{product_id}] Coverage thresholds failed — "
+                f"`python3 scripts/check_module_coverage.py --run` "
+                f"or `tools/bin/lint_and_test.sh --coverage`; adjust "
+                f"config/coverage_config.json fail_under/modules."
+            )
         else:
             recs.append(
                 f"[{product_id}] Investigate failed gate `{name}` (exit {r.get('exit')})."

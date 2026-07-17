@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .venv/
+
+# Local install / generated (harness is SoT at skills/ and scripts/)
+.agents/

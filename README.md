@@ -133,6 +133,7 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 | `/spec` | Constitution + interview + clarify → spec (+ optional plan/tickets) + roadmap OPEN |
 | `/execute_dev` | One task, **TDD mandatory**, single sub-task |
 | `/anti_slop_design` | UI/UX design law (pols.dev): confirm, build without AI slop, pre-ship audit |
+| `/night_shift` | Overnight readiness: test matrix, smoke, security, optional live probes; vault TODO only — **no** auto-ship |
 | `/cross_review` | Security · maintainability · domain personas |
 | `/pr_review` | Deterministic compliance score (≥95) |
 | `/release_mgmt` | Smoke (from plugin), version, tag |

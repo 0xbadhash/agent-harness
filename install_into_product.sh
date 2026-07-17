@@ -14,7 +14,8 @@ mkdir -p \
   "$PRODUCT_ROOT/.agents/artifacts" \
   "$PRODUCT_ROOT/.agents/skills" \
   "$PRODUCT_ROOT/.agents/policy" \
-  "$PRODUCT_ROOT/scripts"
+  "$PRODUCT_ROOT/scripts" \
+  "$PRODUCT_ROOT/tools/bin"
 
 if [[ ! -f "$PRODUCT_ROOT/.agents/state/pipeline.json" ]]; then
   cp -a "$HARNESS_ROOT/templates/pipeline.json" "$PRODUCT_ROOT/.agents/state/pipeline.json"
@@ -31,6 +32,11 @@ echo "  ~ scripts/"
 rsync -a "$HARNESS_ROOT/policy/" "$PRODUCT_ROOT/.agents/policy/"
 echo "  ~ .agents/policy/"
 
+if [[ -d "$HARNESS_ROOT/tools" ]]; then
+  rsync -a "$HARNESS_ROOT/tools/" "$PRODUCT_ROOT/tools/"
+  chmod +x "$PRODUCT_ROOT/tools/bin/"*.sh 2>/dev/null || true
+  echo "  ~ tools/ (lint_and_test etc.)"
+fi
 if [[ ! -f "$PRODUCT_ROOT/.agents/product_plugin.yaml" ]]; then
   cp -a "$HARNESS_ROOT/product_plugin.example.yaml" "$PRODUCT_ROOT/.agents/product_plugin.yaml"
   echo "  + product_plugin.yaml (edit me)"

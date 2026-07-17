@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- **`/night_shift`** (finished feature): multi-product overnight readiness SoT.
+  - Skill `skills/night_shift/`, `scripts/night_shift_readiness.py`, `scripts/check_test_matrix.py`
+  - Orchestrator `bin/night_shift_all_products.py` + `config/night_shift_products.yaml`
+  - systemd `deploy/night-shift-all.{service,timer}` — **03:15 HKT** (19:15 UTC)
+  - Vault: per-product `TODO.md` + `night-shift-log.md`; multi summary under `harness-night-shift/`
+  - Coverage gate (ORCH-P3b): `check_module_coverage.py` + example config; soft-if-missing for night runs
+  - `tools/bin/lint_and_test.sh` installed into products via `install_into_product.sh`
+  - Hard-stops: no auto-ship, no auto product code fixes
 - **`/anti_slop_design`** skill: full [pols.dev anti-slop design law](https://pols.dev/slop.md) as a harness skill (`skills/anti_slop_design/`). Mandatory confirm → build → point-by-point pre-ship re-check for any UI work. Law body + `references/slop.md` mirror.
 
 ### Changed
