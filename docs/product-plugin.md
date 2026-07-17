@@ -90,6 +90,7 @@ Used only by `scripts/night_shift_readiness.py`. Full schedule, gates, and syste
 - [ ] `product_path_prefixes` match real source roots  
 - [ ] Vault filled or clearly empty/optional  
 - [ ] Product-only skills listed if any  
+- [ ] If using `/night_shift`: `night_shift` knobs + optional `TEST_MATRIX.md` (see [night-shift.md](night-shift.md))  
 
 ## Related
 

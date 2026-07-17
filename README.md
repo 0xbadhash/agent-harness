@@ -119,6 +119,7 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 | [docs/product-plugin.md](docs/product-plugin.md) | Stack, smoke, vault (bootstrap choices) |
 | [docs/ship-flow.md](docs/ship-flow.md) | FSM, phases, artifacts |
 | [docs/skills-catalog.md](docs/skills-catalog.md) | Each skill: purpose, when to fire |
+| [docs/night-shift.md](docs/night-shift.md) | Overnight readiness, gates, systemd 03:15 HKT, hard-stops |
 | [docs/tdd.md](docs/tdd.md) | How `/execute_dev` enforces red→green |
 | [docs/writing-skills.md](docs/writing-skills.md) | How to add a skill (Pocock-style minimal) |
 | [docs/security.md](docs/security.md) | Third-party skills & secrets |
@@ -133,7 +134,7 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 | `/spec` | Constitution + interview + clarify → spec (+ optional plan/tickets) + roadmap OPEN |
 | `/execute_dev` | One task, **TDD mandatory**, single sub-task |
 | `/anti_slop_design` | UI/UX design law (pols.dev): confirm, build without AI slop, pre-ship audit |
-| `/night_shift` | Overnight readiness: test matrix, smoke, security, optional live probes; vault TODO only — **no** auto-ship |
+| `/night_shift` | Overnight readiness (matrix, smoke, coverage, live); vault TODO; **no** auto-ship — [docs/night-shift.md](docs/night-shift.md) |
 | `/cross_review` | Security · maintainability · domain personas |
 | `/pr_review` | Deterministic compliance score (≥95) |
 | `/release_mgmt` | Smoke (from plugin), version, tag |
