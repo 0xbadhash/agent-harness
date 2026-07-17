@@ -10,6 +10,7 @@ Writes (per product root):
   - .agents/artifacts/NIGHT_SHIFT_TODO.md
   - vault 01-Projects/<project_label>/night-shift-log.md
   - vault 01-Projects/<project_label>/TODO.md
+  - vault agent-tasks/kanban.md Done note when overall PASS (auto:night_shift_readiness)
   - optional vault ad-hoc note via sync_vault_devlog.py when present
 
 Exit 0 = all gates pass; 1 = one or more failures (still writes reports).
@@ -31,6 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 ARTIFACTS = ROOT / ".agents" / "artifacts"
 DEFAULT_VAULT = Path("/opt/second-brain/vault")
+KANBAN_AUTO_MARKER = "auto:night_shift_readiness"
 
 
 def _now() -> datetime:
@@ -242,11 +244,16 @@ def run_gates(
         return results
 
     if (SCRIPTS / "validate.py").is_file():
+        ns = plugin.get("night_shift") or {}
+        vmode = str(ns.get("validate_mode") or "full").strip().lower()
+        if vmode not in {"full", "night", "hygiene"}:
+            vmode = "full"
         results.append(
             _run(
                 "validate_full",
-                [py, str(SCRIPTS / "validate.py"), "full"],
-                timeout=600,
+                [py, str(SCRIPTS / "validate.py"), vmode],
+                # Large products (e.g. ocr-ledger full mypy+pytest cov) need >10m
+                timeout=int(ns.get("validate_timeout", 1800 if vmode == "full" else 300)),
             )
         )
     if (SCRIPTS / "product_smoke.py").is_file():
@@ -544,6 +551,109 @@ def build_todo_md(
     return "\n".join(lines)
 
 
+def _gate_summary(results: list[dict[str, Any]]) -> str:
+    passed = sum(1 for r in results if r.get("ok"))
+    total = len(results)
+    names = ",".join(r.get("name", "?") for r in results if r.get("ok"))
+    if len(names) > 120:
+        names = names[:117] + "..."
+    return f"{passed}/{total}" + (f" {names}" if names else "")
+
+
+def upsert_kanban_readiness_done(
+    text: str,
+    *,
+    product_id: str,
+    overall: str,
+    when_iso: str,
+    gate_summary: str,
+) -> tuple[str, str]:
+    """Insert or refresh a Done card for night_shift PASS. Pure (no I/O).
+
+    Returns (new_text, message). Unchanged text when overall != PASS.
+    """
+    if overall != "PASS":
+        return text, "kanban: skip (not PASS)"
+
+    day = when_iso[:10] if when_iso else _now().strftime("%Y-%m-%d")
+    card_id = f"T-NS-{product_id}-{day.replace('-', '')}"
+    # Stable product-scoped id without date for single refreshable card
+    stable_title = f"Night shift readiness PASS ({product_id})"
+    notes_line = (
+        f"  - notes: {KANBAN_AUTO_MARKER} @ {when_iso} · {gate_summary} · "
+        f"see `01-Projects/{product_id}/TODO.md`"
+    )
+    card_body = (
+        f"- [x] **{card_id}** — {stable_title} ({day})\n"
+        f"{notes_line}\n"
+        f"  - links: `01-Projects/{product_id}/TODO.md` | "
+        f"`01-Projects/{product_id}/night-shift-log.md` | skill `night_shift`\n"
+    )
+
+    # Refresh existing auto card (any id) by marker in notes
+    if KANBAN_AUTO_MARKER in text:
+        # Replace from list item containing marker back to previous list item or section
+        pattern = re.compile(
+            r"- \[[ xX]\] \*\*T-[^*]+\*\* — [^\n]*\n"
+            r"(?:  - [^\n]*\n)*?"
+            rf"  - notes: {re.escape(KANBAN_AUTO_MARKER)}[^\n]*\n"
+            r"(?:  - [^\n]*\n)*",
+            re.MULTILINE,
+        )
+        if pattern.search(text):
+            new_text = pattern.sub(card_body, text, count=1)
+            return new_text, "kanban: refresh readiness Done note"
+        # Marker present but odd shape — fall through to insert
+
+    # Insert under ## Done (after heading / comment block)
+    done_m = re.search(r"(## Done\n(?:<!--[^\n]*-->\n)?\n?)", text)
+    if done_m:
+        insert_at = done_m.end()
+        new_text = text[:insert_at] + card_body + "\n" + text[insert_at:]
+        return new_text, "kanban: insert readiness Done note"
+    # No Done section — append
+    new_text = text.rstrip() + "\n\n## Done\n\n" + card_body
+    return new_text, "kanban: append Done section + readiness note"
+
+
+def sync_kanban_readiness_file(
+    vault: Path,
+    *,
+    product_id: str,
+    overall: str,
+    when: datetime,
+    results: list[dict[str, Any]],
+    dry_run: bool,
+) -> str:
+    """Write PASS readiness into vault agent-tasks/kanban.md Done note."""
+    kanban = vault / "agent-tasks" / "kanban.md"
+    if overall != "PASS":
+        return "kanban: skip (not PASS)"
+    if dry_run:
+        return f"kanban: dry-run would upsert {kanban}"
+    if not kanban.is_file():
+        return f"kanban: skip (missing {kanban})"
+    try:
+        original = kanban.read_text(encoding="utf-8")
+    except OSError as exc:
+        return f"kanban: skip (read {exc})"
+    when_iso = when.strftime("%Y-%m-%dT%H:%M:%SZ")
+    new_text, msg = upsert_kanban_readiness_done(
+        original,
+        product_id=product_id,
+        overall=overall,
+        when_iso=when_iso,
+        gate_summary=_gate_summary(results),
+    )
+    if new_text == original:
+        return msg
+    try:
+        kanban.write_text(new_text, encoding="utf-8")
+    except OSError as exc:
+        return f"kanban: skip (write {exc})"
+    return f"{msg} → {kanban}"
+
+
 def write_vault(
     vault: Path,
     project_rel: Path,
@@ -554,6 +664,7 @@ def write_vault(
     overall: str,
     product_id: str,
     dry_run: bool,
+    results: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     notes: list[str] = []
     if dry_run:
@@ -581,6 +692,17 @@ def write_vault(
         todo_path = proj / "TODO.md"
         todo_path.write_text(todo_md, encoding="utf-8")
         notes.append(f"vault TODO: {todo_path}")
+
+        notes.append(
+            sync_kanban_readiness_file(
+                vault,
+                product_id=product_id,
+                overall=overall,
+                when=when,
+                results=results or [],
+                dry_run=dry_run,
+            )
+        )
 
         devlog = SCRIPTS / "sync_vault_devlog.py"
         if devlog.is_file():
@@ -703,6 +825,7 @@ def main(argv: list[str] | None = None) -> int:
         overall=overall,
         product_id=product_id,
         dry_run=args.dry_run,
+        results=results,
     ):
         print(n)
 
