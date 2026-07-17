@@ -296,3 +296,34 @@ Full skill text: `skills/night_shift/SKILL.md`.
 - [Ship flow](ship-flow.md) (night_shift is **off** the ship FSM — readiness, not a phase)  
 - [Optional vault](second-brain-optional.md)  
 - [Source of truth](source-of-truth.md)  
+
+---
+
+## Vault log rotation (anti-spam)
+
+Append-only `night-shift-log.md` files accumulate FAIL history. After a product
+goes green, rotate so the live log is readable:
+
+```bash
+# From agent-harness SoT
+python3 scripts/rotate_night_shift_logs.py --vault "${PRODUCT_VAULT_ROOT:-/opt/second-brain/vault}"
+python3 scripts/rotate_night_shift_logs.py --vault ... --only agent-harness
+python3 scripts/rotate_night_shift_logs.py --vault ... --dry-run
+```
+
+Behavior:
+
+- **Latest PASS** + older FAIL chunks → archive full file under `_archive/`, rewrite with timeline + latest report
+- **Latest FAIL** → leave intact (still valid debt)
+- Rebuilds `01-Projects/harness-night-shift/SUMMARY.md`
+
+### Automate with the timer
+
+Add to `deploy/night-shift-all.service` after readiness (or a second oneshot):
+
+```bash
+# after bin/night_shift_all_products.py
+python3 %h/agent-harness/scripts/rotate_night_shift_logs.py --vault ${PRODUCT_VAULT_ROOT}
+```
+
+Or chain in `bin/night_shift_all_products.py` at end of successful multi-run.

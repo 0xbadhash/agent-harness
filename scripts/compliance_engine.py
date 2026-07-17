@@ -14,6 +14,41 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def _python_executable() -> str:
+    """Prefer a Python that can import mypy/ruff/pytest (product venv may be lean)."""
+    candidates: list[Path] = [
+        ROOT / ".venv" / "bin" / "python",
+        Path(sys.executable),
+    ]
+    # Optional shared tool venv (host may set TOOLS_VENV or use sibling watchlist)
+    for env_key in ("COMPLIANCE_PYTHON", "TOOLS_VENV"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            p = Path(raw)
+            if p.is_dir():
+                candidates.insert(0, p / "bin" / "python")
+            elif p.is_file():
+                candidates.insert(0, p)
+    home = Path.home()
+    candidates.extend(
+        [
+            home / "watchlist" / ".venv" / "bin" / "python",
+            home / "agent-harness" / ".venv" / "bin" / "python",
+        ]
+    )
+    seen: set[str] = set()
+    for cand in candidates:
+        s = str(cand)
+        if s in seen or not cand.is_file():
+            continue
+        seen.add(s)
+        r = subprocess.run(
+            [s, "-c", "import mypy, ruff, pytest"],
+            capture_output=True,
+            check=False,
+        )
+        if r.returncode == 0:
+            return s
+    # last resort: product venv or current interpreter
     venv_py = ROOT / ".venv" / "bin" / "python"
     if venv_py.is_file():
         return str(venv_py)

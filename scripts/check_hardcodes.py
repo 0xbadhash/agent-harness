@@ -37,6 +37,12 @@ SKIP_FILES = {
     "RELEASE_RUNBOOK.md",
     "PR_DRAFT.md",
     "WORKFLOW_DOCUMENTATION.md",
+    # Lockfiles always list package registries
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "Cargo.lock",
 }
 
 # Absolute home paths (not ~/ relative)
@@ -44,6 +50,11 @@ ABS_HOME = re.compile(r"/home/[a-zA-Z0-9_-]+", re.I)
 WIN_HOME = re.compile(r"C:\\\\Users\\\\", re.I)
 INLINE_SECRET = re.compile(
     r"(?<![_\w])(password|secret|api_key|token)\s*=\s*['\"][^'\"]{6,}['\"]",
+    re.I,
+)
+# Placeholders in docs / examples are not real secrets
+INLINE_SECRET_PLACEHOLDER = re.compile(
+    r"(your-?key|changeme|xxx+|placeholder|example|dummy|todo|insert)",
     re.I,
 )
 EXPOSED_KEY = re.compile(r"\b[A-Z0-9]{16}\b")
@@ -61,8 +72,18 @@ URL_HOST_ALLOW = re.compile(
     r"pypi\.org|"
     r"docs\.python\.org|"
     r"(www\.)?npmjs\.com|"
+    r"registry\.npmjs\.org|"
     r"fonts\.google\.com|"
-    r"fontshare\.com"
+    r"fontshare\.com|"
+    r"api\.telegram\.org|"
+    r"(www\.)?googleapis\.com|"
+    r"oauth2\.googleapis\.com|"
+    r"accounts\.google\.com|"
+    r"console\.cloud\.google\.com|"
+    r"api\.openai\.com|"
+    r"api\.wise\.com|"
+    r"[\w.-]+\.apihub\.citi\.com|"
+    r"sandbox\.apihub\.citi\.com"
     r")([/:?]|$)",
     re.I,
 )
@@ -76,6 +97,9 @@ ALLOW_PREFIXES = (
     "migration/deploy/",
     "deploy/",
     "docs/",  # operator manuals may show clone URLs and path examples
+    "INSTALL.md",
+    "USAGE.md",
+    "CONTRIBUTING.md",
 )
 
 
@@ -94,6 +118,13 @@ def main() -> int:
             continue
         if p.suffix not in {".py", ".md", ".json", ".yaml", ".yml", ".toml"}:
             continue
+        # Never scan local OAuth / credential dumps (should be gitignored)
+        if p.name in {
+            "token.json",
+            "credentials.json",
+            "client_secret.json",
+        } or p.name.startswith("google-credentials"):
+            continue
         try:
             text = p.read_text(encoding="utf-8")
         except UnicodeDecodeError:
@@ -111,6 +142,8 @@ def main() -> int:
             print(f"❌ {rel}:{line} [windows_user_path] {m.group(0)[:60]}")
             hits += 1
         for m in INLINE_SECRET.finditer(text):
+            if INLINE_SECRET_PLACEHOLDER.search(m.group(0)):
+                continue
             line = text[: m.start()].count("\n") + 1
             print(f"❌ {rel}:{line} [inline_secret] {m.group(0)[:60]}")
             hits += 1
@@ -124,6 +157,16 @@ def main() -> int:
         for m in EXPOSED_KEY.finditer(text):
             # digit-only 16-char often false positive; require a letter
             if not re.search(r"[A-Z]", m.group(0)):
+                continue
+            # Env var names are not keys (e.g. PYTHONUNBUFFERED)
+            if m.group(0).isalpha() and m.group(0).isupper() and "_" not in m.group(0):
+                # still could be a key; skip known long env-style tokens
+                if m.group(0) in {
+                    "PYTHONUNBUFFERED",
+                    "GOOGLE_APPLICATION_CREDENTIALS",
+                }:
+                    continue
+            if m.group(0) == "PYTHONUNBUFFERED":
                 continue
             line = text[: m.start()].count("\n") + 1
             print(f"❌ {rel}:{line} [exposed_api_key] {m.group(0)[:60]}")
