@@ -65,6 +65,10 @@ DEV_LOG_HEADER = (
     f"# {_LABEL} dev log\n\n"
     "Newest first. Times: UTC + HKT. Writers: harness `sync_vault_devlog` only.\n\n"
     f"Agent-appended development notes ({_LABEL} → optional knowledge vault).\n\n"
+    "Two entry kinds (Option A — harness docs/dev-log.md):\n"
+    "- **Release** (`/sync_docs`): `## YYYY-MM-DD — vX.Y.Z synced` + When/Kind/Release/…\n"
+    "- **Note** (`--note`): `## YYYY-MM-DD — {title}` + When/Kind/Repo + bullets "
+    "(never `synced` / bare semver title)\n\n"
 )
 SHAPING_MAX = 3
 ROADMAP_PATH = ROOT / "BACKEND_ROADMAP.md"

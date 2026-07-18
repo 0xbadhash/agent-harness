@@ -1,30 +1,43 @@
-# PR Draft: night_shift dev-deps preflight
+# PR Draft — vault dev-log newest-first UTC+HKT
 
-## What Problem This Solves
-Nightly multi-product readiness FAILs from missing pytest when products lack .venv tooling.
+**Date:** 2026-07-18  
+**Task:** Spec 2026-07-18-vault-dev-log-standard — prepend + dual zone + night_shift dedupe  
+**Version target:** 1.3.2
 
-## Why This Change Was Made
-Preflight ensure_product_dev_env before each product readiness; create .venv + pip install -r requirements-dev.txt when needed (no sudo pip).
+## Summary
 
-## User Impact
-Fewer env FAIL false alarms at 03:15 HKT; real gate failures stay visible.
+- `sync_vault_devlog.py`: newest-first **prepend**, `**When:** UTC · HKT`, `**Kind:** release|note`
+- Night_shift notes: one per product per UTC day (marker without PASS/FAIL) unless `--force`
+- Tests: `tests/test_sync_vault_devlog_format.py`
+- Products reinstalled with same script; live agent-harness vault log updated
 
 ## Evidence
-```
-red_cmd: pytest tests/test_ensure_product_dev_env.py  # missing module
-green_cmd: pytest -q
-green_cmd: python3 scripts/product_smoke.py --root .
-```
 
-## Red-proof
-Tests failed on missing ensure_product_dev_env.py then passed after implementation.
+- pytest format tests + kanban tests green
+- `validate.py full` 4/4
+- Live prepend on `/opt/second-brain/vault/01-Projects/agent-harness/dev-log.md`
 
 ## Cross-review
-CROSS-REVIEW: blockers 0. Security: no sudo pip. Maintainability: pure helper + orchestrator wire. Domain: night_shift hard-stops unchanged.
+
+**Marker:** CROSS-REVIEW  
+**Blockers:** 0 · **Major:** 0 · **Nits:** 1
+
+### Security Guru
+- none — no secrets in log format; vault paths optional
+
+### Maintainability Expert
+- none — pure helpers unit-tested; append_entry aliases prepend
+- nit — historical vault rows remain old order until rewritten
+
+### Domain Specialist
+- none — Option A release vs note preserved; products thin
+
+### Obsolete / cleanup (scoped)
+- Tier C: old append-order history in vault (migrate-on-write / optional normalizer later)
 
 ## Things that look bad but are actually fine
-1. Auto-creating .venv is intentional for readiness hosts.
-2. Skip when no requirements-dev — readiness may still fail.
-3. Dual path load of helper (harness SoT or product scripts/).
-4. pip install network-dependent — timeout 600s.
-5. Report-only readiness still does not auto-fix product code.
+
+1. **History still chronological at bottom** — only new writes prepend; full reorder is out of scope for this ship.
+2. **Night_shift skip same day** — intentional dedupe; use `--force` to override.
+3. **HKT on entry when writer runs in UTC** — correct dual display for Obsidian operators.
+4. **Product copies of one script** — install_into_product pattern; SoT remains harness git.

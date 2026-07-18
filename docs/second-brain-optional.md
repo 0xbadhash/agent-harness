@@ -10,6 +10,9 @@ You already use a personal/team knowledge vault (e.g. second-brain) and want:
 - One place for **agent-harness** docs/skills/policies as SoT mirrors  
 - Release rows in `dev-log.md` after `/sync_docs`
 
+**`dev-log.md` shape is fixed (Option A)** — see **[dev-log.md](dev-log.md)**  
+(newest-first, UTC·HKT, release vs note; writer: `scripts/sync_vault_devlog.py`).
+
 ## How to enable (product)
 
 1. In the **product** `.agents/product_plugin.yaml`:
