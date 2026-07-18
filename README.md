@@ -1,5 +1,10 @@
 # agent-harness
 
+<!-- CURRENT_RELEASE -->
+**Current release:** `v1.3.0` (docs synced via `/sync_docs`)
+<!-- /CURRENT_RELEASE -->
+
+
 **Reusable agent workflows for shipping software.**  
 Not a framework. Not an app stack. A small set of **skills**, **scripts**, and **policy** you install into *any* product repo so the agent follows the same process every time.
 
