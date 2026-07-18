@@ -1,0 +1,47 @@
+product_id: agent-harness
+product_name: Agent Harness
+repo_root: .
+
+stack:
+  languages: [python]
+  package_manager: pip
+  test_runners: [pytest]
+  app_layout: scripts/, bin/, skills/
+
+product_roadmap: CHANGELOG.md
+harness_backlog: .agents/BACKLOG.md
+
+smoke:
+  - name: hardcodes
+    cmd: ["python3", "scripts/check_hardcodes.py"]
+    cwd: .
+  # Prefer COMPLIANCE_PYTHON / sibling watchlist venv when harness has no local .venv
+  - name: unit
+    cmd: ["bash", "-c", "PY=\"${COMPLIANCE_PYTHON:-}\"; if [ -z \"$PY\" ] && [ -x \"$HOME/watchlist/.venv/bin/python\" ]; then PY=\"$HOME/watchlist/.venv/bin/python\"; elif [ -x .venv/bin/python ]; then PY=.venv/bin/python; else PY=python3; fi; exec \"$PY\" -m pytest -q"]
+    cwd: .
+
+vault:
+  enabled: true
+  root_env: PRODUCT_VAULT_ROOT
+  default_root: ""
+  project_label: agent-harness
+  dev_log_rel: 01-Projects/agent-harness/dev-log.md
+  mirror_docs: []
+
+product_path_prefixes:
+  - scripts/
+  - bin/
+  - skills/
+
+domain_review_hints:
+  - portable harness (no host-only defaults)
+  - no secret leakage
+
+night_shift:
+  default_host: ""
+  live_path: ""
+  live_urls: []
+  live_expect_code: "200"
+  coverage_soft: "1"
+
+product_skills: []
