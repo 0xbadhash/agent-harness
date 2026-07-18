@@ -94,17 +94,49 @@ def main() -> int:
     elif args.diff and not changed_py_files:
         linter_cmd = ["true"]  # No existing python files in diff
     else:
-        linter_cmd = [py, "-m", "ruff", "check", "scripts", "tests", "bin"]
-        
+        # Only dirs that exist (many products have no bin/; ruff E902 on missing path)
+        lint_dirs = [
+            d
+            for d in ("scripts", "tests", "bin", "email_detach", "src", "lib")
+            if (ROOT / d).is_dir()
+        ]
+        linter_cmd = [py, "-m", "ruff", "check", *(lint_dirs or ["."])]
+
     results = [
         _run_tool("type_checker", mypy_cmd),
         _run_tool("linter", linter_cmd),
-        _run_tool(
-            "test_runner",
-            [py, "-m", "pytest", "-q"],
-            env={**os.environ, "PYTHONPATH": str(ROOT)},
-        ),
     ]
+
+    # Skip pytest when the product has no test suite (pytest exit 5 = no tests collected)
+    has_py_tests = any(
+        (ROOT / d).is_dir() and any((ROOT / d).rglob("test_*.py"))
+        for d in ("tests", "test")
+    ) or any(ROOT.glob("test_*.py"))
+    if has_py_tests:
+        results.append(
+            _run_tool(
+                "test_runner",
+                [py, "-m", "pytest", "-q"],
+                env={**os.environ, "PYTHONPATH": str(ROOT)},
+            )
+        )
+    else:
+        results.append(
+            {
+                "tool": "test_runner",
+                "exit": 0,
+                "stdout": "no python tests found — skipped",
+                "stderr": "",
+            }
+        )
+
+    # Pytest exit 5 (no tests collected) is not a failure for products without a suite
+    for r in results:
+        if r.get("tool") == "test_runner" and r.get("exit") == 5:
+            out = (r.get("stdout") or "") + (r.get("stderr") or "")
+            if "no tests" in out.lower() or "collected 0" in out.lower():
+                r["exit"] = 0
+                r["stdout"] = (r.get("stdout") or "") + "\n(treated as skip: no tests)"
 
     ok = all(r["exit"] == 0 for r in results)
     report = {

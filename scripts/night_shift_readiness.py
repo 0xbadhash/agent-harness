@@ -285,7 +285,8 @@ def run_gates(
             cov_args.append("--soft-if-missing")
         # Prefer existing coverage.json when not forcing a long pytest run
         if not do_run and (ROOT / "coverage.json").is_file():
-            cov_args.extend(["--json-report", str(ROOT / "coverage.json")])
+            # check_module_coverage uses --json-out (not pytest's --json-report)
+            cov_args.extend(["--json-out", str(ROOT / "coverage.json")])
         results.append(
             _run(
                 "coverage",

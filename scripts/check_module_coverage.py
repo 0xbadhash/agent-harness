@@ -191,7 +191,17 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_JSON,
         help="Where --run writes coverage.json",
     )
+    # Alias used by older night_shift callers
+    ap.add_argument(
+        "--json-report",
+        type=Path,
+        default=None,
+        dest="json_report_alias",
+        help=argparse.SUPPRESS,
+    )
     args = ap.parse_args(argv)
+    if getattr(args, "json_report_alias", None) is not None:
+        args.json_out = args.json_report_alias
 
     try:
         cfg = load_cfg(args.config)
