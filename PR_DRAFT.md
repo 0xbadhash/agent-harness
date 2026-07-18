@@ -31,7 +31,18 @@ green_cmd: python3 scripts/product_smoke.py --root .
 
 ## Cross-review
 
-_Pending /cross_review_
+CROSS-REVIEW evidence: `.agents/artifacts/CROSS_REVIEW.md` (2026-07-18).
+
+| Severity | Count |
+|----------|------:|
+| blocker | 0 |
+| major | 0 |
+| nit | 3 |
+
+### Obsolete / cleanup (scoped)
+
+Tier A: 0 — inline prepend replaced by shared module.
+
 
 ## Things that look bad but are actually fine
 
