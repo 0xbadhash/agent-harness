@@ -30,6 +30,7 @@ vault:
   root_env: PRODUCT_VAULT_ROOT   # set this env var when enabled
   default_root: ""               # leave empty in committed examples
   project_label: my-product
+  # Option A path — see docs/dev-log.md (newest-first, UTC·HKT, release vs note)
   dev_log_rel: 01-Projects/my-product/dev-log.md
   # optional allowlist of repo-relative docs; empty → product discovery defaults
   mirror_docs: []

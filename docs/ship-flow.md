@@ -61,8 +61,8 @@ Implementers fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` before `/pr_review`
 | `.agents/artifacts/CROSS_REVIEW.md` | cross_review |
 | `.agents/artifacts/INFRA_RUNBOOK.md` | product infra skill |
 | `RELEASE_RUNBOOK.md` | release_mgmt |
-| Vault release block | sync_docs (`sync_vault_devlog.py` without `--note`) |
-| Vault ad-hoc note | any task (`--note`; never `synced` in title) |
+| Vault release block | sync_docs (`sync_vault_devlog.py` without `--note`) — shape: **[dev-log.md](dev-log.md)** |
+| Vault ad-hoc note | any task (`--note`; never `synced` in title) — same Option A standard |
 
 ## Soft gates
 

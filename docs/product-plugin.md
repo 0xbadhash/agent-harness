@@ -30,10 +30,12 @@ smoke:
     cwd: .
 
 vault:
+  enabled: false            # true when PRODUCT_VAULT_ROOT is set on the machine
   root_env: PRODUCT_VAULT_ROOT
   default_root: ""          # empty = vault optional / skip
-  dev_log_rel: 01-Projects/example-api/dev-log.md
   project_label: example-api
+  # Path relative to vault root — must match Option A layout (docs/dev-log.md)
+  dev_log_rel: 01-Projects/example-api/dev-log.md
 
 product_path_prefixes:
   - cmd/
@@ -58,7 +60,7 @@ product_skills:
 | `stack` | recommended | Free-form metadata for agents (not executed) |
 | `smoke` | yes for release | List of `{name, cmd[], cwd?}` — **executed** at release |
 | `product_path_prefixes` | recommended | Paths that count as product code for large-diff heuristics |
-| `vault` | no | Second-brain / release note location |
+| `vault` | no | Second-brain / release note location; `dev_log_rel` + `project_label` required when enabled — [dev-log.md](dev-log.md) |
 | `domain_review_hints` | no | Domain persona cues for `/cross_review` |
 | `product_skills` | no | Names of skills that live only in the product |
 | `night_shift` | no | Optional live probes + coverage softness for `/night_shift` — [night-shift.md](night-shift.md) |

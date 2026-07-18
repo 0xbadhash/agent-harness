@@ -69,7 +69,7 @@ DEV_LOG_HEADER = (
     "- **Release** (`/sync_docs`): `## YYYY-MM-DD — vX.Y.Z synced` + When/Kind/Release/…\n"
     "- **Note** (`--note`): `## YYYY-MM-DD — {title}` + When/Kind/Repo + bullets "
     "(never `synced` / bare semver title)\n\n"
-)
+)  # keep in sync with ensure_dev_log.standard_header
 SHAPING_MAX = 3
 ROADMAP_PATH = ROOT / "BACKEND_ROADMAP.md"
 WORKFLOW_PATH = ROOT / "WORKFLOW_DOCUMENTATION.md"

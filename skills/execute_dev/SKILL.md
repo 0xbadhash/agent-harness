@@ -49,7 +49,8 @@ When invoked with `/execute_dev`:
    - `scripts/pipeline_state set-phase ready_for_review --score <X>`
    - **Optional notes vault (unless ephemeral):**  
      `python3 scripts/sync_vault_devlog.py --note "<task title>" --bullet "…"`  
-     Never raw-append; never hand-write a release `… synced` block (that is `/sync_docs` only).
+     Never raw-append; never hand-write a release `… synced` block (that is `/sync_docs` only).  
+     Shape SoT: harness **`docs/dev-log.md`** (Option A: newest-first, UTC·HKT, release vs note).
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
    - Output: `📦 READY FOR REVIEW. Prefer /cross_review then /pr_review --validate` + vault status  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")
