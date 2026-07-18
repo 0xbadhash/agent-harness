@@ -20,6 +20,8 @@ import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
 
 def format_when_dual(when: datetime | None = None) -> str:
     when = when or datetime.now(timezone.utc)
@@ -34,7 +36,6 @@ def format_when_dual(when: datetime | None = None) -> str:
     except Exception:
         hkt_s = when.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M HKT")
     return f"{utc_s} · {hkt_s}"
-from pathlib import Path
 
 HARNESS_ROOT = Path(__file__).resolve().parent.parent
 # Prefer env; fall back next to harness sibling dirs under $HOME (no /home/<user> literals).
