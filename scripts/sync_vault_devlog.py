@@ -63,12 +63,14 @@ DEV_LOG_REL = _dev_log_rel()
 _LABEL = _project_label()
 DEV_LOG_HEADER = (
     f"# {_LABEL} dev log\n\n"
+    "Newest first. Times: UTC + HKT. Writers: harness `sync_vault_devlog` only.\n\n"
     f"Agent-appended development notes ({_LABEL} → optional knowledge vault).\n\n"
 )
 SHAPING_MAX = 3
 ROADMAP_PATH = ROOT / "BACKEND_ROADMAP.md"
 WORKFLOW_PATH = ROOT / "WORKFLOW_DOCUMENTATION.md"
 RUNBOOK_PATH = ROOT / "RELEASE_RUNBOOK.md"
+HKT_ZONE = "Asia/Hong_Kong"
 
 
 def _git_tag() -> str:
@@ -314,6 +316,89 @@ def _pipeline_task(path: Path) -> str:
     return str(data.get("task") or "")
 
 
+def _as_utc(when: datetime | None) -> datetime:
+    dt = when or datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def format_when_line(when: datetime | None = None) -> str:
+    """Dual-zone timestamp line for every dev-log entry."""
+    utc = _as_utc(when)
+    try:
+        from zoneinfo import ZoneInfo
+
+        hkt = utc.astimezone(ZoneInfo(HKT_ZONE))
+    except Exception:  # noqa: BLE001 — portable fallback UTC+8
+        from datetime import timedelta
+
+        hkt = utc + timedelta(hours=8)
+    return (
+        f"- **When:** {utc.strftime('%Y-%m-%d %H:%M')} UTC · "
+        f"{hkt.strftime('%Y-%m-%d %H:%M')} HKT"
+    )
+
+
+def split_header_and_rest(text: str) -> tuple[str, str]:
+    """Split file into preamble (before first ## entry) and rest."""
+    if not text:
+        return DEV_LOG_HEADER, ""
+    lines = text.splitlines(keepends=True)
+    cut = None
+    for i, line in enumerate(lines):
+        if line.startswith("## "):
+            cut = i
+            break
+    if cut is None:
+        header = text if text.endswith("\n") else text + "\n"
+        if not header.endswith("\n\n"):
+            header = header.rstrip("\n") + "\n\n"
+        return header, ""
+    header = "".join(lines[:cut])
+    rest = "".join(lines[cut:])
+    if header and not header.endswith("\n"):
+        header += "\n"
+    if header and not header.endswith("\n\n"):
+        header = header.rstrip("\n") + "\n\n"
+    return header, rest
+
+
+def _write_full(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.write_text(content, encoding="utf-8")
+    except PermissionError:
+        proc = subprocess.run(
+            ["sudo", "-u", "secondbrain", "tee", str(path)],
+            input=content.encode("utf-8"),
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise PermissionError(
+                f"cannot write {path}: {proc.stderr.decode(errors='replace')}".strip()
+            )
+
+
+def prepend_entry(dev_log: Path, content: str, *, init_header: bool = True) -> None:
+    """Insert entry after file header (newest-first). Content should end with newline."""
+    body = content if content.endswith("\n") else content + "\n"
+    if init_header and (not dev_log.is_file() or dev_log.stat().st_size == 0):
+        _write_full(dev_log, DEV_LOG_HEADER + body)
+        return
+    existing = ""
+    if dev_log.is_file():
+        try:
+            existing = dev_log.read_text(encoding="utf-8")
+        except OSError:
+            existing = ""
+    header, rest = split_header_and_rest(existing if existing else DEV_LOG_HEADER)
+    if not header.strip():
+        header = DEV_LOG_HEADER
+    _write_full(dev_log, header + body + ("\n" if body and rest and not body.endswith("\n\n") else "") + rest)
+
+
 def build_entry(
     *,
     tag: str,
@@ -323,7 +408,8 @@ def build_entry(
     shaping: list[str] | None = None,
     synced_at: datetime | None = None,
 ) -> str:
-    when = (synced_at or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
+    now = _as_utc(synced_at)
+    day = now.strftime("%Y-%m-%d")
     version = runbook.get("version") or tag
     if version == "unknown" and tag != "unknown":
         version = tag
@@ -332,8 +418,10 @@ def build_entry(
     shaping_line = format_shaping_line(shaping if shaping is not None else [])
 
     lines = [
-        f"## {when} — {version} synced",
+        f"## {day} — {version} synced",
         "",
+        format_when_line(now),
+        "- **Kind:** release",
         f"- **Release:** `{version}` (tag `{tag}`)",
         f"- **Scope:** {scope}",
     ]
@@ -387,22 +475,22 @@ def _append_as_secondbrain(path: Path, content: str) -> None:
 
 
 def append_entry(dev_log: Path, content: str, *, init_header: bool = True) -> None:
-    if init_header and (not dev_log.is_file() or dev_log.stat().st_size == 0):
-        bootstrap = DEV_LOG_HEADER + content
-        try:
-            dev_log.parent.mkdir(parents=True, exist_ok=True)
-            dev_log.write_text(bootstrap, encoding="utf-8")
-            return
-        except PermissionError:
-            dev_log.parent.mkdir(parents=True, exist_ok=True)
-            _append_as_secondbrain(dev_log, bootstrap)
-            return
+    """Compat alias — all writers prepend (newest-first)."""
+    prepend_entry(dev_log, content, init_header=init_header)
 
-    try:
-        with dev_log.open("a", encoding="utf-8") as handle:
-            handle.write(content)
-    except PermissionError:
-        _append_as_secondbrain(dev_log, content)
+
+def night_shift_day_marker(
+    title: str,
+    *,
+    day: str,
+    product_id: str | None = None,
+) -> str | None:
+    """Stable marker for one night_shift note per product per UTC day (no PASS/FAIL)."""
+    t = (title or "").strip()
+    if not re.search(r"night\s*shift\s*readiness", t, re.I):
+        return None
+    label = product_id or _project_label()
+    return f"Night shift readiness {label} {day}"
 
 
 def build_note_entry(
@@ -417,6 +505,8 @@ def build_note_entry(
 
         ## YYYY-MM-DD — {short title}
 
+        - **When:** … UTC · … HKT
+        - **Kind:** note
         - **Repo**: {_project_label()}
         - bullet...
     """
@@ -434,10 +524,13 @@ def build_note_entry(
             "ad-hoc note title must not start with a semver release id "
             "(that shape is reserved for /sync_docs release entries)"
         )
-    day = (when or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
+    now = _as_utc(when)
+    day = now.strftime("%Y-%m-%d")
     lines = [
         f"## {day} — {t}",
         "",
+        format_when_line(now),
+        "- **Kind:** note",
         f"- **Repo**: {_project_label()}",
     ]
     for b in bullets or []:
@@ -459,14 +552,20 @@ def append_note(
     *,
     dry_run: bool = False,
     when: datetime | None = None,
-) -> tuple[Path, str]:
-    """Append an ad-hoc note to vault dev-log. Returns (dev_log, entry)."""
+    force: bool = False,
+) -> tuple[Path, str, bool]:
+    """Prepend an ad-hoc note. Returns (dev_log, entry, wrote)."""
     dev_log = vault_root / DEV_LOG_REL
-    entry = build_note_entry(title, bullets, when=when)
+    now = _as_utc(when)
+    day = now.strftime("%Y-%m-%d")
+    entry = build_note_entry(title, bullets, when=now)
+    ns_marker = night_shift_day_marker(title, day=day, product_id=_project_label())
     if dry_run:
-        return dev_log, entry
-    append_entry(dev_log, entry)
-    return dev_log, entry
+        return dev_log, entry, True
+    if ns_marker and not force and entry_exists(dev_log, ns_marker):
+        return dev_log, "", False
+    prepend_entry(dev_log, entry)
+    return dev_log, entry, True
 
 
 def sync_vault(
@@ -475,7 +574,7 @@ def sync_vault(
     dry_run: bool = False,
     force: bool = False,
 ) -> tuple[Path, str, bool]:
-    """Returns (dev_log_path, entry_text, appended)."""
+    """Returns (dev_log_path, entry_text, wrote). Newest-first prepend."""
     dev_log = vault_root / DEV_LOG_REL
     tag = _git_tag()
     runbook = _parse_release_runbook(RUNBOOK_PATH)
@@ -501,7 +600,7 @@ def sync_vault(
     if not force and entry_exists(dev_log, marker):
         return dev_log, "", False
 
-    append_entry(dev_log, entry)
+    prepend_entry(dev_log, entry)
     return dev_log, entry, True
 
 
@@ -548,11 +647,12 @@ def main() -> int:
     # --- Ad-hoc note path (Option A) ---
     if args.note:
         try:
-            dev_log, entry = append_note(
+            dev_log, entry, wrote = append_note(
                 vault,
                 args.note,
                 args.bullets or None,
                 dry_run=args.dry_run,
+                force=args.force,
             )
         except ValueError as exc:
             print(f"❌ note rejected: {exc}", file=sys.stderr)
@@ -563,7 +663,10 @@ def main() -> int:
         if args.dry_run:
             print(entry, end="" if entry.endswith("\n") else "\n")
             return 0
-        print(f"✅ vault note appended: {dev_log}")
+        if not wrote:
+            print(f"⏭️  vault note skipped (dedupe or exists): {dev_log}")
+            return 0
+        print(f"✅ vault note prepended (newest-first): {dev_log}")
         return 0
 
     try:

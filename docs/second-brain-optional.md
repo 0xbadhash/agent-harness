@@ -64,3 +64,11 @@ Details: [night-shift.md](night-shift.md). Still optional: missing vault → rep
 ## SoT reminder
 
 Even when vault sync is on, **edit skills/policies in agent-harness**, reinstall into products, then re-sync mirrors. See [[source-of-truth]] / `docs/source-of-truth.md`.
+
+## Vault dev-log contract
+
+- Path: `01-Projects/<project_label>/dev-log.md`
+- **Newest first** (prepend after header); oldest at bottom
+- Every entry: `**When:** … UTC · … HKT` and `**Kind:** release|note`
+- Writer: `scripts/sync_vault_devlog.py` only (release vs `--note`)
+- Night_shift: at most one readiness note per product per UTC day
