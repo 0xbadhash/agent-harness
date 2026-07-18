@@ -19,7 +19,21 @@ import argparse
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+def format_when_dual(when: datetime | None = None) -> str:
+    when = when or datetime.now(timezone.utc)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    else:
+        when = when.astimezone(timezone.utc)
+    utc_s = when.strftime("%Y-%m-%d %H:%M UTC")
+    try:
+        from zoneinfo import ZoneInfo
+        hkt_s = when.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y-%m-%d %H:%M HKT")
+    except Exception:
+        hkt_s = when.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M HKT")
+    return f"{utc_s} · {hkt_s}"
 from pathlib import Path
 
 HARNESS_ROOT = Path(__file__).resolve().parent.parent
@@ -130,7 +144,7 @@ def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) 
     total = len(rows)
     overall = "PASS" if passed == total else "FAIL"
     lines = [
-        f"# Multi-product night shift — {when.strftime('%Y-%m-%d %H:%M UTC')}",
+        f"# Multi-product night shift — {format_when_dual(when)}",
         "",
         f"**Overall:** {overall} ({passed}/{total} products)",
         "**Schedule:** 03:15 Asia/Hong_Kong (harness timer)",
@@ -185,21 +199,26 @@ def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) 
         proj.mkdir(parents=True, exist_ok=True)
         (proj / "SUMMARY.md").write_text(body, encoding="utf-8")
         notes.append(f"vault summary: {proj / 'SUMMARY.md'}")
-        log = proj / "log.md"
+        log = proj / "log.md"  # multi orchestrator log (newest first)
+        header = (
+            "# Multi-product night-shift log\n\n"
+            "Newest-first multi-product runs (harness SoT). Times: **UTC · HKT**.\n\n"
+        )
+        chunk = body.rstrip() + "\n\n---\n\n"
         if not log.is_file():
-            log.write_text(
-                "# Multi-product night-shift log\n\nHarness SoT orchestrator.\n\n",
-                encoding="utf-8",
-            )
-        with log.open("a", encoding="utf-8") as f:
-            f.write("\n---\n\n")
-            f.write(body)
+            log.write_text(header + chunk, encoding="utf-8")
+        else:
+            existing = log.read_text(encoding="utf-8", errors="replace")
+            marker = "# Multi-product night shift —"
+            idx = existing.find(marker)
+            bodies = existing[idx:] if idx >= 0 else existing
+            log.write_text(header + chunk + bodies.lstrip(), encoding="utf-8")
         notes.append(f"vault log: {log}")
         # cross-product TODO
         todo_lines = [
             "# All products TODO (night_shift multi)",
             "",
-            f"_Updated {when.strftime('%Y-%m-%d %H:%M UTC')} · **{overall}** ({passed}/{total})_",
+            f"_Updated **{format_when_dual(when)}** · **{overall}** ({passed}/{total})_",
             "",
             "## Products",
             "",
@@ -282,9 +301,10 @@ def main() -> int:
     # Rotate vault FAIL spam when latest is PASS; rebuild SUMMARY
     try:
         rot = HARNESS_ROOT / "scripts" / "rotate_night_shift_logs.py"
-        if rot.is_file() and not dry_run:
+        vault_path = args.vault.expanduser().resolve()
+        if rot.is_file() and not args.dry_run:
             subprocess.run(
-                [sys.executable, str(rot), "--vault", str(vault)],
+                [sys.executable, str(rot), "--vault", str(vault_path)],
                 cwd=str(HARNESS_ROOT),
                 check=False,
             )

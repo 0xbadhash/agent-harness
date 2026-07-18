@@ -74,7 +74,8 @@ def rotate_project(
     if not reports:
         return f"skip {project_dir.name}: no report chunks"
 
-    latest = reports[-1]
+    # Newest-first logs (after 2026-07-18): first chunk is latest; fall back to last
+    latest = reports[0]
     fails = [r for r in reports if r["overall"] == "FAIL"]
     passes = [r for r in reports if r["overall"] == "PASS"]
 
@@ -161,16 +162,24 @@ def rebuild_multi_summary(vault: Path, *, dry_run: bool) -> str:
         elif log.is_file():
             reps = _parse_reports(log.read_text(encoding="utf-8", errors="replace"))
             if reps:
-                overall = reps[-1]["overall"]
-                when = reps[-1]["when"]
+                overall = reps[0]["overall"]
+                when = reps[0]["when"]
         if overall == "?" and not todo.is_file() and not log.is_file():
             continue
         tag = "✅" if overall == "PASS" else ("❌" if overall == "FAIL" else "·")
         rows.append(f"| {d.name} | {tag} {overall} | {when} |")
 
+    now = datetime.now(timezone.utc)
+    try:
+        from zoneinfo import ZoneInfo
+        hkt = now.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y-%m-%d %H:%M HKT")
+    except Exception:
+        from datetime import timedelta
+        hkt = now.astimezone(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M HKT")
+    when_s = f"{now.strftime('%Y-%m-%d %H:%M UTC')} · {hkt}"
     body = f"""# Multi-product night-shift summary
 
-_Auto-rebuilt by `rotate_night_shift_logs.py` at {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}._
+_Auto-rebuilt by `rotate_night_shift_logs.py` at {when_s}._
 
 | Project | Latest | When |
 |---------|--------|------|

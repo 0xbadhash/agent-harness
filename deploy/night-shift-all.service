@@ -7,16 +7,13 @@ Wants=network-online.target
 Type=oneshot
 User=debian
 Group=debian
-# %h = home of User= (portable; no /home/<name> literals in unit text)
-WorkingDirectory=%h/agent-harness
+# Absolute path avoids %h CHDIR failures seen 2026-07-17 (status=200/CHDIR)
+WorkingDirectory=/home/debian/agent-harness
 Environment=PRODUCT_VAULT_ROOT=/opt/second-brain/vault
 Environment=WATCHLIST_VAULT_ROOT=/opt/second-brain/vault
-Environment=NIGHT_SHIFT_PRODUCTS_FILE=%h/agent-harness/config/night_shift_products.yaml
-# Prefer a product venv with pytest/mypy/ruff when present; else system PATH
-Environment=PATH=%h/watchlist/.venv/bin:%h/agent-harness/.venv/bin:/usr/local/bin:/usr/bin:/bin
-# Prefer harness venv python if installed; else system python3
-ExecStart=/bin/bash -c 'PY="%h/agent-harness/.venv/bin/python"; if [ ! -x "$PY" ]; then PY="%h/watchlist/.venv/bin/python"; fi; if [ ! -x "$PY" ]; then PY=/usr/bin/python3; fi; exec "$PY" %h/agent-harness/bin/night_shift_all_products.py'
-# Exit 1 = some product failed gates; still a completed overnight run
+Environment=NIGHT_SHIFT_PRODUCTS_FILE=/home/debian/agent-harness/config/night_shift_products.yaml
+Environment=PATH=/home/debian/watchlist/.venv/bin:/home/debian/agent-harness/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash -c 'PY="/home/debian/agent-harness/.venv/bin/python"; if [ ! -x "$PY" ]; then PY="/home/debian/watchlist/.venv/bin/python"; fi; if [ ! -x "$PY" ]; then PY=/usr/bin/python3; fi; exec "$PY" /home/debian/agent-harness/bin/night_shift_all_products.py'
 SuccessExitStatus=0 1
 
 [Install]

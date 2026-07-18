@@ -39,6 +39,47 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def format_when_dual(when: datetime | None = None) -> str:
+    """UTC + Asia/Hong_Kong wall times for operators."""
+    when = when or _now()
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    else:
+        when = when.astimezone(timezone.utc)
+    utc_s = when.strftime("%Y-%m-%d %H:%M UTC")
+    try:
+        from zoneinfo import ZoneInfo
+
+        hkt = when.astimezone(ZoneInfo("Asia/Hong_Kong"))
+        hkt_s = hkt.strftime("%Y-%m-%d %H:%M HKT")
+    except Exception:  # noqa: BLE001
+        # Fallback fixed offset UTC+8
+        from datetime import timedelta
+
+        hkt = when.astimezone(timezone(timedelta(hours=8)))
+        hkt_s = hkt.strftime("%Y-%m-%d %H:%M HKT")
+    return f"{utc_s} · {hkt_s}"
+
+
+def prepend_night_shift_log(log_path: Path, *, product_id: str, report_md: str) -> None:
+    """Write report at top of log (after short title) so latest is always first."""
+    header = (
+        f"# {product_id} night-shift log\n\n"
+        "Newest-first readiness reports (`/night_shift` harness SoT).\n"
+        "Each entry: **UTC · HKT**.\n\n"
+    )
+    chunk = report_md.rstrip() + "\n\n---\n\n"
+    if not log_path.is_file():
+        log_path.write_text(header + chunk, encoding="utf-8")
+        return
+    existing = log_path.read_text(encoding="utf-8", errors="replace")
+    # Drop old title/intro; keep report bodies (everything from first readiness header)
+    marker = "# Night shift readiness —"
+    idx = existing.find(marker)
+    bodies = existing[idx:] if idx >= 0 else existing
+    log_path.write_text(header + chunk + bodies.lstrip(), encoding="utf-8")
+
+
 def _run(
     name: str,
     cmd: list[str],
@@ -487,9 +528,11 @@ def build_report_md(
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
     overall = "PASS" if passed == total else "FAIL"
+    when_s = format_when_dual(when)
     lines = [
-        f"# Night shift readiness — {product_id} — {when.strftime('%Y-%m-%d %H:%M UTC')}",
+        f"# Night shift readiness — {product_id} — {when_s}",
         "",
+        f"**When:** {when_s}",
         f"**Overall:** {overall} ({passed}/{total} gates) · mode=`{mode}` · product=`{product_id}`",
         f"**Repo:** `{ROOT}`",
         "**Hard-stops:** no release, no push, no product auto-fix",
@@ -529,11 +572,12 @@ def build_todo_md(
     results: list[dict[str, Any]],
     product_id: str,
 ) -> str:
+    when_s = format_when_dual(when)
     lines = [
         f"# {product_id} TODO (night_shift readiness)",
         "",
         f"_Auto-updated by harness `night_shift_readiness.py` at "
-        f"{when.strftime('%Y-%m-%d %H:%M UTC')}. Overall: **{overall}**._",
+        f"**{when_s}**. Overall: **{overall}**._",
         "",
         "Do **not** hand-edit the auto section; add notes under **Human backlog**.",
         "",
@@ -683,17 +727,7 @@ def write_vault(
     try:
         proj.mkdir(parents=True, exist_ok=True)
         log_path = proj / "night-shift-log.md"
-        if not log_path.is_file():
-            log_path.write_text(
-                f"# {product_id} night-shift log\n\n"
-                "Append-only readiness reports from `/night_shift` (harness SoT).\n\n",
-                encoding="utf-8",
-            )
-        with log_path.open("a", encoding="utf-8") as f:
-            f.write("\n---\n\n")
-            f.write(report_md)
-            if not report_md.endswith("\n"):
-                f.write("\n")
+        prepend_night_shift_log(log_path, product_id=product_id, report_md=report_md)
         notes.append(f"vault log: {log_path}")
 
         todo_path = proj / "TODO.md"
