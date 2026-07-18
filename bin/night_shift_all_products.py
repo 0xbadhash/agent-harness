@@ -74,6 +74,15 @@ def _load_products(path: Path | None) -> list[tuple[str, Path]]:
     return rows or [(n, p) for n, p in DEFAULT_PRODUCTS if p.is_dir()]
 
 
+def _product_python(root: Path) -> str:
+    """Prefer product virtualenv so gates (e.g. pydantic) resolve correctly."""
+    for rel in (".venv/bin/python", "venv/bin/python", ".venv/bin/python3", "venv/bin/python3"):
+        p = root / rel
+        if p.is_file() and os.access(p, os.X_OK):
+            return str(p)
+    return sys.executable
+
+
 def run_one(
     name: str,
     root: Path,
@@ -84,13 +93,14 @@ def run_one(
     dry_run: bool,
 ) -> dict:
     script = root / "scripts" / "night_shift_readiness.py"
+    py = _product_python(root)
     # Prefer product copy; fall back to harness SoT with --root
     if script.is_file():
-        cmd = [sys.executable, str(script), "--vault", str(vault)]
+        cmd = [py, str(script), "--vault", str(vault)]
         cwd = root
     else:
         sot = HARNESS_ROOT / "scripts" / "night_shift_readiness.py"
-        cmd = [sys.executable, str(sot), "--root", str(root), "--vault", str(vault)]
+        cmd = [py, str(sot), "--root", str(root), "--vault", str(vault)]
         cwd = root
     if quick:
         cmd.append("--quick")
