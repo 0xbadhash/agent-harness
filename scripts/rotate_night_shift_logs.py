@@ -131,8 +131,19 @@ Append-only readiness reports from `/night_shift` (harness SoT).
         )
 
     archive_dir.mkdir(parents=True, exist_ok=True)
-    archive_path.write_text(text, encoding="utf-8")
-    log.write_text(new_text, encoding="utf-8")
+    try:
+        # Prefer group-writable archives (shared vault: secondbrain + operator)
+        archive_dir.chmod(archive_dir.stat().st_mode | 0o2770)
+    except OSError:
+        pass
+    try:
+        archive_path.write_text(text, encoding="utf-8")
+    except PermissionError as exc:
+        return f"fail {project_dir.name}: cannot write archive {archive_path.name}: {exc}"
+    try:
+        log.write_text(new_text, encoding="utf-8")
+    except PermissionError as exc:
+        return f"fail {project_dir.name}: cannot rewrite log: {exc}"
     return (
         f"rotated {project_dir.name}: archived {len(reports)} reports "
         f"({len(fails)} FAIL / {len(passes)} PASS) → {archive_path.name}"
