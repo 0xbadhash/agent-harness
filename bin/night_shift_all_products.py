@@ -84,6 +84,35 @@ def _product_python(root: Path) -> str:
     return sys.executable
 
 
+def _preflight_dev_env(root: Path, *, dry_run: bool) -> dict:
+    """Ensure product .venv + requirements-dev when present (no sudo pip)."""
+    helper = HARNESS_ROOT / "scripts" / "ensure_product_dev_env.py"
+    if not helper.is_file():
+        # Product install may carry a copy under scripts/
+        helper = root / "scripts" / "ensure_product_dev_env.py"
+    if not helper.is_file():
+        return {
+            "ok": True,
+            "status": "skip",
+            "message": "ensure_product_dev_env.py missing",
+            "python": _product_python(root),
+        }
+    # Import by path so harness SoT works without install
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("ensure_product_dev_env", helper)
+    if not spec or not spec.loader:
+        return {
+            "ok": False,
+            "status": "fail",
+            "message": "cannot load ensure_product_dev_env",
+            "python": _product_python(root),
+        }
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.ensure_product_dev_env(root, dry_run=dry_run)
+
+
 def run_one(
     name: str,
     root: Path,
@@ -93,8 +122,19 @@ def run_one(
     skip_live: bool,
     dry_run: bool,
 ) -> dict:
+    pre = _preflight_dev_env(root, dry_run=dry_run)
+    if not pre.get("ok"):
+        return {
+            "name": name,
+            "root": str(root),
+            "exit": 1,
+            "ok": False,
+            "tail": f"preflight FAIL: {pre.get('status')}: {pre.get('message')}",
+            "preflight": pre,
+        }
+
     script = root / "scripts" / "night_shift_readiness.py"
-    py = _product_python(root)
+    py = pre.get("python") or _product_python(root)
     # Prefer product copy; fall back to harness SoT with --root
     if script.is_file():
         cmd = [py, str(script), "--vault", str(vault)]
@@ -130,6 +170,7 @@ def run_one(
             "exit": r.returncode,
             "ok": r.returncode == 0,
             "tail": out[-2000:],
+            "preflight": pre,
         }
     except subprocess.TimeoutExpired:
         return {
@@ -138,6 +179,7 @@ def run_one(
             "exit": 124,
             "ok": False,
             "tail": "timeout 3600s",
+            "preflight": pre,
         }
     except Exception as exc:  # noqa: BLE001
         return {
@@ -146,6 +188,7 @@ def run_one(
             "exit": 1,
             "ok": False,
             "tail": str(exc),
+            "preflight": pre,
         }
 
 
@@ -299,6 +342,9 @@ def main() -> int:
             dry_run=args.dry_run,
         )
         rows.append(row)
+        pf = row.get("preflight") or {}
+        if pf:
+            print(f"   preflight: {pf.get('status')}: {pf.get('message', '')[:120]}")
         print(f"{'✅' if row['ok'] else '❌'} {name} exit={row['exit']}")
 
     for n in write_summary(args.vault.expanduser().resolve(), when, rows, args.dry_run):

@@ -2,10 +2,9 @@
 
 ## Unreleased
 
-### Planned
-- **Night shift dev-deps preflight (OPEN):** ensure product `.venv` + requirements-dev before multi-product readiness. Spec: `docs/specs/2026-07-18-night-shift-dev-deps-preflight.md`.
-
 ### Added
+- **Night shift dev-deps preflight:** `scripts/ensure_product_dev_env.py` + multi-product orchestrator preflight before readiness (venv + requirements-dev; no sudo pip).
+
 - **Night-shift log template:** canonical vault `night-shift-log.md` (Timeline newest-first + dual UTC/HKT + full reports). Helpers in `scripts/night_shift_log.py`; readiness prepend + rotate share the same render. Spec: `docs/specs-2026-07-18-night-shift-log-template.md`.
 
 - **`/night_shift`** (finished feature): multi-product overnight readiness SoT.

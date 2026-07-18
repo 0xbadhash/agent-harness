@@ -1,53 +1,30 @@
-# PR Draft: night-shift-log template (Timeline + UTC/HKT)
-
-**Range:** HEAD~1..HEAD (implementation commits)
+# PR Draft: night_shift dev-deps preflight
 
 ## What Problem This Solves
-
-Vault night-shift logs mixed formats (no Timeline vs post-rotate Timeline; UTC-only vs dual HKT), so operators could not scan PASS/FAIL history consistently across products.
+Nightly multi-product readiness FAILs from missing pytest when products lack .venv tooling.
 
 ## Why This Change Was Made
-
-Single SoT helper module renders the operator-requested template on every readiness write and on rotate, so products stay consistent after harness install.
+Preflight ensure_product_dev_env before each product readiness; create .venv + pip install -r requirements-dev.txt when needed (no sudo pip).
 
 ## User Impact
-
-- Every new `01-Projects/<id>/night-shift-log.md` has a Timeline table (newest first) and dual **UTC · HKT** stamps.
-- Rotate after PASS still compacts full reports but keeps the same template (no alternate intro schema).
+Fewer env FAIL false alarms at 03:15 HKT; real gate failures stay visible.
 
 ## Evidence
-
-```text
-red_cmd: pytest tests/test_night_shift_log_template.py  # missing module / failed asserts
-green_cmd: pytest -q  # 22 passed
-green_cmd: python3 scripts/validate.py full
+```
+red_cmd: pytest tests/test_ensure_product_dev_env.py  # missing module
+green_cmd: pytest -q
 green_cmd: python3 scripts/product_smoke.py --root .
 ```
 
 ## Red-proof
-
-- Added `tests/test_night_shift_log_template.py` first (failed: missing `scripts/night_shift_log.py`).
-- Implemented module + wired readiness/rotate → 8/8 template tests green; full suite 22 passed.
+Tests failed on missing ensure_product_dev_env.py then passed after implementation.
 
 ## Cross-review
-
-CROSS-REVIEW evidence: `.agents/artifacts/CROSS_REVIEW.md` (2026-07-18).
-
-| Severity | Count |
-|----------|------:|
-| blocker | 0 |
-| major | 0 |
-| nit | 3 |
-
-### Obsolete / cleanup (scoped)
-
-Tier A: 0 — inline prepend replaced by shared module.
-
+CROSS-REVIEW: blockers 0. Security: no sudo pip. Maintainability: pure helper + orchestrator wire. Domain: night_shift hard-stops unchanged.
 
 ## Things that look bad but are actually fine
-
-1. `.agents/` remains gitignored for local installs; tracked SoT is `scripts/` + `docs/`.
-2. Legacy UTC-only Timeline rows are kept without inventing HKT.
-3. night_shift still never release/push/auto-fix product code.
-4. Dual Python import path insert for `scripts/` is intentional for product installs.
-5. Rotate may leave only the latest full report while Timeline keeps history — intentional spam control.
+1. Auto-creating .venv is intentional for readiness hosts.
+2. Skip when no requirements-dev — readiness may still fail.
+3. Dual path load of helper (harness SoT or product scripts/).
+4. pip install network-dependent — timeout 600s.
+5. Report-only readiness still does not auto-fix product code.

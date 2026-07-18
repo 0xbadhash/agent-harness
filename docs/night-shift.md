@@ -109,6 +109,22 @@ Each entry: **UTC · HKT**. Hard-stops: no release, no push, no product auto-fix
 
 After a **PASS** with FAIL history noise, `rotate_night_shift_logs.py` archives the full file and rewrites the live log with the **same** template (full Timeline + latest full report only).
 
+
+
+## Dev env preflight (multi-product)
+
+Before each product readiness run, `bin/night_shift_all_products.py` calls
+`scripts/ensure_product_dev_env.py`:
+
+1. Prefer `product/.venv/bin/python` when imports (`pytest`, …) succeed.
+2. If `requirements-dev.txt` exists and imports fail → create `.venv` (if needed) and
+   `pip install -r requirements-dev.txt` (**no** `sudo pip`).
+3. If no `requirements-dev.txt` → skip install (readiness may still FAIL for missing tools).
+4. Optional product `scripts/ensure_dev_deps.py` is run when present after a healthy env.
+
+Preflight status is printed per product (`ok` / `installed` / `skip` / `fail`).
+
+
 ## Single product (manual or agent)
 
 From a **product** checkout (after install):
