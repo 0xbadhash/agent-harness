@@ -2,10 +2,9 @@
 
 ## Unreleased
 
-### Planned
-- **Night-shift log template (OPEN):** standardize vault `01-Projects/<id>/night-shift-log.md` — Timeline table (newest first) + dual UTC/HKT + full reports newest-first. Spec: `.agents/specs/2026-07-18-night-shift-log-template.md`. Backlog: `.agents/BACKLOG.md`.
-
 ### Added
+- **Night-shift log template:** canonical vault `night-shift-log.md` (Timeline newest-first + dual UTC/HKT + full reports). Helpers in `scripts/night_shift_log.py`; readiness prepend + rotate share the same render. Spec: `docs/specs-2026-07-18-night-shift-log-template.md`.
+
 - **`/night_shift`** (finished feature): multi-product overnight readiness SoT.
   - Skill `skills/night_shift/`, `scripts/night_shift_readiness.py`, `scripts/check_test_matrix.py`
   - Orchestrator `bin/night_shift_all_products.py` + `config/night_shift_products.yaml`

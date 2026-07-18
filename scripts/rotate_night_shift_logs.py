@@ -19,8 +19,16 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
+from night_shift_log import parse_reports as _parse_reports  # noqa: E402
+from night_shift_log import render_rotated_log  # noqa: E402
 
 _HOME = Path.home()
 DEFAULT_VAULT = Path(
@@ -28,36 +36,6 @@ DEFAULT_VAULT = Path(
     or os.environ.get("WATCHLIST_VAULT_ROOT")
     or "/opt/second-brain/vault"
 )
-
-OVERALL_RE = re.compile(
-    r"^\*\*Overall:\*\*\s*(PASS|FAIL)\b.*$",
-    re.M,
-)
-HEADER_RE = re.compile(
-    r"^# Night shift readiness — (\S+) — (.+)$",
-    re.M,
-)
-
-
-def _parse_reports(text: str) -> list[dict]:
-    """Split append-only log into report chunks."""
-    parts = re.split(r"(?=^# Night shift readiness — )", text, flags=re.M)
-    out: list[dict] = []
-    for part in parts:
-        part = part.strip()
-        if not part.startswith("# Night shift readiness"):
-            continue
-        hm = HEADER_RE.search(part)
-        om = OVERALL_RE.search(part)
-        out.append(
-            {
-                "product": hm.group(1) if hm else "?",
-                "when": hm.group(2).strip() if hm else "?",
-                "overall": om.group(1) if om else "?",
-                "body": part,
-            }
-        )
-    return out
 
 
 def rotate_project(
@@ -94,35 +72,18 @@ def rotate_project(
 
     # Prefer freshest product artifact report if available (caller can set env)
     artifact = os.environ.get("NIGHT_SHIFT_REPORT_PATH")
-    latest_body = latest["body"]
     if artifact and Path(artifact).is_file():
-        latest_body = Path(artifact).read_text(encoding="utf-8", errors="replace").strip()
+        # Inject artifact as newest report body for compact render
+        artifact_body = Path(artifact).read_text(encoding="utf-8", errors="replace").strip()
+        text_for_render = artifact_body + "\n\n---\n\n" + text
+    else:
+        text_for_render = text
 
-    # Compact timeline from parsed history
-    rows = []
-    for r in reports:
-        rows.append(f"| {r['when']} | {r['overall']} |")
-    table = "\n".join(rows) if rows else "| — | — |"
-
-    new_text = f"""# {project_dir.name} night-shift log
-
-Append-only readiness reports from `/night_shift` (harness SoT).
-
-## How to read
-
-- **Latest status wins** for ops.
-- Full raw history archived under `_archive/` when rotated after a PASS.
-
-## Timeline (auto-rotated {when})
-
-| When | Result |
-|------|--------|
-{table}
-
----
-
-{latest_body}
-"""
+    new_text = render_rotated_log(
+        text_for_render,
+        product_id=project_dir.name,
+        keep_full_reports=1,
+    )
 
     if dry_run:
         return (

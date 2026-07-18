@@ -63,6 +63,52 @@
 
 ---
 
+---
+
+## Vault `night-shift-log.md` template (canonical)
+
+**SoT helpers:** `scripts/night_shift_log.py` (used by `night_shift_readiness.py` and `rotate_night_shift_logs.py`).
+
+Every product log under `01-Projects/<id>/night-shift-log.md` is **newest-first**:
+
+1. Title + one-line how-to-read  
+2. **`## Timeline`** table (`When` | `Result`) — newest row on top  
+3. Horizontal rule  
+4. Full **Night shift readiness** reports — newest on top  
+
+### Timestamps
+
+- **New writes:** always dual `YYYY-MM-DD HH:MM UTC · YYYY-MM-DD HH:MM HKT` (`format_when_dual`)
+- **Legacy rows:** may be UTC-only; never invent HKT when rewriting history
+
+### Minimal example
+
+```markdown
+# demo night-shift log
+
+Newest-first readiness reports (`/night_shift` harness SoT).
+Each entry: **UTC · HKT**. Hard-stops: no release, no push, no product auto-fix.
+
+## Timeline
+
+| When | Result |
+| --- | --- |
+| 2026-07-18 07:07 UTC · 2026-07-18 15:07 HKT | PASS |
+| 2026-07-18 06:36 UTC · 2026-07-18 14:36 HKT | FAIL |
+
+---
+
+# Night shift readiness — demo — 2026-07-18 07:07 UTC · 2026-07-18 15:07 HKT
+
+**When:** 2026-07-18 07:07 UTC · 2026-07-18 15:07 HKT
+**Overall:** PASS (6/6 gates) · mode=`full` · product=`demo`
+…
+```
+
+### Rotate
+
+After a **PASS** with FAIL history noise, `rotate_night_shift_logs.py` archives the full file and rewrites the live log with the **same** template (full Timeline + latest full report only).
+
 ## Single product (manual or agent)
 
 From a **product** checkout (after install):
