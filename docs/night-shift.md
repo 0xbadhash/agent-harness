@@ -225,6 +225,7 @@ night_shift:
   live_urls: []              # full URLs for HTTP probes
   live_expect_code: "200"
   coverage_soft: "1"         # "0" = hard-fail if coverage tooling missing
+  autofix: "1"               # "0" = report-only (no mechanical auto-fix)
 ```
 
 Vault label for TODO/log:
