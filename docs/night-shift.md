@@ -29,8 +29,9 @@
 
 1. **Never** run `/release_mgmt`, create tags, or force-push from night_shift.  
 2. **Auto-fix is bounded** — `scripts/night_shift_autofix.py` only (venv/requirements, npm install, ruff/black, trailing whitespace). Disable: `--no-autofix` or `night_shift.autofix: "0"`.  
-3. **Never invent** roadmap features. **PROPOSE** only with gate/matrix/open-AC evidence.  
-4. Residual failures → checkboxes in vault **TODO** (and repo `.agents/artifacts/`).
+3. **Never invent** roadmap features. **PROPOSE** only with gate/matrix/open-AC/tail-pattern evidence.  
+4. Each proposal is **normalized**: `confidence=0.00–1.00` (0 lowest … 1 highest) · `kind=` · `lean=` (muda: defect/rework/inventory/overprocessing/waiting/motion/…) · `evidence:` facts. Refactor/standardize/lean-waste only when facts support it.  
+5. Residual failures → checkboxes in vault **TODO** (and repo `.agents/artifacts/`).
 
 ---
 

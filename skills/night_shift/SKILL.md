@@ -22,7 +22,7 @@ Prove each **product test surface** is green so next `/execute_dev` can start.
 
 - **Never** `/release_mgmt`, tag, force-push without explicit user OK.
 - **Bounded auto-fix only** (deps install, formatters, trailing ws) via `night_shift_autofix.py` — one re-run. Disable with `--no-autofix` or `night_shift.autofix: "0"`.
-- **Never invent** roadmap features. May **PROPOSE** items with evidence (failed gates, matrix gaps, existing open AC checkboxes).
+- **Never invent** roadmap features. May **PROPOSE** items with **confidence ∈ [0,1]** (0=lowest, 1=highest), **kind** (fix/refactor/standardize/normalize/lean_waste/ops/security), **lean** muda label, and **evidence:** facts (failed gates, matrix gaps, open AC, tail patterns). Sorted highest confidence first.
 - Residual failures → vault **TODO** checkboxes.
 
 ## Single product (`/night_shift` in a product checkout)
@@ -36,7 +36,7 @@ Flags: `--quick` · `--skip-live` · `--dry-run` · `--no-autofix` · `--root <p
 
 Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate full, product_smoke, **coverage** (ORCH-P3b: `check_module_coverage.py --run --soft-if-missing`), optional security, optional live probes from `product_plugin.night_shift`.
 
-**Auto-fix + proposals:** on gate failure → mechanical autofix → re-run gates once → TODO gets fix log + **PROPOSE roadmap** lines when evidence is clear.
+**Auto-fix + proposals:** on gate failure → mechanical autofix → re-run gates once → TODO gets fix log + **PROPOSE confidence=… kind=… lean=… | action | evidence:** lines (refactor/standardize/lean waste only when fact-backed).
 
 **ORCH-TOOLS:** `tools/bin/lint_and_test.sh` → `validate full` (+ optional `--coverage`).
 
