@@ -64,6 +64,18 @@ Implementers fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` before `/pr_review`
 | Vault release block | sync_docs (`sync_vault_devlog.py` without `--note`) — shape: **[dev-log.md](dev-log.md)** |
 | Vault ad-hoc note | any task (`--note`; never `synced` in title) — same Option A standard |
 
+## Validate gates (`validate.py full`)
+
+| Gate | When |
+|------|------|
+| compliance_engine (type/lint/test) | full / compliance |
+| check_hardcodes | full / hygiene |
+| check_repo_hygiene | full / hygiene |
+| check_module_coverage | full / hygiene |
+| **check_dev_log_contract** | full / hygiene **if vault present** (this product’s `01-Projects/<label>/dev-log.md`) |
+
+See `docs/dev-log.md`. Overnight multi-product job still normalizes + checks **all** logs.
+
 ## Soft gates
 
 - **Cross-review:** large diffs warn without evidence; optional `--strict-cross-review`  

@@ -31,11 +31,26 @@ Any skill that touches vault project history must call the product copy of `sync
 2. `normalize_vault_devlog.py --vault $PRODUCT_VAULT_ROOT` on **all** `01-Projects/*/dev-log.md`
 3. `check_dev_log_contract.py` — **fails the multi-product job** if any log still drifts
 
+## Product validate FSM gate
+
+`python3 scripts/validate.py full` (and `hygiene`) when vault is present:
+
+| Condition | Behavior |
+|-----------|----------|
+| Vault resolved (`PRODUCT_VAULT_ROOT` / plugin / `/opt/second-brain/vault`) | Run `check_dev_log_contract --project <label>` for this product |
+| No vault / no `01-Projects` | Gate **skipped** (portable harness without second-brain) |
+| No `dev-log.md` yet for this product | Gate **skipped** (create via `sync_vault_devlog`) |
+| Drift | **validate fails** (same as hardcodes/hygiene) |
+| Escape hatch | `--skip-dev-log-contract` |
+
+Night_shift_all still checks **all** project logs; product validate scopes to **this** product’s log.
+
 Manual:
 
 ```bash
 python3 scripts/normalize_vault_devlog.py --vault /opt/second-brain/vault
 python3 scripts/check_dev_log_contract.py --vault /opt/second-brain/vault
+python3 scripts/validate.py full   # includes contract when vault present
 ```
 
 ## Product registration
