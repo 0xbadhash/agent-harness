@@ -16,7 +16,7 @@ spec.loader.exec_module(mod)
 
 def test_ok_file(tmp_path: Path):
     p = tmp_path / "demo"
-    p.mkdir()
+    p.mkdir(parents=True, exist_ok=True)
     log = p / "dev-log.md"
     log.write_text(
         "# demo dev log\n\nNewest first. Times: UTC + HKT.\n\n"
@@ -32,7 +32,7 @@ def test_ok_file(tmp_path: Path):
 
 def test_missing_when(tmp_path: Path):
     p = tmp_path / "demo"
-    p.mkdir()
+    p.mkdir(parents=True, exist_ok=True)
     log = p / "dev-log.md"
     log.write_text(
         "# demo\n\nNewest first. HKT\n\n## 2026-07-19 — bad\n\n- **Kind:** note\n",
