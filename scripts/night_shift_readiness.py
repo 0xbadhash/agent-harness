@@ -3,7 +3,11 @@
 
 **Source of truth:** agent-harness. Products receive this via install_into_product.sh.
 
-**Read-only for product code.** Never tags, never pushes, never /release_mgmt.
+**Auto-fix (bounded):** after a failed gate pass, may run mechanical fixers
+(deps install, ruff/black, trailing ws) once and re-run gates. See
+``night_shift_autofix.py``. Never invents product features.
+
+**Still never:** tags, force-push, or ``/release_mgmt``.
 
 Writes (per product root):
   - .agents/artifacts/NIGHT_SHIFT_REPORT.md
@@ -419,10 +423,23 @@ def run_gates(
 
 
 def recommendations_from(
-    results: list[dict[str, Any]], matrix_missing: list[str], product_id: str
+    results: list[dict[str, Any]],
+    matrix_missing: list[str],
+    product_id: str,
+    *,
+    root: Path | None = None,
+    autofix_attempts: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     recs: list[str] = []
     failed = [r for r in results if not r["ok"]]
+    if autofix_attempts:
+        for a in autofix_attempts:
+            tag = "ok" if a.get("ok") else "fail"
+            detail = a.get("detail") or a.get("name") or "autofix"
+            recs.append(
+                f"[{product_id}] Auto-fix `{a.get('name')}` → {tag}: {detail}"
+            )
+
     if not failed and not matrix_missing:
         recs.append(
             f"[{product_id}] All readiness gates green — safe to start next product "
@@ -476,6 +493,19 @@ def recommendations_from(
                 f"[{product_id}] Investigate failed gate `{name}` (exit {r.get('exit')})."
             )
 
+    # Evidence-based roadmap proposals (never invent greenfield features)
+    try:
+        from night_shift_autofix import propose_roadmap_items  # type: ignore
+
+        proposals = propose_roadmap_items(
+            root or ROOT, results, matrix_missing, product_id
+        )
+        recs.extend(proposals)
+    except Exception as exc:  # noqa: BLE001
+        recs.append(
+            f"[{product_id}] Roadmap propose skipped ({exc}); gate recs above still apply."
+        )
+
     for m in matrix_missing:
         recs.append(f"[{product_id}] Add or restore test path: `{m}`")
 
@@ -503,7 +533,7 @@ def build_report_md(
         f"**When:** {when_s}",
         f"**Overall:** {overall} ({passed}/{total} gates) · mode=`{mode}` · product=`{product_id}`",
         f"**Repo:** `{ROOT}`",
-        "**Hard-stops:** no release, no push, no product auto-fix",
+        "**Hard-stops:** no release/tag/force-push; autofix is mechanical only (deps/format)",
         "**SoT:** agent-harness `scripts/night_shift_readiness.py`",
         "",
         "## Gates",
@@ -744,6 +774,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--json", action="store_true")
     ap.add_argument(
+        "--no-autofix",
+        action="store_true",
+        help="Disable bounded auto-fix + single re-run (default: autofix on)",
+    )
+    ap.add_argument(
         "--root",
         type=Path,
         default=None,
@@ -765,6 +800,38 @@ def main(argv: list[str] | None = None) -> int:
     mode = "quick" if args.quick else ("full-no-live" if args.skip_live else "full")
     results = run_gates(quick=args.quick, skip_live=args.skip_live, plugin=plugin)
 
+    autofix_attempts: list[dict[str, Any]] = []
+    ns_plugin = plugin.get("night_shift") or {}
+    autofix_enabled = (
+        not args.no_autofix
+        and str(ns_plugin.get("autofix", "1")).lower() not in ("0", "false", "no")
+    )
+    if autofix_enabled and any(not r.get("ok") for r in results):
+        try:
+            from night_shift_autofix import attempt_autofix  # type: ignore
+
+            autofix_attempts = attempt_autofix(
+                ROOT,
+                results,
+                dry_run=args.dry_run,
+                product_id=product_id,
+            )
+            if autofix_attempts and not args.dry_run:
+                # Single re-run after mechanical fixes
+                results = run_gates(
+                    quick=args.quick, skip_live=args.skip_live, plugin=plugin
+                )
+                mode = f"{mode}+autofix"
+        except Exception as exc:  # noqa: BLE001
+            autofix_attempts.append(
+                {
+                    "name": "autofix_error",
+                    "ok": False,
+                    "detail": str(exc),
+                    "exit": 1,
+                }
+            )
+
     matrix_missing: list[str] = []
     matrix_path = ROOT / ".agents" / "policy" / "TEST_MATRIX.md"
     checker = SCRIPTS / "check_test_matrix.py"
@@ -779,7 +846,13 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # noqa: BLE001
             matrix_missing.append(f"(matrix checker error: {exc})")
 
-    recs = recommendations_from(results, matrix_missing, product_id)
+    recs = recommendations_from(
+        results,
+        matrix_missing,
+        product_id,
+        root=ROOT,
+        autofix_attempts=autofix_attempts,
+    )
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
     overall = "PASS" if passed == total else "FAIL"
@@ -790,6 +863,24 @@ def main(argv: list[str] | None = None) -> int:
         mode=mode,
         product_id=product_id,
     )
+    if autofix_attempts:
+        lines = [
+            "",
+            "## Auto-fix attempts (bounded)",
+            "",
+        ]
+        for a in autofix_attempts:
+            status = "ok" if a.get("ok") else "fail"
+            lines.append(
+                f"- `{a.get('name')}` → **{status}** — {a.get('detail') or ''}"
+            )
+        lines.append("")
+        # insert after first heading block
+        report_md = report_md.replace(
+            "\n## Recommendations\n",
+            "\n" + "\n".join(lines) + "\n## Recommendations\n",
+            1,
+        )
     todo_md = build_todo_md(
         when=when,
         overall=overall,
@@ -806,6 +897,14 @@ def main(argv: list[str] | None = None) -> int:
                     "overall": overall,
                     "passed": passed,
                     "total": total,
+                    "autofix": [
+                        {
+                            "name": a.get("name"),
+                            "ok": a.get("ok"),
+                            "detail": a.get("detail"),
+                        }
+                        for a in autofix_attempts
+                    ],
                     "results": [
                         {"name": r["name"], "ok": r["ok"], "exit": r["exit"]}
                         for r in results

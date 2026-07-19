@@ -1,6 +1,6 @@
 ---
 name: night_shift
-description: Overnight readiness runner (harness SoT) — multi-product suites/security/matrix; vault TODO + logs; 03:15 HKT schedule; human hard-stops. No auto-ship.
+description: Overnight readiness runner (harness SoT) — multi-product suites; bounded autofix; evidence-based roadmap proposals; vault TODO; 03:15 HKT; no auto-ship.
 disable-model-invocation: true
 user-invocable: true
 max-retries: 0
@@ -16,14 +16,14 @@ preserve-artifacts-on-failure: true
 ## Purpose (ORCH-P3 readiness)
 
 Prove each **product test surface** is green so next `/execute_dev` can start.  
-**Not** a product UI feature. **Not** autonomous coding overnight.
+**Not** a product UI feature. **Not** full autonomous product coding.
 
 ## Human hard-stops (always)
 
 - **Never** `/release_mgmt`, tag, force-push without explicit user OK.
-- **Never** auto-edit product code to “fix” failures (report only).
-- **Never** invent roadmap features.
-- Failures → vault **TODO** checkboxes only.
+- **Bounded auto-fix only** (deps install, formatters, trailing ws) via `night_shift_autofix.py` — one re-run. Disable with `--no-autofix` or `night_shift.autofix: "0"`.
+- **Never invent** roadmap features. May **PROPOSE** items with evidence (failed gates, matrix gaps, existing open AC checkboxes).
+- Residual failures → vault **TODO** checkboxes.
 
 ## Single product (`/night_shift` in a product checkout)
 
@@ -32,9 +32,11 @@ python3 scripts/night_shift_readiness.py \
   --vault "${PRODUCT_VAULT_ROOT:-${WATCHLIST_VAULT_ROOT:-/opt/second-brain/vault}}"
 ```
 
-Flags: `--quick` · `--skip-live` · `--dry-run` · `--root <path>` (when invoking harness SoT copy)
+Flags: `--quick` · `--skip-live` · `--dry-run` · `--no-autofix` · `--root <path>` (when invoking harness SoT copy)
 
 Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate full, product_smoke, **coverage** (ORCH-P3b: `check_module_coverage.py --run --soft-if-missing`), optional security, optional live probes from `product_plugin.night_shift`.
+
+**Auto-fix + proposals:** on gate failure → mechanical autofix → re-run gates once → TODO gets fix log + **PROPOSE roadmap** lines when evidence is clear.
 
 **ORCH-TOOLS:** `tools/bin/lint_and_test.sh` → `validate full` (+ optional `--coverage`).
 

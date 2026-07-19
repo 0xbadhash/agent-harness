@@ -20,16 +20,17 @@
 | **Is** | **Is not** |
 |--------|------------|
 | Proves suites / gates are green so the next `/execute_dev` can start | A product UI feature |
-| Report-only: artifacts + optional vault TODO/log | Autonomous overnight coding |
+| Bounded auto-fix (deps/format) + re-run once | Full autonomous product coding / inventing features |
 | Multi-product orchestrator on a schedule | Auto `/release_mgmt`, tag, or force-push |
-| Optional live HTTP probes from plugin config | Permission to “fix” product code without a human |
+| Evidence-based **PROPOSE** roadmap lines in TODO | Inventing greenfield roadmap items without evidence |
+| Optional live HTTP probes from plugin config | Secret rotation or production deploys |
 
 ### Human hard-stops (always)
 
 1. **Never** run `/release_mgmt`, create tags, or force-push from night_shift.  
-2. **Never** auto-edit product code to “fix” failures — **report only**.  
-3. **Never** invent roadmap features.  
-4. Failures → checkboxes in vault **TODO** (and repo `.agents/artifacts/`).
+2. **Auto-fix is bounded** — `scripts/night_shift_autofix.py` only (venv/requirements, npm install, ruff/black, trailing whitespace). Disable: `--no-autofix` or `night_shift.autofix: "0"`.  
+3. **Never invent** roadmap features. **PROPOSE** only with gate/matrix/open-AC evidence.  
+4. Residual failures → checkboxes in vault **TODO** (and repo `.agents/artifacts/`).
 
 ---
 
