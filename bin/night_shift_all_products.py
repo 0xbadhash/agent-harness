@@ -355,10 +355,11 @@ def main() -> int:
     overall = "PASS" if passed == total else "FAIL"
     print(f"{'✅' if overall == 'PASS' else '❌'} night_shift_all {overall} ({passed}/{total})")
     
+    vault_path = args.vault.expanduser().resolve()
+
     # Rotate vault FAIL spam when latest is PASS; rebuild SUMMARY
     try:
         rot = HARNESS_ROOT / "scripts" / "rotate_night_shift_logs.py"
-        vault_path = args.vault.expanduser().resolve()
         if rot.is_file() and not args.dry_run:
             subprocess.run(
                 [sys.executable, str(rot), "--vault", str(vault_path)],
@@ -367,6 +368,45 @@ def main() -> int:
             )
     except Exception as exc:  # noqa: BLE001
         print(f"⚠️ rotate_night_shift_logs: {exc}")
+
+    # --- Dev-log anti-drift (all 01-Projects/*/dev-log.md, no product exceptions) ---
+    # 1) Normalize (newest-first + When/Kind backfill)
+    # 2) Contract check — fail multi-product run if anything still drifts
+    contract_rc = 0
+    if not args.dry_run:
+        norm = HARNESS_ROOT / "scripts" / "normalize_vault_devlog.py"
+        check = HARNESS_ROOT / "scripts" / "check_dev_log_contract.py"
+        if norm.is_file():
+            print("--- normalize_vault_devlog (all projects) ---")
+            r = subprocess.run(
+                [sys.executable, str(norm), "--vault", str(vault_path)],
+                cwd=str(HARNESS_ROOT),
+                check=False,
+            )
+            if r.returncode != 0:
+                print(f"⚠️ normalize_vault_devlog exit={r.returncode}")
+                contract_rc = 1
+        else:
+            print("⚠️ normalize_vault_devlog.py missing")
+            contract_rc = 1
+        if check.is_file():
+            print("--- check_dev_log_contract ---")
+            r = subprocess.run(
+                [sys.executable, str(check), "--vault", str(vault_path)],
+                cwd=str(HARNESS_ROOT),
+                check=False,
+            )
+            if r.returncode != 0:
+                contract_rc = 1
+        else:
+            print("⚠️ check_dev_log_contract.py missing")
+            contract_rc = 1
+    else:
+        print("dev-log normalize/check: dry-run skip")
+
+    if contract_rc != 0:
+        print("❌ night_shift_all FAIL (dev-log contract drift after normalize)")
+        return 1
 
     return 0 if overall == "PASS" else 1
 
