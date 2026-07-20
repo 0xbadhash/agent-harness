@@ -66,7 +66,8 @@ def rotate_project(
     if len(fails) == 0 and len(reports) <= 2:
         return f"ok {project_dir.name}: already lean (latest PASS, little history)"
 
-    when = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # No colons: Windows/Android clients reject ":" in filenames (Syncthing out-of-sync forever)
+    when = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     archive_dir = project_dir / "_archive"
     archive_path = archive_dir / f"night-shift-log-through-{when}.md"
 
