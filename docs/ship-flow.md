@@ -2,6 +2,17 @@
 
 ## Pipeline FSM
 
+**FSM** means **Finite State Machine**: a fixed set of **phases (states)** and allowed **transitions**. The ship pipeline is an FSM so agents cannot invent arbitrary “we’re done” paths — each skill only advances when the current phase and gates allow it.
+
+| Term | Meaning here |
+|------|----------------|
+| **FSM** | Finite State Machine (not a product name or acronym for something else) |
+| **Phase / state** | One of: `init` → `ready_for_review` → `approved` \| `blocked` → `shipped` → `init` |
+| **Transition** | Moving to the next phase via `scripts/pipeline_state.py` only |
+| **Gate** | Deterministic check before a transition (e.g. PR score ≥ 95, TDD evidence) |
+
+Related (product vaults / second-brain kanban): a **card-level ship FSM** may use stages like `spec` → `execute_dev` → `cross_review` → `pr_review` → `release` → `sync_docs` → `done`. That is the same idea (states + gates); harness SoT for **product install** pipeline state is still `.agents/state/pipeline.json` below.
+
 ```text
 init
   │

@@ -14,7 +14,7 @@ Coding agents are capable improvisers. Without a harness they:
 **agent-harness** is a portable kit:
 
 1. **Skills** — pull-loaded workflows (`SKILL.md`)  
-2. **Scripts** — push-button gates (validate, score, pipeline FSM)  
+2. **Scripts** — push-button gates (validate, score, **pipeline FSM** = Finite State Machine of ship phases)  
 3. **Policy** — short always-on rules  
 4. **Product plugin** — *your* stack and smoke commands  
 

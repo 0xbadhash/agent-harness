@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.3.1` (docs synced via `/sync_docs`)
+**Current release:** `v1.3.2` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -48,7 +48,7 @@ git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.g
 | Piece | Role |
 |-------|------|
 | **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, implement (TDD), review, release, sync docs, anti-slop UI design, sweep |
-| **Scripts** (`scripts/`) | Deterministic gates: pipeline FSM, validate, PR score, vault notes |
+| **Scripts** (`scripts/`) | Deterministic gates: **pipeline FSM** (Finite State Machine of ship phases — see [docs/ship-flow.md](docs/ship-flow.md)), validate, PR score, vault notes |
 | **Policy** (`policy/`) | Always-on engineering rules the skills inherit |
 | **Product plugin** | *Your* stack, smoke commands, vault path—never hard-coded in the harness |
 
