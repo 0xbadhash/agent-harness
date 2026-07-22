@@ -1,26 +1,35 @@
-# RELEASE RUNBOOK — agent-harness v1.3.2
+# Release runbook — agent-harness v1.3.3
 
-**Date:** 2026-07-18  
-**Tag:** v1.3.2  
-**Version:** `v1.3.2`  
-**Theme:** Vault dev-log newest-first + UTC/HKT  
-**Scope:** prepend entries; dual-zone When; night_shift day dedupe; product script reinstall  
+**Date:** 2026-07-22  
+**Version:** 1.3.3  
+**Scope:** Docs — define FSM as Finite State Machine in ship-flow  
+**Prior:** 1.3.2  
+**Commit:** 2bfc032 (+ this release metadata)
 
 ## Smoke
 
 | Check | Result |
 |-------|--------|
-| hardcodes | PASS |
-| validate full | PASS 4/4 |
-| pytest format + kanban | PASS |
-| live vault prepend | PASS |
+| `python3 scripts/validate.py full` | PASS (see CI/local log) |
+| `python3 scripts/product_smoke.py --root .` | PASS / warn if empty smoke |
+| Cross-review | blockers=0 (`.agents/artifacts/CROSS_REVIEW.md`) |
+| PR score | 100 → approved |
 
-## Pipeline
+## Infra
 
-pr_review 100% → approved → shipped
+None required (docs-only; no host topology change).
+
+## Rollback
+
+```bash
+git checkout v1.3.2
+# or revert docs commit 2bfc032
+```
 
 ## Things that look bad but are actually fine
 
-1. Historical vault rows stay old order until rewritten.
-2. Product copies updated by commit (not full install_into_product).
-3. HKT is Asia/Hong_Kong display only.
+1. **Docs-only version bump** — operators need a tagged SoT for "what is FSM".  
+2. **No product reinstall required for acronym text** — optional `install_into_product` to refresh mirrored docs.  
+3. **Main already had the commit before tag** — normal for private harness docs ships.  
+4. **normalize_vault_devlog dirty left out** — not part of 1.3.3.  
+5. **Kanban stages mentioned** — educational; install FSM remains pipeline.json.

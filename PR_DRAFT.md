@@ -1,43 +1,40 @@
-# PR Draft — vault dev-log newest-first UTC+HKT
+# PR Draft — FSM glossary in ship-flow
 
-**Date:** 2026-07-18  
-**Task:** Spec 2026-07-18-vault-dev-log-standard — prepend + dual zone + night_shift dedupe  
-**Version target:** 1.3.2
+**Date:** 2026-07-22  
+**Task:** Define FSM = Finite State Machine where pipeline FSM is documented  
+**Version target:** 1.3.3 (patch docs)
+
+## What Problem This Solves
+
+Operators and agents hit "pipeline FSM" / "ship FSM" without knowing the acronym. Ambiguity slows onboarding and causes wrong assumptions (product name vs process model).
+
+## Why This Change Was Made
+
+Explicit definition at the SoT (`docs/ship-flow.md`) with term table + light cross-links from README and overview.
+
+## User Impact
+
+Clearer mental model of ship phases; no runtime behavior change.
 
 ## Summary
 
-- `sync_vault_devlog.py`: newest-first **prepend**, `**When:** UTC · HKT`, `**Kind:** release|note`
-- Night_shift notes: one per product per UTC day (marker without PASS/FAIL) unless `--force`
-- Tests: `tests/test_sync_vault_devlog_format.py`
-- Products reinstalled with same script; live agent-harness vault log updated
+- `docs/ship-flow.md`: FSM = Finite State Machine; phase/transition/gate table; kanban stages note  
+- `docs/overview.md` / `README.md`: expand FSM once where scripts are listed  
 
 ## Evidence
 
-- pytest format tests + kanban tests green
-- `validate.py full` 4/4
-- Live prepend on `/opt/second-brain/vault/01-Projects/agent-harness/dev-log.md`
+- Commit `2bfc032` on main  
+- Cross-review: `.agents/artifacts/CROSS_REVIEW.md` (blockers=0)  
+- TDD: N/A (docs-only)
 
 ## Cross-review
 
-**Marker:** CROSS-REVIEW  
-**Blockers:** 0 · **Major:** 0 · **Nits:** 1
-
-### Security Guru
-- none — no secrets in log format; vault paths optional
-
-### Maintainability Expert
-- none — pure helpers unit-tested; append_entry aliases prepend
-- nit — historical vault rows remain old order until rewritten
-
-### Domain Specialist
-- none — Option A release vs note preserved; products thin
-
-### Obsolete / cleanup (scoped)
-- Tier C: old append-order history in vault (migrate-on-write / optional normalizer later)
+See `.agents/artifacts/CROSS_REVIEW.md` — **Marker:** CROSS-REVIEW · blockers=0 majors=0 nits=1
 
 ## Things that look bad but are actually fine
 
-1. **History still chronological at bottom** — only new writes prepend; full reorder is out of scope for this ship.
-2. **Night_shift skip same day** — intentional dedupe; use `--force` to override.
-3. **HKT on entry when writer runs in UTC** — correct dual display for Obsidian operators.
-4. **Product copies of one script** — install_into_product pattern; SoT remains harness git.
+1. **No unit tests for docs** — intentional; process gates still via validate/pr_validator.  
+2. **Kanban stages listed in harness docs** — educational only; SoT for install FSM is pipeline.json.  
+3. **Already on main before formal release** — commit landed early; this cycle tags the docs ship.  
+4. **Patch not minor** — glossary only, no API surface.  
+5. **Dirty normalize_vault_devlog left uncommitted** — separate change, not this release.
