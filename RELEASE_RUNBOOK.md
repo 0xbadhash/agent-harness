@@ -1,35 +1,24 @@
-# Release runbook — agent-harness v1.3.3
+# Release runbook — agent-harness v1.3.4
 
-**Date:** 2026-07-22  
-**Version:** 1.3.3  
-**Scope:** Docs — define FSM as Finite State Machine in ship-flow  
-**Prior:** 1.3.2  
-**Commit:** 2bfc032 (+ this release metadata)
+**Date:** 2026-07-25  
+**Scope:** Review closeout improvements (scope, P0, code_review, secrets, prose skip)
 
 ## Smoke
 
 | Check | Result |
 |-------|--------|
-| `python3 scripts/validate.py full` | PASS (see CI/local log) |
-| `python3 scripts/product_smoke.py --root .` | PASS / warn if empty smoke |
-| Cross-review | blockers=0 (`.agents/artifacts/CROSS_REVIEW.md`) |
-| PR score | 100 → approved |
-
-## Infra
-
-None required (docs-only; no host topology change).
+| unittest review_scope + secrets | PASS |
+| validate.py full | 5/5 |
+| product_smoke | PASS |
 
 ## Rollback
 
 ```bash
-git checkout v1.3.2
-# or revert docs commit 2bfc032
+git checkout v1.3.3
 ```
 
-## Things that look bad but are actually fine
+## §9
 
-1. **Docs-only version bump** — operators need a tagged SoT for "what is FSM".  
-2. **No product reinstall required for acronym text** — optional `install_into_product` to refresh mirrored docs.  
-3. **Main already had the commit before tag** — normal for private harness docs ships.  
-4. **normalize_vault_devlog dirty left out** — not part of 1.3.3.  
-5. **Kanban stages mentioned** — educational; install FSM remains pipeline.json.
+1. Skills need product reinstall to refresh product copies.  
+2. gitleaks optional.  
+3. No pipeline auto-advance from code_review.

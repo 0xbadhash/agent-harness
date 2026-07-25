@@ -32,16 +32,19 @@ When invoked with `/execute_dev`:
    3. **Green:** Implement the minimum to make those tests pass. One sub-task only.
    4. **Refactor:** Clean up with tests still green.
    5. **Regression:** Run targeted suite + product smoke (from `product_plugin.yaml`) when runtime surface changes.
-4. **Implement constraints:**
+4. **Implement constraints + scope governor:**
    - **UI is allowed** when the product task is user-facing UI (use the product's own stack from `product_plugin.yaml`). Prefer progressive enhancement over unnecessary SPA rewrites unless the product already is an SPA.
    - Non-UI product work: APIs, services, CLIs, data paths as the product defines.
    - Harness-only changes stay under `.agents/` + `scripts/`.
    - Do not put harness backlog items into the product roadmap.
+   - **Freeze scope** to the loaded task: do not turn a narrow task into architecture/protocol/migration work unless the task says so. Review-driven fixes must stay **in-scope blockers** (see `/cross_review` / `/code_review` scope governor). Follow-ups get a note, not silent scope expansion.
 5. **Run the app (Principle 3 — after significant product change):**
    - Run **smoke** commands from `.agents/product_plugin.yaml` (or the product's documented health check).
    - Plus targeted unit/integration tests for the module under change (tooling from the product's stack).
+   - **Behavior ≠ source:** green unit tests are not enough if runtime surface changed — smoke must pass.
 6. **Validate (diff-first):**
    - `scripts/validate full` (and hygiene as needed)
+   - Optional: `python3 scripts/check_secrets_diff.py --base HEAD~1 --head HEAD` on code ships
    - If exit ≠ 0 → `❌ VALIDATION FAILED` and halt. Do NOT auto-fix.
 7. **Handoff:**
    - Mark product task ✅ in the product roadmap or harness item in `.agents/BACKLOG.md`
@@ -52,7 +55,7 @@ When invoked with `/execute_dev`:
      Never raw-append; never hand-write a release `… synced` block (that is `/sync_docs` only).  
      Shape SoT: harness **`docs/dev-log.md`** (Option A: newest-first, UTC·HKT, release vs note).
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
-   - Output: `📦 READY FOR REVIEW. Prefer /cross_review then /pr_review --validate` + vault status  
+   - Output: `📦 READY FOR REVIEW. Prefer [/code_review] → /cross_review → /pr_review --validate` + vault status  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")
    - Prefer filling `PR_DRAFT.md` from harness `templates/PR_DRAFT.md`:
      **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence**,

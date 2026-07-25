@@ -1,40 +1,38 @@
-# PR Draft — FSM glossary in ship-flow
+# PR Draft — Portable review improvements (openclaw-inspired)
 
-**Date:** 2026-07-22  
-**Task:** Define FSM = Finite State Machine where pipeline FSM is documented  
-**Version target:** 1.3.3 (patch docs)
+**Date:** 2026-07-25  
+**Version:** 1.3.4  
 
 ## What Problem This Solves
 
-Operators and agents hit "pipeline FSM" / "ship FSM" without knowing the acronym. Ambiguity slows onboarding and causes wrong assumptions (product name vs process model).
+Agents inflate PRs on review nits, re-review with the same model, skip secret scans on diffs, and treat green review as product proof. openclaw autoreview has strong ideas; we need them **without** vendoring a 12k-line multi-engine CLI.
 
 ## Why This Change Was Made
 
-Explicit definition at the SoT (`docs/ship-flow.md`) with term table + light cross-links from README and overview.
+Adopt: scope governor, P0-first, optional `/code_review`, diff secrets scan, prose-only skip, re-review-after-fix, behavior≠source smoke pairing — in harness-owned skills/scripts.
 
 ## User Impact
 
-Clearer mental model of ship phases; no runtime behavior change.
-
-## Summary
-
-- `docs/ship-flow.md`: FSM = Finite State Machine; phase/transition/gate table; kanban stages note  
-- `docs/overview.md` / `README.md`: expand FSM once where scripts are listed  
+Clearer ship reviews; optional second-model pass; fail closed on secret-like additions; less process theater for pure internal prose.
 
 ## Evidence
 
-- Commit `2bfc032` on main  
-- Cross-review: `.agents/artifacts/CROSS_REVIEW.md` (blockers=0)  
-- TDD: N/A (docs-only)
+- `python3 -m unittest tests.test_review_scope tests.test_check_secrets_diff` — OK  
+- `python3 scripts/validate.py full` — 5/5  
+- `python3 scripts/product_smoke.py` — OK  
+
+## Red-proof
+
+- green_cmd: `python3 -m unittest tests.test_review_scope tests.test_check_secrets_diff -q`
 
 ## Cross-review
 
-See `.agents/artifacts/CROSS_REVIEW.md` — **Marker:** CROSS-REVIEW · blockers=0 majors=0 nits=1
+`.agents/artifacts/CROSS_REVIEW.md` — blockers=0
 
 ## Things that look bad but are actually fine
 
-1. **No unit tests for docs** — intentional; process gates still via validate/pr_validator.  
-2. **Kanban stages listed in harness docs** — educational only; SoT for install FSM is pipeline.json.  
-3. **Already on main before formal release** — commit landed early; this cycle tags the docs ship.  
-4. **Patch not minor** — glossary only, no API surface.  
-5. **Dirty normalize_vault_devlog left uncommitted** — separate change, not this release.
+1. No full OpenClaw isolation matrix — portable by design.  
+2. Regex secret scan is narrower than TruffleHog verified mode — intentional fallback.  
+3. code_review does not advance pipeline — pr_review still owns phase.  
+4. F401 fix in normalize_vault_devlog is drive-by lint — required for validate green.  
+5. Single release for all adopted ideas — one coherent vertical slice.

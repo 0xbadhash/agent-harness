@@ -45,12 +45,23 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 ## Recommended order
 
 0. `/spec` — constitution + interview + **clarify**; write `.agents/specs/` (+ optional `-plan.md` / tickets) + roadmap OPEN (pipeline unchanged)  
-1. `/execute_dev` — one task, TDD for code  
-2. `/cross_review` — large diffs (record evidence)  
-3. `/pr_review --validate` — score ≥ 95  
-4. Product infra skill (optional) — hosts, TLS, deploy  
-5. `/release_mgmt` — smoke from **product_plugin**, tag  
-6. `/sync_docs` — docs + optional vault **release** entry  
+1. `/execute_dev` — one task, TDD for code (scope governor: no silent expansion)  
+2. `/code_review` — **optional** P0-first code closeout (second model when configured); skip prose-only  
+3. `/cross_review` — large/code diffs (personas + obsolete scan + secrets); P0-first  
+4. **Smoke / validate** — behavior ≠ source: review is not runtime proof  
+5. `/pr_review --validate` — score ≥ 95 → phase `approved`  
+6. Product infra skill (optional) — hosts, TLS, deploy  
+7. `/release_mgmt` — smoke from **product_plugin**, tag  
+8. `/sync_docs` — docs + optional vault **release** entry  
+
+### Review helpers (scripts)
+
+| Script | Role |
+|--------|------|
+| `scripts/review_scope.py` | Baseline files/LOC; `prose_only` / `skip_heavy_review` |
+| `scripts/check_secrets_diff.py` | Diff-scoped secret scan (gitleaks/trufflehog or regex) |
+| `scripts/cross_review_gate.py` | Soft large-diff evidence warn |
+| `scripts/pr_validator.py` | Deterministic score + pipeline phase |
 
 ## PR_DRAFT narrative (template)
 
@@ -70,6 +81,7 @@ Implementers fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` before `/pr_review`
 |----------|--------|
 | `PR_DRAFT.md` | pr_review / implementer |
 | `.agents/artifacts/CROSS_REVIEW.md` | cross_review |
+| `.agents/artifacts/CODE_REVIEW.md` | code_review (optional) |
 | `.agents/artifacts/INFRA_RUNBOOK.md` | product infra skill |
 | `RELEASE_RUNBOOK.md` | release_mgmt |
 | Vault release block | sync_docs (`sync_vault_devlog.py` without `--note`) — shape: **[dev-log.md](dev-log.md)** |

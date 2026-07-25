@@ -8,8 +8,9 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 |-------|--------------|------|
 | `spec` | Before coding a new idea | Constitution → interview → draft → clarify → `.agents/specs/` (+ optional plan/tickets) + roadmap OPEN (no pipeline advance) |
 | `execute_dev` | Building one task | TDD, implement, validate, handoff → `ready_for_review` |
-| `cross_review` | Before score on non-trivial diffs | Multi-persona review + scoped obsolete/cleanup scan + evidence file |
-| `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review warn |
+| `code_review` | Optional closeout code review | P0-first second-model-style pass; scope governor; secrets on diff; no phase advance |
+| `cross_review` | Before score on non-trivial diffs | Multi-persona + obsolete scan; P0-first; scope governor; secrets scan; prose-only skip |
+| `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review; secrets; smoke reminder |
 | `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` |
 | `sync_docs` | After ship | Full repo+vault doc sync (workflow, mirrors, wiki, release log) → `init` |
 
