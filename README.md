@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.3.5` (docs synced via `/sync_docs`)
+**Current release:** `v1.3.6` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
