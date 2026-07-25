@@ -21,10 +21,24 @@ REQUIRED_IMPORTS = ("pytest",)
 
 
 def _venv_python(root: Path) -> Path | None:
-    for rel in (".venv/bin/python", "venv/bin/python", ".venv/bin/python3", "venv/bin/python3"):
+    """Prefer product venv without collapsing Unix symlinks (absolute, not resolve)."""
+    try:
+        from product_venv import product_venv_python  # type: ignore
+
+        return product_venv_python(root)
+    except ImportError:
+        pass
+    for rel in (
+        ".venv/bin/python",
+        "venv/bin/python",
+        ".venv/bin/python3",
+        "venv/bin/python3",
+        ".venv/Scripts/python.exe",
+        "venv/Scripts/python.exe",
+    ):
         p = root / rel
-        if p.is_file() and os.access(p, os.X_OK):
-            return p
+        if p.is_file() and (os.access(p, os.X_OK) or str(p).lower().endswith(".exe")):
+            return p.absolute()
     return None
 
 

@@ -97,15 +97,31 @@ def _run(
 
 
 def _venv_python(root: Path = ROOT) -> str:
-    """Prefer project virtualenv (``.venv`` or ``venv``), else current interpreter."""
+    """Prefer project virtualenv (``.venv`` or ``venv``), else current interpreter.
+
+    Uses ``product_venv.product_venv_python`` so Unix venv symlinks are not
+    collapsed via ``Path.resolve()`` (keeps site-packages / pytest).
+    """
+    try:
+        from product_venv import product_venv_python  # type: ignore
+    except ImportError:
+        # scripts/ on sys.path when run as file; allow sibling import failure
+        product_venv_python = None  # type: ignore
+    if product_venv_python is not None:
+        vpy = product_venv_python(root)
+        if vpy is not None:
+            return str(vpy)
+    # Fallback if helper missing (partial install)
     for candidate in (
         root / ".venv" / "bin" / "python",
         root / "venv" / "bin" / "python",
         root / ".venv" / "bin" / "python3",
         root / "venv" / "bin" / "python3",
+        root / ".venv" / "Scripts" / "python.exe",
+        root / "venv" / "Scripts" / "python.exe",
     ):
         if candidate.is_file():
-            return str(candidate)
+            return str(candidate.absolute())
     return sys.executable
 
 

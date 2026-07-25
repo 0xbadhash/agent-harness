@@ -76,11 +76,33 @@ def _load_products(path: Path | None) -> list[tuple[str, Path]]:
 
 
 def _product_python(root: Path) -> str:
-    """Prefer product virtualenv so gates (e.g. pydantic) resolve correctly."""
-    for rel in (".venv/bin/python", "venv/bin/python", ".venv/bin/python3", "venv/bin/python3"):
+    """Prefer product virtualenv so gates (e.g. pydantic) resolve correctly.
+
+    Uses ``product_venv.product_venv_python`` (absolute, not resolve) so Unix
+    venv symlinks keep site-packages. Windows prefers Scripts\\python.exe.
+    """
+    helper = HARNESS_ROOT / "scripts" / "product_venv.py"
+    if helper.is_file():
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("product_venv", helper)
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            vpy = mod.product_venv_python(root)
+            if vpy is not None:
+                return str(vpy)
+    for rel in (
+        ".venv/bin/python",
+        "venv/bin/python",
+        ".venv/bin/python3",
+        "venv/bin/python3",
+        ".venv/Scripts/python.exe",
+        "venv/Scripts/python.exe",
+    ):
         p = root / rel
-        if p.is_file() and os.access(p, os.X_OK):
-            return str(p)
+        if p.is_file() and (os.access(p, os.X_OK) or str(p).lower().endswith(".exe")):
+            return str(p.absolute())
     return sys.executable
 
 

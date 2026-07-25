@@ -8,6 +8,20 @@ from pathlib import Path
 from typing import Any
 
 from product_plugin import load_plugin  # type: ignore
+from product_venv import (  # type: ignore
+    product_venv_python,
+    rewrite_smoke_python,
+)
+
+# Re-export for product tests that import helpers from product_smoke
+_rewrite_smoke_python = rewrite_smoke_python
+__all__ = [
+    "run_smoke",
+    "main",
+    "product_venv_python",
+    "rewrite_smoke_python",
+    "_rewrite_smoke_python",
+]
 
 
 def run_smoke(
@@ -39,7 +53,7 @@ def run_smoke(
                 }
             )
             continue
-        cmd_s = [str(c) for c in cmd]
+        cmd_s = rewrite_smoke_python([str(c) for c in cmd], product_root)
         cwd_rel = str(raw.get("cwd") or ".").strip() or "."
         cwd = (product_root / cwd_rel).resolve()
         if dry_run:
