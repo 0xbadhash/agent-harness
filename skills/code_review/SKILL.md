@@ -87,7 +87,17 @@ Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with:
 
 ## Handoff
 
+Always print status, then **exactly one** next skill via the helper:
+
+```bash
+python3 scripts/next_skill.py --after code_review --base <base> --head HEAD --verbose
+```
+
 ```text
 ✅ CODE-REVIEW DONE  p0=N  follow_ups=M
-   next: /cross_review (if not done) → /pr_review --validate
+NEXT_SKILL=/cross_review
 ```
+
+or `NEXT_SKILL=/behavior_validator` or `NEXT_SKILL=/pr_review --validate`.
+
+Launch **only** the printed `NEXT_SKILL`.

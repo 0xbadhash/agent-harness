@@ -8,8 +8,9 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 |-------|--------------|------|
 | `spec` | Before coding a new idea | Constitution → interview → draft → clarify → `.agents/specs/` (+ optional plan/tickets) + roadmap OPEN (no pipeline advance) |
 | `execute_dev` | Building one task | TDD, implement, validate, handoff → `ready_for_review` |
-| `code_review` | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only skip; no phase advance |
-| `cross_review` | Before score on non-trivial diffs | Multi-persona + obsolete scan; P0-first; scope governor; secrets scan; prose-only skip |
+| `code_review` | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only; prints `NEXT_SKILL=` |
+| `cross_review` | When `NEXT_SKILL=/cross_review` | Multi-persona + obsolete scan; P0-first; then `NEXT_SKILL=` |
+| `behavior_validator` | When `NEXT_SKILL=/behavior_validator` | Source-blind contract check; then `NEXT_SKILL=/pr_review --validate` |
 | `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review; secrets; smoke reminder |
 | `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` |
 | `sync_docs` | After ship | Full repo+vault doc sync (workflow, mirrors, wiki, release log) → `init` |
@@ -18,6 +19,9 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
+| `handoff` | Switch agent / delegate | Clipboard-ready handoff prompt for a fresh agent |
+| `session_viewer` | Inspect a session log | JSONL/text → local HTML |
+| `agent_transcript` | Optional PR provenance | Sanitized markdown; ask user before PR insert |
 | `anti_slop_design` | Any UI/UX/frontend design or polish | pols.dev anti-slop law: confirm → build → point-by-point pre-ship audit ([slop.md](https://pols.dev/slop.md)) |
 | `sweep` | Hygiene pass | Status, drift, skills audit, whole-repo obsolete/cleanup (evidence only) |
 | `night_shift` | Overnight / on-demand readiness | Gates (matrix, smoke, coverage, optional live); vault TODO + night-shift-log; multi-product timer 03:15 HKT; **no** auto-ship — [docs/night-shift.md](night-shift.md) |

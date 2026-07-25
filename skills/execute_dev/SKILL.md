@@ -71,8 +71,17 @@ When invoked with `/execute_dev`:
      Never raw-append; never hand-write a release `… synced` block (that is `/sync_docs` only).  
      Shape SoT: harness **`docs/dev-log.md`** (Option A: newest-first, UTC·HKT, release vs note).
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
-   - Output: `📦 READY FOR REVIEW.` + `code_review: done|skipped (prose-only)` + next  
-     `/cross_review` (if needed) → `/pr_review --validate`  
+   - **Always** print the next skill as a single parseable line (and run the helper):
+     ```bash
+     python3 scripts/next_skill.py --after execute_dev --base <task-base> --head HEAD --verbose
+     ```
+     Example stdout (exactly one of these patterns):
+     ```text
+     NEXT_SKILL=/code_review
+     NEXT_SKILL=/pr_review --validate
+     ```
+     Agents and humans must launch **that** skill next (no free-form “if needed”).
+   - Output: `📦 READY FOR REVIEW.` + `code_review: required|skipped (prose-only)` + `NEXT_SKILL=…`  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")
    - Prefer filling `PR_DRAFT.md` from harness `templates/PR_DRAFT.md`:
      **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence**,

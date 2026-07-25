@@ -1,23 +1,26 @@
-# PR Draft — require /code_review after execute_dev
+# PR Draft — P1–P3 skills + NEXT_SKILL handoff
 
 **Date:** 2026-07-25  
-**Version:** 1.3.5  
+**Version:** 1.3.7  
 
 ## What Problem This Solves
-code_review existed but agents skipped it after implement.
+After execute_dev/code_review, next skill was ambiguous ("if needed"). P1–P3 openclaw-adjacent skills missing.
 
 ## Why This Change Was Made
-Soft-auto (1): execute_dev must run /code_review unless review_scope prose-only.
+- `next_skill.py` always prints one line `NEXT_SKILL=…`
+- P1 behavior_validator, P2 handoff, P3 session_viewer + agent_transcript
+- execute_dev/code_review/cross_review handoffs use the helper
 
 ## User Impact
-Code ships get a mandatory closeout review step; docs-only still skippable.
+Clear next slash command; optional black-box behavior check; handoff/session tools.
 
 ## Evidence
-Skill + ship-flow + catalog updates; reinstall across night_shift products.
+- unittest test_next_skill + review_scope + secrets  
+- validate full 5/5  
 
-## Things that look bad but are actually fine
-1. Still agent-enforced not a binary hook — portable agents must follow skill.  
-2. Same-session model may review own code unless CODE_REVIEW_MODEL set.  
-3. cross_review still separate for large diffs.  
-4. No phase advance from code_review.  
-5. Products need reinstall to get skill copy.
+## Things that look but are fine
+1. behavior_validator is contract-first skill, not full openclaw isolation  
+2. session_viewer is minimal HTML not full openclaw TS viewer  
+3. NEXT_SKILL still agent-enforced  
+4. Large→cross_review heuristic is file/LOC based  
+5. Runtime heuristic may send pure-script tools to behavior_validator (acceptable)

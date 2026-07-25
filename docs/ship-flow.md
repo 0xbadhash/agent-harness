@@ -46,20 +46,34 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 
 0. `/spec` — constitution + interview + **clarify**; write `.agents/specs/` (+ optional `-plan.md` / tickets) + roadmap OPEN (pipeline unchanged)  
 1. `/execute_dev` — one task, TDD for code (scope governor: no silent expansion)  
-2. `/code_review` — **required** after execute_dev for non-prose code (P0-first; skip only if `review_scope` prose-only)  
-3. `/cross_review` — large/non-trivial diffs (personas + obsolete scan + secrets); P0-first  
-4. **Smoke / validate** — behavior ≠ source: review is not runtime proof  
-5. `/pr_review --validate` — score ≥ 95 → phase `approved`  
-6. Product infra skill (optional) — hosts, TLS, deploy  
-7. `/release_mgmt` — smoke from **product_plugin**, tag  
-8. `/sync_docs` — docs + optional vault **release** entry  
+2. **Print `NEXT_SKILL=…`** via `scripts/next_skill.py --after execute_dev` (usually `/code_review`)  
+3. `/code_review` — required for non-prose; then **`NEXT_SKILL=…`** again  
+4. `/cross_review` and/or `/behavior_validator` — **only if** `NEXT_SKILL` says so  
+5. **Smoke / validate** — behavior ≠ source  
+6. `/pr_review --validate` — score ≥ 95 → phase `approved`  
+7. Product infra skill (optional) — hosts, TLS, deploy  
+8. `/release_mgmt` — smoke from **product_plugin**, tag  
+9. `/sync_docs` — docs + optional vault **release** entry  
+
+**Always parse one line:** `NEXT_SKILL=/skill …` — do not invent the next step.
+
+### Side skills (not ship phases)
+
+| Skill | When |
+|-------|------|
+| `/handoff` | Switch agent/session |
+| `/session_viewer` | HTML view of a local session log |
+| `/agent_transcript` | Sanitized transcript for PR body (ask user first) |
 
 ### Review helpers (scripts)
 
 | Script | Role |
 |--------|------|
+| `scripts/next_skill.py` | **Single-line handoff** `NEXT_SKILL=…` after each step |
 | `scripts/review_scope.py` | Baseline files/LOC; `prose_only` / `skip_heavy_review` |
 | `scripts/check_secrets_diff.py` | Diff-scoped secret scan (gitleaks/trufflehog or regex) |
+| `scripts/session_viewer.py` | JSONL/text → HTML |
+| `scripts/agent_transcript.py` | find/render sanitized markdown |
 | `scripts/cross_review_gate.py` | Soft large-diff evidence warn |
 | `scripts/pr_validator.py` | Deterministic score + pipeline phase |
 

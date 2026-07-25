@@ -75,7 +75,20 @@ When invoked with `/cross_review`:
 10. Output: `✅ CROSS-REVIEW DONE` + blocker count + scoped obsolete Tier A count.  
     **Do not** set pipeline phase (use `/pr_review` for score gate).
 
-If any **blocker** remains → recommend `/execute_dev` remediation before release.  
-Then: product smoke / `validate full` → `/pr_review --validate`.
+11. **Always** print next skill:
+
+    ```bash
+    python3 scripts/next_skill.py --after cross_review --base <base> --head HEAD --verbose
+    ```
+
+    ```text
+    NEXT_SKILL=/behavior_validator
+    ```
+    or
+    ```text
+    NEXT_SKILL=/pr_review --validate
+    ```
+
+If any **blocker** remains → `NEXT_SKILL=/execute_dev` (remediation) instead of advancing.
 
 **Behavior ≠ source:** a clean cross-review is not proof the app works for users.

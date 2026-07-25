@@ -1,34 +1,15 @@
-# Release runbook — agent-harness v1.3.6
+# Release runbook — agent-harness v1.3.7
 
-| Field | Value |
-|-------|--------|
-| **Version** | `v1.3.6` |
-| **Date** | 2026-07-25 |
-| **Range** | `v1.3.5..v1.3.6` |
+**Scope:** P1 behavior_validator, P2 handoff, P3 session tools, NEXT_SKILL handoff
 
-## What shipped
+## Smoke
+- `python3 -m unittest tests.test_next_skill tests.test_review_scope tests.test_check_secrets_diff`
+- `python3 scripts/validate.py full`
+- `python3 scripts/next_skill.py --after execute_dev --base HEAD~1`
 
-| Change | Detail |
-|--------|--------|
-| `scripts/product_venv.py` | OS-aware venv path; `absolute()` not `resolve()` (Linux symlink keep + Windows Scripts) |
-| night_shift + smoke | Wire readiness, all_products, ensure_product_dev_env, product_smoke |
-| product_plugin | Multi-entry smoke parse without PyYAML |
-
-## Smoke / tests
-
-| Step | Result |
-|------|--------|
-| `pytest tests/` | 55+ passed (via product venv pytest) |
-| Install into product | `install_into_product.sh` rsyncs scripts/ |
-
-## Rollback
-
+## Install products
 ```bash
-git checkout v1.3.5
+for p in watchlist email-detach substack-push second-brain catalyxt.ltd ocr-ledger zk-business-card; do
+  bash install_into_product.sh /home/debian/$p
+done
 ```
-
-## §9
-
-1. absolute() not resolve — required for venv site-packages
-2. Dual OS candidate lists — intentional
-3. Partial-install fallbacks still list bin/Scripts — safe degrade
