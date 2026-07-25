@@ -41,33 +41,37 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
         prefs = re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", m.group(1), re.MULTILINE)
         out["product_path_prefixes"] = prefs
 
-    # smoke entries: blocks starting with "  - name:"
+    # smoke: section — each list item starts with "- name:" (stdlib, no PyYAML)
+    # Prefer section-scoped split so multi-entry smoke lists all parse (not only first).
     smoke: list[dict[str, Any]] = []
-    for block in re.finditer(
-        r"^[ \t]+-[ \t]+name:\s*(\S+)\s*\n"
-        r"((?:[ \t]+.+\n?)*)",
+    sm = re.search(
+        r"^smoke:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
         text,
-        re.MULTILINE,
-    ):
-        # Only under smoke: section — approximate by requiring cmd line in block
-        name = block.group(1).strip().strip("'\"")
-        body = block.group(2)
-        cmd_m = re.search(r"cmd:\s*\[([^\]]*)\]", body)
-        if not cmd_m:
-            continue
-        # Only accept if we're after a "smoke:" header somewhere before
-        pos = block.start()
-        before = text[:pos]
-        if not re.search(r"^smoke:\s*$", before, re.MULTILINE):
-            # still allow if 'smoke:' appears earlier
-            if "smoke:" not in before:
+        re.MULTILINE | re.DOTALL,
+    )
+    if sm:
+        section = sm.group(1)
+        parts = re.split(r"(?m)^([ \t]+-[ \t]+name:\s*\S+[ \t]*\n)", section)
+        i = 1
+        while i + 1 < len(parts):
+            head = parts[i]
+            body = parts[i + 1]
+            i += 2
+            nm = re.search(r"name:\s*(\S+)", head)
+            if not nm:
                 continue
-        parts = [p.strip().strip("'\"") for p in cmd_m.group(1).split(",") if p.strip()]
-        entry: dict[str, Any] = {"name": name, "cmd": parts}
-        cwd_m = re.search(r"cwd:\s*(\S+)", body)
-        if cwd_m:
-            entry["cwd"] = cwd_m.group(1).strip().strip("'\"")
-        smoke.append(entry)
+            name = nm.group(1).strip().strip("'\"")
+            cmd_m = re.search(r"cmd:\s*\[([^\]]*)\]", body)
+            if not cmd_m:
+                continue
+            argv = [
+                p.strip().strip("'\"") for p in cmd_m.group(1).split(",") if p.strip()
+            ]
+            entry: dict[str, Any] = {"name": name, "cmd": argv}
+            cwd_m = re.search(r"cwd:\s*(\S+)", body)
+            if cwd_m:
+                entry["cwd"] = cwd_m.group(1).strip().strip("'\"")
+            smoke.append(entry)
     if smoke:
         out["smoke"] = smoke
     return out

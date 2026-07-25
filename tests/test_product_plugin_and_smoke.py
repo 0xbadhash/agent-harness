@@ -97,3 +97,26 @@ def test_pr_validator_rubric_uses_suite_green_not_tdd_evidence():
     assert "suite_green" in pv.RUBRIC
     assert "tdd_evidence" not in pv.RUBRIC
     assert pv.RUBRIC["suite_green"] == 25
+
+
+def test_parse_minimal_plugin_multiple_smoke_entries():
+    import product_plugin as pp  # type: ignore
+
+    text = """
+product_id: demo
+smoke:
+  - name: a
+    cmd: ["python", "-c", "print(1)"]
+    cwd: .
+  - name: b
+    cmd: ["python", "-m", "pytest", "tests/", "-q"]
+    cwd: .
+  - name: c
+    cmd: ["python", "-m", "pkg", "--help"]
+vault:
+  enabled: true
+"""
+    data = pp._parse_minimal_plugin(text)
+    names = [e["name"] for e in data.get("smoke") or []]
+    assert names == ["a", "b", "c"]
+    assert data["smoke"][1]["cmd"] == ["python", "-m", "pytest", "tests/", "-q"]
