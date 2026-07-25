@@ -1,9 +1,9 @@
 ---
 name: code_review
 description: >
-  Optional second-model / structured closeout code review of a git diff (local,
-  branch, or commit). Complements cross_review + pr_review; does not set pipeline
-  phase. Inspired by openclaw autoreview ideas; harness-owned, portable engines.
+  Closeout code review of a git diff (required after execute_dev for non-prose
+  code ships; skip only when review_scope says prose-only). Complements
+  cross_review + pr_review; does not set pipeline phase.
 disable-model-invocation: true
 user-invocable: true
 max-retries: 0
@@ -16,16 +16,20 @@ preserve-artifacts-on-failure: true
 **Not** a replacement for `/cross_review` (personas + obsolete scan) or
 `/pr_review --validate` (deterministic score + FSM phase).
 
-Use when:
+**When (mandatory from `/execute_dev`):** after implement + validate on any ship
+whose `review_scope` is **not** prose-only. The implementer agent must invoke
+this skill (or an equivalent structured pass that writes `CODE-REVIEW`) before
+declaring `ready_for_review`.
 
-- Non-trivial **code** edits before ship
+Also use when:
+
 - User asks for second-model / autoreview-style pass
 - After fixing review findings (re-run once)
 
-**Skip** (prose-only exception): entire diff is internal notes / skill prose under
-`.agents/skills/**/SKILL.md` or non-user-facing markdown — still run
+**Skip only** (prose-only exception): entire diff is internal notes / skill prose under
+`.agents/skills/**/SKILL.md` or non-user-facing markdown — run
 `python3 scripts/review_scope.py` to confirm `skip_heavy_review=true`, then
-lightweight read of the diff only.
+lightweight read of the diff only and record skip in handoff.
 
 ## Contract
 

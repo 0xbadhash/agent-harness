@@ -46,8 +46,8 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 
 0. `/spec` — constitution + interview + **clarify**; write `.agents/specs/` (+ optional `-plan.md` / tickets) + roadmap OPEN (pipeline unchanged)  
 1. `/execute_dev` — one task, TDD for code (scope governor: no silent expansion)  
-2. `/code_review` — **optional** P0-first code closeout (second model when configured); skip prose-only  
-3. `/cross_review` — large/code diffs (personas + obsolete scan + secrets); P0-first  
+2. `/code_review` — **required** after execute_dev for non-prose code (P0-first; skip only if `review_scope` prose-only)  
+3. `/cross_review` — large/non-trivial diffs (personas + obsolete scan + secrets); P0-first  
 4. **Smoke / validate** — behavior ≠ source: review is not runtime proof  
 5. `/pr_review --validate` — score ≥ 95 → phase `approved`  
 6. Product infra skill (optional) — hosts, TLS, deploy  

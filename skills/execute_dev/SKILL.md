@@ -44,9 +44,25 @@ When invoked with `/execute_dev`:
    - **Behavior ≠ source:** green unit tests are not enough if runtime surface changed — smoke must pass.
 6. **Validate (diff-first):**
    - `scripts/validate full` (and hygiene as needed)
-   - Optional: `python3 scripts/check_secrets_diff.py --base HEAD~1 --head HEAD` on code ships
+   - Prefer: `python3 scripts/check_secrets_diff.py --base HEAD~1 --head HEAD` on code ships
    - If exit ≠ 0 → `❌ VALIDATION FAILED` and halt. Do NOT auto-fix.
-7. **Handoff:**
+7. **Mandatory `/code_review` closeout (soft auto — not optional for code ships):**
+   1. Freeze scope:
+      ```bash
+      python3 scripts/review_scope.py --base <task-base> --head HEAD --json
+      ```
+   2. **Skip** full `/code_review` **only if** `skip_heavy_review` / `prose_only` is true
+      (internal skill/docs notes only — not user-facing README/SECURITY/INSTALL).
+      Record in handoff: `code_review: skipped (prose-only)`.
+   3. **Otherwise MUST run `/code_review`** (same session is fine; prefer a **different
+      model** when `CODE_REVIEW_MODEL` / `GROK_MODEL_CROSS_REVIEW` is set):
+      - Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`)
+      - P0-first; scope governor; secrets scan
+      - If accepted P0 remain → fix in-scope only, re-run focused tests + `/code_review` once
+   4. Do **not** set pipeline phase here — still `/pr_review` later.
+   5. Then continue with `/cross_review` when the diff is large or non-trivial (personas +
+      obsolete scan). Small code ships: `/code_review` alone is the minimum; large diffs need both.
+8. **Handoff:**
    - Mark product task ✅ in the product roadmap or harness item in `.agents/BACKLOG.md`
    - Update product workflow/drift docs if the product uses them
    - `scripts/pipeline_state set-phase ready_for_review --score <X>`
@@ -55,7 +71,8 @@ When invoked with `/execute_dev`:
      Never raw-append; never hand-write a release `… synced` block (that is `/sync_docs` only).  
      Shape SoT: harness **`docs/dev-log.md`** (Option A: newest-first, UTC·HKT, release vs note).
    - Optional worksheet: `python3 scripts/generate_worksheet.py --task-id <id> --title "…"` → `.agents/traces/`
-   - Output: `📦 READY FOR REVIEW. Prefer [/code_review] → /cross_review → /pr_review --validate` + vault status  
+   - Output: `📦 READY FOR REVIEW.` + `code_review: done|skipped (prose-only)` + next  
+     `/cross_review` (if needed) → `/pr_review --validate`  
    - Handoff must note **TDD proof**: which tests went red then green (or "docs-only, TDD N/A")
    - Prefer filling `PR_DRAFT.md` from harness `templates/PR_DRAFT.md`:
      **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence**,

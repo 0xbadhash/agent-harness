@@ -1,24 +1,14 @@
-# Release runbook — agent-harness v1.3.4
+# Release runbook — agent-harness v1.3.5
 
-**Date:** 2026-07-25  
-**Scope:** Review closeout improvements (scope, P0, code_review, secrets, prose skip)
+**Scope:** execute_dev requires /code_review for non-prose ships; reinstall products.
 
 ## Smoke
+- unittest review helpers  
+- validate.py full  
 
-| Check | Result |
-|-------|--------|
-| unittest review_scope + secrets | PASS |
-| validate.py full | 5/5 |
-| product_smoke | PASS |
-
-## Rollback
-
+## Install into products
 ```bash
-git checkout v1.3.3
+for p in watchlist email-detach substack-push second-brain catalyxt.ltd agent-harness ocr-ledger zk-business-card; do
+  bash install_into_product.sh ~/$p 2>/dev/null || bash install_into_product.sh /home/debian/$p
+done
 ```
-
-## §9
-
-1. Skills need product reinstall to refresh product copies.  
-2. gitleaks optional.  
-3. No pipeline auto-advance from code_review.
