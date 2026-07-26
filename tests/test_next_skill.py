@@ -58,6 +58,84 @@ class TestNextSkill(unittest.TestCase):
         nxt, _ = ns.decide("behavior_validator", base="a", head="b", repo=Path("."))
         self.assertEqual(nxt, "/pr_review --validate")
 
+    def test_pr_review_skips_infra_without_skill(self):
+        nxt, meta = ns.decide("pr_review", base="a", head="b", repo=ROOT)
+        self.assertEqual(nxt, "/release_mgmt")
+        self.assertEqual(meta.get("infra"), "skipped")
+
+    def test_pr_review_suggests_vps_when_skill_present(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            skill = root / ".agents" / "skills" / "vps_infra_ops"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("# vps\n", encoding="utf-8")
+            nxt, meta = ns.decide("pr_review", base="a", head="b", repo=root)
+        self.assertEqual(nxt, "/vps_infra_ops --verify")
+        self.assertEqual(meta.get("infra"), "required")
+
+    def test_pr_review_skip_infra_flag(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            skill = root / ".agents" / "skills" / "vps_infra_ops"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("# vps\n", encoding="utf-8")
+            nxt, meta = ns.decide(
+                "pr_review", base="a", head="b", repo=root, skip_infra=True
+            )
+        self.assertEqual(nxt, "/release_mgmt")
+        self.assertEqual(meta.get("infra"), "skipped")
+
+    def test_vps_infra_to_release(self):
+        nxt, _ = ns.decide("vps_infra_ops", base="a", head="b", repo=ROOT)
+        self.assertEqual(nxt, "/release_mgmt")
+
+    def test_empty_after_raises(self):
+        with self.assertRaises(ValueError):
+            ns.decide("", base="a", head="b", repo=ROOT)
+        with self.assertRaises(ValueError):
+            ns.decide("   ", base="a", head="b", repo=ROOT)
+
+    def test_unknown_after_does_not_echo_slash(self):
+        nxt, meta = ns.decide("not_a_ship_skill", base="a", head="b", repo=ROOT)
+        self.assertTrue(nxt.startswith("(unknown"))
+        self.assertIn("unknown", meta.get("reason", ""))
+
+    def test_commented_require_vps_does_not_trigger(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            agents = root / ".agents"
+            agents.mkdir(parents=True)
+            (agents / "product_plugin.yaml").write_text(
+                "# require_vps_infra: true\n"
+                "product_path_prefixes:\n"
+                "  - src\n",
+                encoding="utf-8",
+            )
+            nxt, meta = ns.decide("pr_review", base="a", head="b", repo=root)
+        self.assertEqual(nxt, "/release_mgmt")
+        self.assertEqual(meta.get("infra"), "skipped")
+
+    def test_infra_required_block_triggers(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            agents = root / ".agents"
+            agents.mkdir(parents=True)
+            (agents / "product_plugin.yaml").write_text(
+                "infra:\n  required: true\n",
+                encoding="utf-8",
+            )
+            nxt, meta = ns.decide("pr_review", base="a", head="b", repo=root)
+        self.assertEqual(nxt, "/vps_infra_ops --verify")
+        self.assertEqual(meta.get("infra"), "required")
+
 
 if __name__ == "__main__":
     unittest.main()

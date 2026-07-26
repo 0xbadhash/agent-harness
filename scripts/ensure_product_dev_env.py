@@ -113,9 +113,15 @@ def ensure_product_dev_env(
         }
 
     venv_dir = root / ".venv"
-    venv_py = venv_dir / "bin" / "python"
+    # Prefer product_venv helper (absolute, no symlink collapse); Windows uses Scripts/
+    venv_py = _venv_python(root)
+    if venv_py is None:
+        if sys.platform == "win32":
+            venv_py = venv_dir / "Scripts" / "python.exe"
+        else:
+            venv_py = venv_dir / "bin" / "python"
     try:
-        if not venv_py.is_file():
+        if not Path(venv_py).is_file():
             r = _run([sys.executable, "-m", "venv", str(venv_dir)], timeout=120)
             if r.returncode != 0:
                 return {
@@ -124,29 +130,32 @@ def ensure_product_dev_env(
                     "message": f"venv create failed: {(r.stderr or r.stdout)[-400:]}",
                     "python": candidate,
                 }
-        pip = [str(venv_py), "-m", "pip", "install", "-r", str(req)]
+            # Re-resolve after create (platform layout may differ)
+            venv_py = _venv_python(root) or venv_py
+        venv_py_s = str(venv_py)
+        pip = [venv_py_s, "-m", "pip", "install", "-r", str(req)]
         r = _run(pip, timeout=600)
         if r.returncode != 0:
             return {
                 "ok": False,
                 "status": "fail",
                 "message": f"pip install failed: {(r.stderr or r.stdout)[-500:]}",
-                "python": str(venv_py),
+                "python": venv_py_s,
             }
-        if not _can_import(str(venv_py), required):
+        if not _can_import(venv_py_s, required):
             return {
                 "ok": False,
                 "status": "fail",
                 "message": f"after install still missing {required}",
-                "python": str(venv_py),
+                "python": venv_py_s,
             }
         if ensure_script.is_file():
-            _run([str(venv_py), str(ensure_script)], timeout=120)
+            _run([venv_py_s, str(ensure_script)], timeout=120)
         return {
             "ok": True,
             "status": "installed",
             "message": f"installed {req.name} into {venv_dir}",
-            "python": str(venv_py),
+            "python": venv_py_s,
         }
     except subprocess.TimeoutExpired:
         return {

@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from review_scope import (  # noqa: E402
     ScopeBaseline,
     classify_finding,
+    is_large_baseline,
     is_prose_path,
     is_test_path,
     scope_growth_exceeded,
@@ -81,6 +82,23 @@ class TestSkipAndGrowth(unittest.TestCase):
         o = ScopeBaseline("a", "b", ["a.py"], 1, 10, 0, 10, False)
         c = ScopeBaseline("a", "b", ["a.py", "b.py", "c.py"], 3, 50, 0, 50, False)
         self.assertTrue(scope_growth_exceeded(o, c, max_factor=2.0))
+
+    def test_large_by_non_test_loc(self):
+        b = ScopeBaseline("a", "b", ["a.py"], 1, 150, 0, 150, False)
+        large, detail = is_large_baseline(b)
+        self.assertTrue(large)
+        self.assertIn("non_test_loc", detail)
+
+    def test_large_by_product_paths(self):
+        b = ScopeBaseline("a", "b", ["src/a.py", "src/b.py", "src/c.py"], 3, 10, 0, 10, False)
+        large, _ = is_large_baseline(
+            b, product_path_count=3, product_prefixes_configured=True
+        )
+        self.assertTrue(large)
+        large2, _ = is_large_baseline(
+            b, product_path_count=3, product_prefixes_configured=False
+        )
+        self.assertFalse(large2)
 
 
 if __name__ == "__main__":

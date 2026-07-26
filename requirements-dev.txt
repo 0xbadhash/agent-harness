@@ -1,0 +1,5 @@
+# Dev / CI deps for agent-harness (install into .venv or product venv)
+pytest>=7.0
+ruff>=0.4
+mypy>=1.0
+coverage>=7.0

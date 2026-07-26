@@ -39,8 +39,9 @@ When invoked with `/pr_review --validate`:
    (warn if missing; not scored unless product hardens later).
 
 5. **Cross-review (soft, recommended before score):**
-   - Prefer `/cross_review` when the diff is **large** (≥8 files, ≥200 line churn, or ≥3 paths
-     under `product_plugin.product_path_prefixes`) **and** not prose-only.
+   - Prefer `/cross_review` when the diff is **large** (≥8 files, ≥200 line churn,
+     ≥150 non-test LOC, or ≥3 paths under `product_plugin.product_path_prefixes`)
+     **and** not prose-only. Thresholds live in `review_scope.is_large_baseline`.
    - Prefer `/code_review` for non-trivial **code** when a second model is available.
    - Record `CROSS-REVIEW` / `CODE-REVIEW` markers under `PR_DRAFT.md` or `.agents/artifacts/`.
    - Soft gate: `python3 scripts/cross_review_gate.py --diff <range>`

@@ -49,14 +49,21 @@ Optional front door:
 
 ## 4. Phase gates (agent must respect)
 
+**Full FSM (states + transitions + skill branches):** [ship-flow.md](ship-flow.md)  
+(product install: `.agents/docs/ship-flow.md`)
+
 ```text
 init → ready_for_review → approved → shipped → init
+                 └─► blocked ──(fix /execute_dev)──► ready_for_review
 ```
 
 | Skill | Needs phase | Sets phase |
 |-------|-------------|------------|
+| `/spec` | any | *(none)* |
 | `/execute_dev` | `init` or `blocked` | `ready_for_review` |
+| `/code_review` / `/cross_review` / `/behavior_validator` | (after implement) | *(none)* — print `NEXT_SKILL=` only |
 | `/pr_review --validate` | `ready_for_review` | `approved` or `blocked` |
+| `/vps_infra_ops --verify` | `approved` | *(none)* — **only if required** for product; then `NEXT_SKILL=/release_mgmt` |
 | `/release_mgmt` | `approved` | `shipped` |
 | `/sync_docs` | `shipped` | `init` |
 

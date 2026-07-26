@@ -64,9 +64,16 @@ class TestInstallBootstrap(unittest.TestCase):
             self.assertTrue((product / ".agents" / "product_plugin.yaml").is_file())
             self.assertTrue((product / "scripts" / "pipeline_state.py").is_file())
             self.assertTrue((product / "scripts" / "next_skill.py").is_file())
+            self.assertTrue((product / "scripts" / "review_scope.py").is_file())
+            self.assertTrue((product / "scripts" / "product_venv.py").is_file())
+            self.assertTrue((product / "scripts" / "product_plugin.py").is_file())
+            self.assertTrue((product / "scripts" / "bootstrap_check.sh").is_file())
             self.assertTrue((product / ".agents" / "docs" / "llm-bootstrap.md").is_file())
             self.assertTrue((product / ".agents" / "docs" / "ship-flow.md").is_file())
             self.assertTrue((product / "AGENTS.md").is_file())  # template when missing
+            self.assertTrue((product / ".agents" / "policy" / "ship_skills.txt").is_file())
+            # Install must not vendor harness bytecode as SoT
+            self.assertFalse((product / "scripts" / "__pycache__").is_dir())
 
             # verify_skills from product scripts against product root
             r2 = subprocess.run(

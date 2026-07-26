@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Diff-scoped secret scan for ship closeout (soft by default).
+"""Diff-scoped secret scan for ship closeout.
 
 Inspired by openclaw autoreview's TruffleHog-on-bundle idea, without requiring
 that binary. Order:
 
-1. If ``gitleaks`` or ``trufflehog`` is on PATH → run on the git diff range.
+1. If ``gitleaks`` or ``trufflehog`` is on PATH → run on the git range
+   ``base...head`` (three-dot / merge-base semantics, same as the regex path).
 2. Else run a **conservative** regex scan on added lines only (high-signal patterns).
-3. Exit 0 with WARN if no scanner and soft mode; exit 1 on findings when ``--strict``.
+3. **Findings always fail closed** (exit 1), with or without ``--strict``.
+4. Missing external scanner: warn + regex fallback (exit 0 only if clean).
+   Use ``--require-scanner`` (or ``--strict``) to fail if neither tool is installed.
 
 Usage::
 
@@ -46,13 +49,18 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _range_spec(base: str, head: str) -> str:
+    """Three-dot range: merge-base(base, head)..head — matches review_scope diffs."""
+    return f"{base}...{head}"
+
+
 def run_gitleaks(repo: Path, base: str, head: str) -> tuple[int, str]:
     bin_path = shutil.which("gitleaks")
     if not bin_path:
         return -1, ""
-    # gitleaks git --log-opts
+    # Align with regex path: three-dot (merge-base) range, not two-dot base..head
     r = subprocess.run(
-        [bin_path, "git", f"--log-opts={base}..{head}", "--no-banner", "-v"],
+        [bin_path, "git", f"--log-opts={_range_spec(base, head)}", "--no-banner", "-v"],
         cwd=str(repo),
         capture_output=True,
         text=True,
@@ -84,7 +92,7 @@ def run_trufflehog(repo: Path, base: str, head: str) -> tuple[int, str]:
 
 
 def scan_added_lines_regex(repo: Path, base: str, head: str) -> list[str]:
-    r = _git(repo, "diff", "-U0", f"{base}...{head}")
+    r = _git(repo, "diff", "-U0", _range_spec(base, head))
     if r.returncode != 0:
         return [f"git diff failed: {r.stderr.strip()}"]
     findings: list[str] = []
@@ -110,8 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--strict",
         action="store_true",
-        help="Exit 1 on findings; also exit 1 if no external scanner and regex finds nothing? "
-        "No — strict only fails on findings. Missing scanner stays soft unless --require-scanner.",
+        help="Require gitleaks or trufflehog on PATH (alias of --require-scanner). "
+        "Findings always fail closed even without this flag.",
     )
     ap.add_argument(
         "--require-scanner",
@@ -120,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     repo = args.repo.resolve()
+    require_scanner = bool(args.require_scanner or args.strict)
+    rng = _range_spec(args.base, args.head)
 
     # Prefer external scanners
     for name, runner in (("gitleaks", run_gitleaks), ("trufflehog", run_trufflehog)):
@@ -127,15 +137,15 @@ def main(argv: list[str] | None = None) -> int:
         if code < 0:
             continue
         if code == 0:
-            print(f"✅ {name}: clean ({args.base}..{args.head})")
+            print(f"✅ {name}: clean ({rng})")
             return 0
         print(f"❌ {name}: findings\n{out[:4000]}", file=sys.stderr)
         return 1  # external scanner findings always fail closed
 
-    if args.require_scanner:
+    if require_scanner:
         print(
             "❌ neither gitleaks nor trufflehog on PATH "
-            "(install one or omit --require-scanner)",
+            "(install one or omit --strict / --require-scanner)",
             file=sys.stderr,
         )
         return 1
@@ -147,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
         for f in findings[:50]:
             print(f"  {f}", file=sys.stderr)
         return 1  # high-signal patterns always fail closed
-    print(f"✅ regex secret scan clean ({args.base}..{args.head})")
+    print(f"✅ regex secret scan clean ({rng})")
     return 0
 
 

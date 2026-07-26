@@ -45,7 +45,8 @@ def test_is_large_diff_uses_plugin_prefixes(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         gate,
         "_git_diff_stat",
-        lambda _d: ([f"app/f{i}.ts" for i in range(3)], 10),
+        # paths, churn, non_test_loc (3-tuple — matches is_large_diff unpack)
+        lambda _d: ([f"app/f{i}.ts" for i in range(3)], 10, 30),
     )
     large, detail = gate.is_large_diff("x")
     assert large is True

@@ -489,11 +489,23 @@ def night_shift_day_marker(
     day: str,
     product_id: str | None = None,
 ) -> str | None:
-    """Stable marker for one night_shift note per product per UTC day (no PASS/FAIL)."""
+    """Stable marker for one night_shift note per product per UTC day (no PASS/FAIL).
+
+    Prefer product id embedded in the title (``Night shift readiness <id> <day>…``)
+    so dedupe works when vault ``project_label`` differs from plugin ``product_id``.
+    """
     t = (title or "").strip()
     if not re.search(r"night\s*shift\s*readiness", t, re.I):
         return None
-    label = product_id or _project_label()
+    embedded = re.search(
+        r"night\s*shift\s*readiness\s+(\S+)",
+        t,
+        re.I,
+    )
+    label = (embedded.group(1) if embedded else None) or product_id or _project_label()
+    # Title form often continues with the day token; don't treat YYYY-MM-DD as label
+    if re.fullmatch(r"20\d{2}-\d{2}-\d{2}", label or ""):
+        label = product_id or _project_label()
     return f"Night shift readiness {label} {day}"
 
 

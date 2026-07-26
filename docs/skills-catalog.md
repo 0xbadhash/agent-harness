@@ -2,6 +2,8 @@
 
 Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
+**Full ship map (ASCII):** [ship-flow.md](ship-flow.md) — phases + skill branches (`/code_review`, `/cross_review`, `/behavior_validator`, `/vps_infra_ops` when required, `NEXT_SKILL=`).
+
 ## User-invoked (ship)
 
 | Skill | When to fire | Does |
@@ -12,7 +14,8 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 | `cross_review` | When `NEXT_SKILL=/cross_review` | Multi-persona + obsolete scan; P0-first; then `NEXT_SKILL=` |
 | `behavior_validator` | When `NEXT_SKILL=/behavior_validator` | Source-blind contract check; then `NEXT_SKILL=/pr_review --validate` |
 | `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review; secrets; smoke reminder |
-| `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` |
+| `vps_infra_ops` | After `approved`, **only if required** | Product-owned; `--verify` → `INFRA_RUNBOOK.md`; phase stays `approved`; then `NEXT_SKILL=/release_mgmt`. **Not** installed by portable harness — only when the product provides the skill or plugin flags infra required |
+| `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` (expects infra PASS when required) |
 | `sync_docs` | After ship | Full repo+vault doc sync (workflow, mirrors, wiki, release log) → `init` |
 
 ## Support

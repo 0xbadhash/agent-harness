@@ -27,10 +27,12 @@ def check_file(path: Path) -> list[str]:
     pid = path.parent.name
     if "Newest first" not in text:
         errs.append(f"{pid}: header missing 'Newest first'")
-    if "UTC" not in text.split("\n\n")[0] and "HKT" not in text[:400]:
-        # header should mention both
-        if "HKT" not in text[:500]:
-            errs.append(f"{pid}: header missing HKT contract blurb")
+    # Header blurb (first ~500 chars / first paragraphs) must mention both zones
+    header_probe = text[:500]
+    if "UTC" not in header_probe:
+        errs.append(f"{pid}: header missing UTC contract blurb")
+    if "HKT" not in header_probe:
+        errs.append(f"{pid}: header missing HKT contract blurb")
     # split entries
     chunks = re.split(r"(?=^## )", text, flags=re.M)
     entries = [c for c in chunks if c.lstrip().startswith("## ")]
