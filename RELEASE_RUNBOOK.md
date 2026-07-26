@@ -1,15 +1,24 @@
-# Release runbook — agent-harness v1.3.7
+# RELEASE RUNBOOK — agent-harness v1.4.0
 
-**Scope:** P1 behavior_validator, P2 handoff, P3 session tools, NEXT_SKILL handoff
+**Date:** 2026-07-26  
+**Tag:** v1.4.0  
+
+## Scope
+Any-LLM bootstrap: install --verify, bootstrap_check, verify_skills ship-chain, llm-bootstrap docs, install tests.
 
 ## Smoke
-- `python3 -m unittest tests.test_next_skill tests.test_review_scope tests.test_check_secrets_diff`
-- `python3 scripts/validate.py full`
-- `python3 scripts/next_skill.py --after execute_dev --base HEAD~1`
+| Step | Result |
+|------|--------|
+| run_harness_tests.sh | ✅ 7 unittest |
+| verify_skills.py . | ✅ 19 skills, 13 ship |
+| bootstrap_check.sh . | ✅ |
 
-## Install products
-```bash
-for p in watchlist email-detach substack-push second-brain catalyxt.ltd ocr-ledger zk-business-card; do
-  bash install_into_product.sh /home/debian/$p
-done
-```
+## Rollback
+`git checkout v1.3.7`
+
+## §9
+1. Install does not delete product-only skills.  
+2. product_plugin.yaml left as-is on re-install.  
+3. Harness prefers skills/ SoT over stale .agents/skills when install script present.  
+4. pytest optional.  
+5. No vault required.  

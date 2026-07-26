@@ -12,6 +12,7 @@ max-retries: 0
 timeout-seconds: 900
 ---
 
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # /anti_slop_design — pols.dev anti-slop design law
 
 **Canonical source:** [https://pols.dev/slop.md](https://pols.dev/slop.md)  

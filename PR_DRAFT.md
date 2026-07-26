@@ -1,26 +1,35 @@
-# PR Draft — P1–P3 skills + NEXT_SKILL handoff
+# PR Draft: v1.4.0 any-LLM bootstrap + install verify
 
-**Date:** 2026-07-25  
-**Version:** 1.3.7  
+**Range:** v1.3.7..HEAD
 
 ## What Problem This Solves
-After execute_dev/code_review, next skill was ambiguous ("if needed"). P1–P3 openclaw-adjacent skills missing.
+
+Products and LLMs needed a clearer, testable way to install the full ship-skill FSM without guessing skill paths or missing chain steps.
 
 ## Why This Change Was Made
-- `next_skill.py` always prints one line `NEXT_SKILL=…`
-- P1 behavior_validator, P2 handoff, P3 session_viewer + agent_transcript
-- execute_dev/code_review/cross_review handoffs use the helper
+
+1. `install_into_product.sh --verify` + `bootstrap_check.sh`  
+2. `verify_skills.py` dual-root + ship-chain manifest  
+3. `docs/llm-bootstrap.md` + AGENTS template  
+4. Install copies FSM docs into `.agents/docs/`  
+5. Unittest install smoke (temp product)
 
 ## User Impact
-Clear next slash command; optional black-box behavior check; handoff/session tools.
+
+Any LLM can bootstrap a product and run full FSM with documented one-shot phrases and gates.
 
 ## Evidence
-- unittest test_next_skill + review_scope + secrets  
-- validate full 5/5  
 
-## Things that look but are fine
-1. behavior_validator is contract-first skill, not full openclaw isolation  
-2. session_viewer is minimal HTML not full openclaw TS viewer  
-3. NEXT_SKILL still agent-enforced  
-4. Large→cross_review heuristic is file/LOC based  
-5. Runtime heuristic may send pure-script tools to behavior_validator (acceptable)
+```text
+green_cmd: bash scripts/run_harness_tests.sh
+green_cmd: python3 scripts/verify_skills.py .
+green_cmd: bash scripts/bootstrap_check.sh .
+```
+
+## Things that look bad but are actually fine
+
+1. pytest suite still optional without venv — bootstrap tests use stdlib unittest.  
+2. Soft AGENT_REFERENCE warnings reduced on harness SoT skills.  
+3. Product-only skills preserved on re-install (rsync).  
+4. VERSION minor bump 1.4.0 for bootstrap contract.  
+5. No product application code in harness.  

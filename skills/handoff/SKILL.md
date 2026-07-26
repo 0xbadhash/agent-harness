@@ -9,6 +9,7 @@ max-retries: 0
 timeout-seconds: 300
 ---
 
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # `/handoff` — multi-agent continuity (P2)
 
 Use when: switching agents/sessions, blocked, or user says “handoff / delegate”.

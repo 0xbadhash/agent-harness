@@ -21,7 +21,7 @@ mkdir my-product && cd my-product
 git init
 
 # 3. Install
-"$AGENTS_HARNESS_ROOT/install_into_product.sh" .
+"$AGENTS_HARNESS_ROOT/install_into_product.sh" . --verify
 
 # 4. Choose stack at bootstrap (edit plugin)
 cp -n "$AGENTS_HARNESS_ROOT/product_plugin.example.yaml" \
@@ -93,15 +93,29 @@ Product-only skill directories (names not in the harness) are **not deleted**.
 ## Verify install
 
 ```bash
+bash scripts/bootstrap_check.sh
+# or piece-wise:
 test -f .agents/product_plugin.yaml && echo plugin_ok
 test -f .agents/skills/execute_dev/SKILL.md && echo skills_ok
 test -f .agents/skills/spec/SKILL.md && echo spec_ok
+test -f .agents/skills/code_review/SKILL.md && echo code_review_ok
+test -f .agents/skills/behavior_validator/SKILL.md && echo behavior_ok
 python3 scripts/pipeline_state.py get 2>/dev/null || cat .agents/state/pipeline.json
-python3 scripts/verify_skills.py
+python3 scripts/verify_skills.py .
+```
+
+## Full FSM (any LLM)
+
+See **[llm-bootstrap.md](llm-bootstrap.md)** for the one-shot user phrase and phase table.
+
+```text
+Full ship FSM for <task>:
+/execute_dev → /code_review → /pr_review --validate → /release_mgmt → /sync_docs
 ```
 
 ## Next
 
+- [LLM bootstrap (any agent)](llm-bootstrap.md)  
 - [Product plugin reference](product-plugin.md)  
 - [Ship flow](ship-flow.md)  
 - [TDD](tdd.md)  

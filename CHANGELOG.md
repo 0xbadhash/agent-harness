@@ -1,8 +1,14 @@
 # Changelog
 
-## Unreleased
+## v1.4.0 — 2026-07-26
 
 ### Added
+- **Any-LLM bootstrap:** `docs/llm-bootstrap.md`, `templates/AGENTS.harness.md`, install `--verify`, `scripts/bootstrap_check.sh`, `config/ship_skills.txt` (ship-chain manifest).
+- **`verify_skills.py`:** dual-root (harness `skills/` or product `.agents/skills/`); require ship-chain skills; works after install.
+- **Tests:** `tests/test_install_bootstrap.py`, `tests/test_verify_skills.py` (stdlib unittest; temp product install).
+- Install copies `.agents/docs/{ship-flow,skills-catalog,llm-bootstrap,bootstrap}.md` into products.
+
+### Added (earlier unreleased)
 - **Night shift dev-deps preflight:** `scripts/ensure_product_dev_env.py` + multi-product orchestrator preflight before readiness (venv + requirements-dev; no sudo pip).
 
 - **Night-shift log template:** canonical vault `night-shift-log.md` (Timeline newest-first + dual UTC/HKT + full reports). Helpers in `scripts/night_shift_log.py`; readiness prepend + rotate share the same render. Spec: `docs/specs-2026-07-18-night-shift-log-template.md`.

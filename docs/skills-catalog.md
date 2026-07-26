@@ -46,7 +46,19 @@ The YAML `description` is the agent’s **load trigger**. Front-load:
 
 Vague descriptions → wrong skill loads → wasted context.
 
+## Install + verify
+
+After `install_into_product.sh`, ship-chain skills are listed in `config/ship_skills.txt` (copied to `.agents/policy/ship_skills.txt`).
+
+```bash
+python3 scripts/verify_skills.py          # frontmatter + ship-chain presence
+bash scripts/bootstrap_check.sh           # files + pipeline + next_skill smoke
+```
+
+Any LLM: [llm-bootstrap.md](llm-bootstrap.md).
+
 ## Related
 
 - [Writing skills](writing-skills.md)  
 - [Ship flow](ship-flow.md)  
+- [LLM bootstrap](llm-bootstrap.md)  

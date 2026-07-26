@@ -11,6 +11,7 @@ timeout-seconds: 900
 preserve-artifacts-on-failure: true
 ---
 
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # `/code_review` — closeout code review (optional)
 
 **Not** a replacement for `/cross_review` (personas + obsolete scan) or

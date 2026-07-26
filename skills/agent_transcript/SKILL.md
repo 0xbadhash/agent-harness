@@ -9,6 +9,7 @@ max-retries: 0
 timeout-seconds: 300
 ---
 
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # `/agent_transcript` — sanitized PR provenance (P3)
 
 Use during agent-created **GitHub PR/issue** workflows when the user wants a

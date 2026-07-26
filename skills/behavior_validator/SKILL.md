@@ -11,6 +11,7 @@ timeout-seconds: 900
 preserve-artifacts-on-failure: true
 ---
 
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # `/behavior_validator` — black-box behavior check (P1)
 
 Companion to source-aware `/code_review` / `/cross_review`:

@@ -8,6 +8,8 @@ user-invocable: true
 max-retries: 0
 timeout-seconds: 600
 ---
+
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # /sync_docs (portable harness)
 
 ## Source of truth

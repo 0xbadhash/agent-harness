@@ -26,19 +26,26 @@ export AGENTS_HARNESS_ROOT="$PWD/agent-harness"   # or install path
 # 2. Create or open a product repo
 mkdir my-product && cd my-product && git init
 
-# 3. Install the harness into that product
-"$AGENTS_HARNESS_ROOT/install_into_product.sh" .
+# 3. Install the harness into that product (+ verify ship skills)
+"$AGENTS_HARNESS_ROOT/install_into_product.sh" . --verify
 
 # 4. Bootstrap product identity + stack (edit the generated file)
 $EDITOR .agents/product_plugin.yaml
+
+# 5. Optional health check later
+bash scripts/bootstrap_check.sh
+python3 scripts/verify_skills.py
 ```
 
-Then open the product in your coding agent and run the ship skills (`/spec` → `/execute_dev` → `/pr_review` → …).
+Then open the product in **any** coding LLM and run the ship skills  
+(`/spec` → `/execute_dev` → `/code_review` → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).
+
+**Any LLM bootstrap:** [docs/llm-bootstrap.md](docs/llm-bootstrap.md) — what to read, one-shot full-FSM phrase, phase gates, `NEXT_SKILL=` router.
 
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
 ```bash
-git clone --branch v1.0.0 --depth 1 https://github.com/0xbadhash/agent-harness.git
+git clone --branch v1.3.8 --depth 1 https://github.com/0xbadhash/agent-harness.git
 ```
 
 ---

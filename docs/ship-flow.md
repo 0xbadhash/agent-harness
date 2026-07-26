@@ -57,6 +57,15 @@ Mutations: `scripts/pipeline_state.py` only (atomic).
 
 **Always parse one line:** `NEXT_SKILL=/skill …` — do not invent the next step.
 
+### One-shot user phrase (any LLM)
+
+```text
+Full ship FSM for <task>: /execute_dev then /code_review then /pr_review --validate
+then /release_mgmt then /sync_docs then git push origin main --tags
+```
+
+See [llm-bootstrap.md](llm-bootstrap.md) for install + discovery.
+
 ### Side skills (not ship phases)
 
 | Skill | When |

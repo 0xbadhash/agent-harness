@@ -9,6 +9,7 @@ max-retries: 0
 timeout-seconds: 300
 ---
 
+# Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
 # `/session_viewer` — local session HTML (P3)
 
 Use when the user wants to **view or export** a coding-agent session.
