@@ -128,6 +128,39 @@ def should_skip_heavy_review(baseline: ScopeBaseline) -> bool:
     return baseline.prose_only
 
 
+# Shared large-diff thresholds (next_skill router + cross_review_gate soft gate)
+LARGE_FILES = 8
+LARGE_LINES = 200
+LARGE_NON_TEST_LOC = 150
+LARGE_PRODUCT_PATHS = 3
+
+
+def is_large_baseline(
+    baseline: ScopeBaseline,
+    *,
+    product_path_count: int = 0,
+    product_prefixes_configured: bool = False,
+) -> tuple[bool, str]:
+    """Return (is_large, reason_detail) using the same heuristics as ship-flow.md."""
+    churn = baseline.n_insertions + baseline.n_deletions
+    reasons: list[str] = []
+    if baseline.n_files >= LARGE_FILES:
+        reasons.append(f"files={baseline.n_files}>={LARGE_FILES}")
+    if churn >= LARGE_LINES:
+        reasons.append(f"churn={churn}>={LARGE_LINES}")
+    if baseline.non_test_loc >= LARGE_NON_TEST_LOC:
+        reasons.append(f"non_test_loc={baseline.non_test_loc}>={LARGE_NON_TEST_LOC}")
+    if product_prefixes_configured and product_path_count >= LARGE_PRODUCT_PATHS:
+        reasons.append(f"product_paths={product_path_count}>={LARGE_PRODUCT_PATHS}")
+    if reasons:
+        return True, ", ".join(reasons)
+    return (
+        False,
+        f"files={baseline.n_files} churn={churn} non_test_loc={baseline.non_test_loc} "
+        f"product_paths={product_path_count}",
+    )
+
+
 def scope_growth_exceeded(
     original: ScopeBaseline,
     current: ScopeBaseline,

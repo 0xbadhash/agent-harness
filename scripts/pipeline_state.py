@@ -10,11 +10,23 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-VALID_PHASES = {"init", "ready_for_review", "approved", "blocked", "shipped", "missing"}
+try:
+    import fcntl
+except ImportError:  # pragma: no cover — non-POSIX
+    fcntl = None  # type: ignore
+
+# Five ship phases only (see docs/ship-flow.md). Do not invent others.
+VALID_PHASES = {"init", "ready_for_review", "approved", "blocked", "shipped"}
+
 
 def _state_path() -> Path:
     root = Path(__file__).resolve().parent.parent
     return root / ".agents" / "state" / "pipeline.json"
+
+
+def _lock_path() -> Path:
+    return _state_path().parent / ".pipeline.json.lock"
+
 
 def _atomic_write(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -33,22 +45,54 @@ def _atomic_write(path: Path, data: dict[str, Any]) -> None:
         raise
 
 
+def _default_state() -> dict[str, Any]:
+    return {"phase": "init", "score": None, "task": None, "remediation": []}
+
+
 def get() -> dict[str, Any]:
     p = _state_path()
     if not p.exists():
-        return {"phase": "init", "score": None, "task": None, "remediation": []}
-    return json.loads(p.read_text(encoding="utf-8"))
+        return _default_state()
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return _default_state()
+    if not isinstance(data, dict):
+        return _default_state()
+    phase = data.get("phase")
+    if phase not in VALID_PHASES:
+        # Corrupt / hand-edited illegal phase → safe default
+        data = {**_default_state(), **{k: v for k, v in data.items() if k != "phase"}}
+        data["phase"] = "init"
+    return data
+
 
 def set_phase(phase: str, score: float | None = None, task: str | None = None) -> None:
     if phase not in VALID_PHASES:
-        raise ValueError(f"Invalid phase: {phase}. Valid: {VALID_PHASES}")
-    state = get()
-    state["phase"] = phase
-    if score is not None:
-        state["score"] = score
-    if task is not None:
-        state["task"] = task
-    _atomic_write(_state_path(), state)
+        raise ValueError(f"Invalid phase: {phase}. Valid: {sorted(VALID_PHASES)}")
+    path = _state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Serialize read-modify-write so concurrent set-phase calls do not drop fields.
+    lock_f = None
+    try:
+        if fcntl is not None:
+            lock_f = open(_lock_path(), "a+", encoding="utf-8")
+            fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
+        state = get()
+        state["phase"] = phase
+        if score is not None:
+            state["score"] = score
+        if task is not None:
+            state["task"] = task
+        _atomic_write(path, state)
+    finally:
+        if lock_f is not None:
+            try:
+                fcntl.flock(lock_f.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+            lock_f.close()
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -65,6 +109,7 @@ def main() -> int:
         set_phase(args.phase, args.score, args.task)
         print(f"✅ phase → {args.phase}")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

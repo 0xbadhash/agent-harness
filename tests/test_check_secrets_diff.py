@@ -4,11 +4,16 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from check_secrets_diff import _PATTERNS  # noqa: E402
+from check_secrets_diff import (  # noqa: E402
+    _PATTERNS,
+    _range_spec,
+    main,
+)
 
 
 class TestPatterns(unittest.TestCase):
@@ -25,6 +30,17 @@ class TestPatterns(unittest.TestCase):
                 pat.search("password = 'short'"),
                 msg=name,
             )
+
+    def test_range_is_three_dot(self):
+        self.assertEqual(_range_spec("HEAD~1", "HEAD"), "HEAD~1...HEAD")
+
+    def test_strict_requires_scanner(self):
+        with mock.patch("check_secrets_diff.run_gitleaks", return_value=(-1, "")):
+            with mock.patch(
+                "check_secrets_diff.run_trufflehog", return_value=(-1, "")
+            ):
+                rc = main(["--strict", "--repo", str(ROOT)])
+        self.assertEqual(rc, 1)
 
 
 if __name__ == "__main__":

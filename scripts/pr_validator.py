@@ -65,7 +65,40 @@ def score(diff: str | None, pr_draft: Path) -> dict:
     else:
         violations.append("compliance gates failed")
 
-    breakdown["pr_hygiene"] = RUBRIC["pr_hygiene"]  # assume ok; refine with git log checks
+    # PR hygiene: draft narrative + clean-ish git surface (not free points)
+    hygiene_ok = True
+    if not pr_draft.is_file():
+        hygiene_ok = False
+        violations.append("pr_hygiene: PR_DRAFT.md missing")
+    else:
+        draft = pr_draft.read_text(encoding="utf-8", errors="replace")
+        for needle in (
+            "What Problem This Solves",
+            "Why This Change Was Made",
+            "User Impact",
+            "Evidence",
+        ):
+            if needle not in draft:
+                hygiene_ok = False
+                violations.append(f"pr_hygiene: PR_DRAFT missing section «{needle}»")
+                break
+    # Prefer a single primary branch tip for ship (soft if git missing)
+    try:
+        log = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-list", "--count", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if log.returncode != 0:
+            hygiene_ok = False
+            violations.append("pr_hygiene: git rev-list failed")
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    if hygiene_ok:
+        breakdown["pr_hygiene"] = RUBRIC["pr_hygiene"]
+    else:
+        breakdown["pr_hygiene"] = 0
 
     # Soft cross_review gate (does not reduce score unless --strict-cross-review)
     try:

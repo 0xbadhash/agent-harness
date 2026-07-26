@@ -29,6 +29,9 @@ need ".agents/skills/behavior_validator/SKILL.md"
 need "scripts/pipeline_state.py"
 need "scripts/pr_validator.py"
 need "scripts/product_smoke.py"
+need "scripts/product_plugin.py"
+need "scripts/product_venv.py"
+need "scripts/review_scope.py"
 need "scripts/next_skill.py"
 need "scripts/verify_skills.py"
 
@@ -41,11 +44,31 @@ if [[ -f scripts/verify_skills.py ]]; then
 fi
 
 if [[ -f scripts/next_skill.py ]]; then
-  out=$(python3 scripts/next_skill.py --after execute_dev --base HEAD --head HEAD 2>/dev/null || true)
+  # review_scope is a hard import of next_skill — do not hide failures
+  # Per-product err file so concurrent bootstrap_check runs do not clobber each other
+  ns_err="$ROOT/.agents/traces/.bootstrap_next_skill.err"
+  mkdir -p "$(dirname "$ns_err")"
+  set +e
+  out=$(python3 scripts/next_skill.py --after execute_dev --base HEAD --head HEAD 2>"$ns_err")
+  ns_rc=$?
+  set -e
   echo "  next after execute_dev: $out"
-  if [[ -z "$out" ]]; then
-    echo "  ⚠️  next_skill produced empty output"
+  if [[ $ns_rc -ne 0 ]]; then
+    echo "  ❌ next_skill exited $ns_rc"
+    if [[ -s "$ns_err" ]]; then
+      sed -n '1,20p' "$ns_err" | sed 's/^/    /'
+    fi
+    fail=1
+  elif [[ -z "$out" ]]; then
+    echo "  ❌ next_skill produced empty output"
+    fail=1
+  elif [[ "$out" != NEXT_SKILL=* ]]; then
+    echo "  ❌ next_skill stdout must be NEXT_SKILL=… (got: $out)"
+    fail=1
+  else
+    echo "  ✅ next_skill OK"
   fi
+  rm -f "$ns_err"
 fi
 
 if [[ $fail -ne 0 ]]; then

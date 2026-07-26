@@ -182,8 +182,9 @@ def normalize_text(text: str, project_id: str) -> str:
     coerced = _coerce_bare_lines(text)
     _old_header, rest = split_header_and_rest(coerced)
     entries, unparsed = parse_entries(rest)
-    # newest first; same-day: higher orig_idx (later append) first
-    entries.sort(key=lambda e: (e.sort_key, e.orig_idx), reverse=True)
+    # newest first; same-day tie: lower orig_idx first (document order when
+    # already newest-first — reverse=True on orig_idx alone flipped same-day rows)
+    entries.sort(key=lambda e: (e.sort_key, -e.orig_idx), reverse=True)
     body = "".join(e.render() for e in entries)
     if unparsed:
         body += "\n<!-- unparsed legacy blocks -->\n" + "".join(unparsed)
