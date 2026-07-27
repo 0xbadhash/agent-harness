@@ -745,7 +745,12 @@ def write_vault(
         notes.append(f"vault log: {log_path}")
 
         todo_path = proj / "TODO.md"
-        todo_path.write_text(todo_md, encoding="utf-8")
+        try:
+            from vault_fs import write_text as _vault_write  # type: ignore
+
+            _vault_write(todo_path, todo_md)
+        except ImportError:
+            todo_path.write_text(todo_md, encoding="utf-8")
         notes.append(f"vault TODO: {todo_path}")
 
         notes.append(

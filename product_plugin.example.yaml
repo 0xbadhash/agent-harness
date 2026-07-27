@@ -15,10 +15,11 @@ stack:
 product_roadmap: ROADMAP.md
 harness_backlog: .agents/BACKLOG.md
 
-# Executed at release / smoke (argv arrays; cwd relative to product root)
+# Executed at release / smoke (argv arrays; cwd relative to product root).
+# Prefer a wrapper script over bash -c (YAML quote breakage under night_shift).
 smoke:
   - name: unit
-    cmd: ["echo", "replace-with-your-test-command"]
+    cmd: ["bash", "scripts/smoke_unit.sh"]   # or your product test command
     cwd: .
 
 # Optional knowledge vault (second-brain / Obsidian / anything).

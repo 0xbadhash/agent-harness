@@ -308,6 +308,25 @@ sudo systemctl start night-shift-all.service
 
 Service treats exit **0 and 1** as success for systemd (`SuccessExitStatus=0 1`) so a failed product gate still counts as a completed overnight run; check the report for PASS/FAIL.
 
+### Vault write permission (group-write)
+
+Night shift runs as the timer user (often `debian`) while vault files may be owned by `secondbrain` mode `0644` → `⚠️ VAULT SKIP: Permission denied`.
+
+**Harness helpers (SoT):**
+
+```bash
+# Report which 01-Projects/*/night-shift-log.md|TODO.md|dev-log.md are not writable
+python3 scripts/ensure_vault_group_write.py --vault "$PRODUCT_VAULT_ROOT" --check
+
+# chmod g+w on files you own
+python3 scripts/ensure_vault_group_write.py --vault "$PRODUCT_VAULT_ROOT" --apply
+
+# Operator one-shot (service-owned tree): chgrp secondbrain + group write
+python3 scripts/ensure_vault_group_write.py --vault "$PRODUCT_VAULT_ROOT" --apply --sudo
+```
+
+Writers (`vault_fs.write_text`, night-shift log/TODO, `sync_vault_devlog`) prefer mode `0664` and fall back to `sudo -n -u secondbrain tee` when passwordless sudo is configured.
+
 ### Live status on this host (documented when last verified)
 
 | Field | Value (2026-07-17) |

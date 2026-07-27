@@ -15,9 +15,9 @@ smoke:
   - name: hardcodes
     cmd: ["python3", "scripts/check_hardcodes.py"]
     cwd: .
-  # Prefer COMPLIANCE_PYTHON / sibling watchlist venv when harness has no local .venv
+  # Wrapper avoids nested bash -c / YAML quote breakage under night_shift
   - name: unit
-    cmd: ["bash", "-c", "PY=\"${COMPLIANCE_PYTHON:-}\"; if [ -z \"$PY\" ] && [ -x \"$HOME/watchlist/.venv/bin/python\" ]; then PY=\"$HOME/watchlist/.venv/bin/python\"; elif [ -x .venv/bin/python ]; then PY=.venv/bin/python; else PY=python3; fi; exec \"$PY\" -m pytest -q"]
+    cmd: ["bash", "scripts/smoke_unit.sh"]
     cwd: .
 
 vault:

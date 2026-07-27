@@ -371,10 +371,17 @@ def split_header_and_rest(text: str) -> tuple[str, str]:
 def _write_full(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
+        from vault_fs import write_text as _vault_write  # type: ignore
+
+        _vault_write(path, content)
+        return
+    except ImportError:
+        pass
+    try:
         path.write_text(content, encoding="utf-8")
     except PermissionError:
         proc = subprocess.run(
-            ["sudo", "-u", "secondbrain", "tee", str(path)],
+            ["sudo", "-n", "-u", "secondbrain", "tee", str(path)],
             input=content.encode("utf-8"),
             capture_output=True,
             check=False,

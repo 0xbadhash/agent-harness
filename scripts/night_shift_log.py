@@ -171,7 +171,12 @@ def write_night_shift_log(
     bodies = [new_body] + [r["body"] for r in prior_reports]
     text = render_log_document(product_id, timeline, bodies)
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    log_path.write_text(text, encoding="utf-8")
+    try:
+        from vault_fs import write_text as _vault_write  # type: ignore
+    except ImportError:  # pragma: no cover
+        log_path.write_text(text, encoding="utf-8")
+    else:
+        _vault_write(log_path, text)
 
 
 def render_rotated_log(
