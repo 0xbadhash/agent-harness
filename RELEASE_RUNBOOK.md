@@ -1,24 +1,37 @@
-# RELEASE RUNBOOK — agent-harness v1.4.0
+# RELEASE_RUNBOOK — agent-harness v1.4.1
 
-**Date:** 2026-07-26  
-**Tag:** v1.4.0  
+**When (UTC):** 2026-07-27  
+**Score:** 100 (pr_validator)  
+**Infra:** N/A (no vps_infra_ops skill on this product)
 
 ## Scope
-Any-LLM bootstrap: install --verify, bootstrap_check, verify_skills ship-chain, llm-bootstrap docs, install tests.
+
+- `scripts/smoke_unit.sh` + product_plugin unit smoke  
+- `vault_fs.py` + `ensure_vault_group_write.py`  
+- night_shift / sync_vault_devlog write paths  
+- docs/night-shift.md vault ACL section  
 
 ## Smoke
+
 | Step | Result |
 |------|--------|
-| run_harness_tests.sh | ✅ 7 unittest |
-| verify_skills.py . | ✅ 19 skills, 13 ship |
-| bootstrap_check.sh . | ✅ |
-
-## Rollback
-`git checkout v1.3.7`
+| hardcodes | pass |
+| unit (`smoke_unit.sh`) | pass |
+| validate full | 5/5 |
 
 ## §9
-1. Install does not delete product-only skills.  
-2. product_plugin.yaml left as-is on re-install.  
-3. Harness prefers skills/ SoT over stale .agents/skills when install script present.  
-4. pytest optional.  
-5. No vault required.  
+
+1. sudo -n secondbrain tee is optional fallback  
+2. One-time vault --apply --sudo is operator  
+3. kanban write not fully on vault_fs (follow-up)  
+
+## Rollback
+
+```bash
+git checkout v1.4.0
+# or: git revert be02817..HEAD
+```
+
+## Tag
+
+`v1.4.1`

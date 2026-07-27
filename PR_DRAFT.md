@@ -1,35 +1,32 @@
-# PR Draft: v1.4.0 any-LLM bootstrap + install verify
+# PR Draft — smoke_unit wrapper + vault group-write
 
-**Range:** v1.3.7..HEAD
+**Date:** 2026-07-27  
+**Version:** 1.4.1 (pending release)
 
 ## What Problem This Solves
-
-Products and LLMs needed a clearer, testable way to install the full ship-skill FSM without guessing skill paths or missing chain steps.
+Night shift failed agent-harness product_smoke on unit (bash -c syntax error) and hit vault Permission denied for night-shift-log writes.
 
 ## Why This Change Was Made
-
-1. `install_into_product.sh --verify` + `bootstrap_check.sh`  
-2. `verify_skills.py` dual-root + ship-chain manifest  
-3. `docs/llm-bootstrap.md` + AGENTS template  
-4. Install copies FSM docs into `.agents/docs/`  
-5. Unittest install smoke (temp product)
+- Replace nested bash -c smoke with scripts/smoke_unit.sh
+- Shared vault_fs writers + ensure_vault_group_write for group-writable vault logs
+- Document operator --apply --sudo path
 
 ## User Impact
-
-Any LLM can bootstrap a product and run full FSM with documented one-shot phrases and gates.
+Night shift unit smoke stable; vault logs writable by debian∈secondbrain after one-time ACL fix.
 
 ## Evidence
-
-```text
-green_cmd: bash scripts/run_harness_tests.sh
-green_cmd: python3 scripts/verify_skills.py .
-green_cmd: bash scripts/bootstrap_check.sh .
-```
+- pytest 87 passed
+- product_smoke 2/2
+- validate full 5/5 (COMPLIANCE_PYTHON)
+- ensure_vault_group_write --check OK after --apply --sudo
+- CODE-REVIEW + CROSS-REVIEW + BEHAVIOR-REPORT artifacts
 
 ## Things that look bad but are actually fine
+1. sudo -n -u secondbrain tee only works with passwordless sudoers (optional fallback)
+2. One-time --apply --sudo is operator, not silent every night after group-write set
+3. kanban.md write path not fully migrated to vault_fs in this patch (follow-up)
+4. smoke falls back to unittest if pytest missing on interpreter
+5. .agents/product_plugin tracked despite general .agents ignore exceptions on this path
 
-1. pytest suite still optional without venv — bootstrap tests use stdlib unittest.  
-2. Soft AGENT_REFERENCE warnings reduced on harness SoT skills.  
-3. Product-only skills preserved on re-install (rsync).  
-4. VERSION minor bump 1.4.0 for bootstrap contract.  
-5. No product application code in harness.  
+## Cross-review
+See `.agents/artifacts/CROSS_REVIEW.md` (blockers=0).
