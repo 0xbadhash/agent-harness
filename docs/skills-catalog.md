@@ -2,42 +2,58 @@
 
 Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
-**Full ship map (ASCII):** [ship-flow.md](ship-flow.md) — phases + skill branches (`/code_review`, `/cross_review`, `/behavior_validator`, `/vps_infra_ops` when required, `NEXT_SKILL=`).
+**Full ship map (ASCII):** [ship-flow.md](ship-flow.md) — phases + skill branches  
+(`/code_review`, `/cross_review`, `/behavior_validator`, `/vps_infra_ops` when required, `NEXT_SKILL=`).
 
 ## User-invoked (ship)
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
 | `spec` | Before coding a new idea | Constitution → interview → draft → clarify → `.agents/specs/` (+ optional plan/tickets) + roadmap OPEN (no pipeline advance) |
-| `execute_dev` | Building one task | TDD, implement, validate, handoff → `ready_for_review` |
-| `code_review` | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only; prints `NEXT_SKILL=` |
+| `execute_dev` | Building one task | TDD, implement, validate; mandatory `/code_review` closeout for non-prose; handoff → `ready_for_review`; prints `NEXT_SKILL=` |
+| `code_review` | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only; secrets + scope; prints `NEXT_SKILL=` |
 | `cross_review` | When `NEXT_SKILL=/cross_review` | Multi-persona + obsolete scan; P0-first; then `NEXT_SKILL=` |
 | `behavior_validator` | When `NEXT_SKILL=/behavior_validator` | Source-blind contract check; then `NEXT_SKILL=/pr_review --validate` |
-| `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review; secrets; smoke reminder |
-| `vps_infra_ops` | After `approved`, **only if required** | Product-owned; `--verify` → `INFRA_RUNBOOK.md`; phase stays `approved`; then `NEXT_SKILL=/release_mgmt`. **Not** installed by portable harness — only when the product provides the skill or plugin flags infra required |
+| `pr_review` | Scoring a ready change | Deterministic rubric; soft cross-review; secrets; smoke reminder; **only** skill that sets `approved`/`blocked` |
+| `vps_infra_ops` | After `approved`, **only if required** | **Product-owned** (not in portable install). `--verify` → `INFRA_RUNBOOK.md`; phase stays `approved`; then `NEXT_SKILL=/release_mgmt` |
 | `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` (expects infra PASS when required) |
-| `sync_docs` | After ship | Full repo+vault doc sync (workflow, mirrors, wiki, release log) → `init` |
+| `sync_docs` | After ship | Full repo+vault doc sync → `init` |
 
-## Support
+Ship-chain manifest (must install): `config/ship_skills.txt`.
+
+## Support (not ship phases)
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
-| `handoff` | Switch agent / delegate | Clipboard-ready handoff prompt for a fresh agent |
-| `session_viewer` | Inspect a session log | JSONL/text → local HTML |
-| `agent_transcript` | Optional PR provenance | Sanitized markdown; ask user before PR insert |
-| `anti_slop_design` | Any UI/UX/frontend design or polish | pols.dev anti-slop law: confirm → build → point-by-point pre-ship audit ([slop.md](https://pols.dev/slop.md)) |
+| `handoff` | Switch agent / delegate | Clipboard-ready handoff prompt for a fresh agent (P2) |
+| `session_viewer` | Inspect a session log | JSONL/text → local HTML (P3) |
+| `agent_transcript` | Optional PR provenance | Sanitized markdown; ask user before PR insert (P3) |
+| `night_shift` | Overnight / on-demand readiness | Gates (matrix, smoke, coverage, optional live); vault TODO + night-shift-log; multi-product timer 03:15 HKT; **no** auto-ship — [night-shift.md](night-shift.md) |
 | `sweep` | Hygiene pass | Status, drift, skills audit, whole-repo obsolete/cleanup (evidence only) |
-| `night_shift` | Overnight / on-demand readiness | Gates (matrix, smoke, coverage, optional live); vault TODO + night-shift-log; multi-product timer 03:15 HKT; **no** auto-ship — [docs/night-shift.md](night-shift.md) |
 | `feedback` | End of session | Harness feedback log |
 | `audit_repo` | Policy gaps | Gap analysis + whole-repo obsolete/cleanup (evidence only) |
+| `audit_harness` | Harness self-audit | Policy / install health of the harness kit |
 | `plan_backend` | After audit | Roadmap structure (product fills content) |
 | `test_automation` | Suite orchestration | Run/scaffold tests |
 
 ## Product-only skills
 
 Live **only** in the product repo under `.agents/skills/<name>/`.  
-Examples: deploy, cloud topology, app-specific ops.  
+Examples: `vps_infra_ops`, deploy, cloud topology, app-specific ops.  
 **Never** copy product hostnames into this harness repo.
+
+## Key scripts (not skills)
+
+| Script | Role |
+|--------|------|
+| `scripts/next_skill.py` | Single-line `NEXT_SKILL=…` after ship steps |
+| `scripts/smoke_unit.sh` | Portable unit smoke (no nested `bash -c`) |
+| `scripts/daytime_readiness_subset.py` | Daytime hardcodes + validate + smoke (pre-night) |
+| `scripts/ensure_vault_group_write.py` | Vault ACL/group-write for night_shift logs |
+| `scripts/vault_fs.py` | Group-friendly vault file writes |
+| `scripts/check_hardcodes.py` | Zero-tolerance hardcodes (with content/vendored skips) |
+| `scripts/pipeline_state.py` | FSM phase get/set |
+| `scripts/pr_validator.py` | Deterministic PR score |
 
 ## Description field (routing)
 
@@ -65,3 +81,4 @@ Any LLM: [llm-bootstrap.md](llm-bootstrap.md).
 - [Writing skills](writing-skills.md)  
 - [Ship flow](ship-flow.md)  
 - [LLM bootstrap](llm-bootstrap.md)  
+- [Night shift](night-shift.md)  

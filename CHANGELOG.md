@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.4.3 — 2026-07-28
+
+### Removed
+- **`/anti_slop_design` skill** — not required in the portable harness; products that still need UI design law can keep a product-local skill.
+
+### Docs
+- **README + ship-flow + skills-catalog + llm-bootstrap + overview** aligned with full FSM: `code_review` / `behavior_validator` / conditional `vps_infra_ops`, `NEXT_SKILL=` router, handoff/session tools, night_shift helpers (`smoke_unit`, daytime readiness, vault group-write).
+- Pinned bootstrap tag examples updated to current release series.
+
+## v1.4.2 — 2026-07-28
+
+### Fixed (night_shift readiness)
+- Hardcode scanner skips content/secrets/vault/vendored/test-results; product domain allowlists; `--root`.
+- Vault normalize ignores epoch `When:`; mojibake headings; multi-job contract retry.
+- Vault group-write covers `harness-night-shift` SUMMARY/log.
+- `cross_review_gate` accepts legacy 2-tuple mocks (product tests).
+- **`daytime_readiness_subset.py`** for pre-night hard gates.
+
+## v1.4.1 — 2026-07-27
+
+### Fixed
+- **`scripts/smoke_unit.sh`** — unit smoke without nested `bash -c` (night_shift syntax errors).
+- **`vault_fs` + `ensure_vault_group_write`** — group-writable vault logs for night_shift.
+
 ## v1.4.0 — 2026-07-26
 
 ### Added

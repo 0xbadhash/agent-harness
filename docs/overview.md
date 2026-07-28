@@ -48,14 +48,20 @@ Keep skill bodies short. Put long checklists in `docs/` and link them.
 |--------------|----------------|
 | Built the wrong thing | `/spec` (interview + acceptance) then single-task `/execute_dev` |
 | Untested code | **TDD** gate in `/execute_dev` |
-| “Looks fine” ship | `/pr_review` score + `/cross_review` |
+| No second look on code | Mandatory `/code_review` after non-prose implement (`NEXT_SKILL=`) |
+| Large / multi-persona risk | `/cross_review` when router says so |
+| Behavior ≠ green unit tests | `/behavior_validator` (source-blind contract) |
+| “Looks fine” ship | `/pr_review --validate` score ≥ 95 (only skill → `approved`/`blocked`) |
 | Docs / vault drift | `/sync_docs` + Option A note vs release entries |
 | Entropy | `/sweep`, architecture notes in product |
 | Red suite blocking next work | `/night_shift` readiness (report + TODO; no auto-ship) — [night-shift.md](night-shift.md) |
+| Switch agent mid-task | `/handoff` (not a ship phase) |
 
 ## Related
 
 - [Bootstrap](bootstrap.md)  
 - [Product plugin](product-plugin.md)  
-- [Ship flow](ship-flow.md)  
+- [Ship flow](ship-flow.md) (full FSM ASCII)  
+- [Skills catalog](skills-catalog.md)  
+- [LLM bootstrap](llm-bootstrap.md)  
 - [Night shift](night-shift.md)  

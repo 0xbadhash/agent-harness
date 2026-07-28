@@ -12,7 +12,7 @@ Install the harness into a product without binding a technology.
 
 ```bash
 # 1. Harness (pin a tag for stability)
-git clone --branch v1.0.0 --depth 1 \
+git clone --branch v1.4.3 --depth 1 \
   https://github.com/0xbadhash/agent-harness.git ~/agent-harness
 export AGENTS_HARNESS_ROOT=~/agent-harness
 

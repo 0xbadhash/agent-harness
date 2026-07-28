@@ -47,6 +47,10 @@ Plugin: `.agents/product_plugin.yaml` (edit stack + smoke for *your* language)
 ## One-shot user phrase
 
 ```text
-Full FSM for <task>: /execute_dev then /code_review then /pr_review --validate
-then /release_mgmt then /sync_docs then git push origin main --tags
+Full FSM for <task>: /execute_dev then /code_review then (if NEXT_SKILL says)
+/cross_review and/or /behavior_validator then /pr_review --validate
+then (if required) /vps_infra_ops --verify then /release_mgmt then /sync_docs
+then git push origin main --tags
 ```
+
+See `.agents/docs/ship-flow.md` and `.agents/docs/skills-catalog.md`.

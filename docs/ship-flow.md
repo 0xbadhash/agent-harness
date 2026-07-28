@@ -261,21 +261,30 @@ See [llm-bootstrap.md](llm-bootstrap.md) for install + discovery.
 
 | Skill | When |
 |-------|------|
-| `/handoff` | Switch agent/session |
-| `/session_viewer` | HTML view of a local session log |
-| `/agent_transcript` | Sanitized transcript for PR body (ask user first) |
+| `/handoff` | Switch agent/session (P2) |
+| `/session_viewer` | HTML view of a local session log (P3) |
+| `/agent_transcript` | Sanitized transcript for PR body; ask user first (P3) |
+| `/night_shift` | Overnight readiness; no phase advance — [night-shift.md](night-shift.md) |
+| `/sweep` / `/audit_*` | Hygiene / gap analysis |
 
-### Review helpers (scripts)
+Full catalog: [skills-catalog.md](skills-catalog.md).
+
+### Review / ops helpers (scripts)
 
 | Script | Role |
 |--------|------|
 | `scripts/next_skill.py` | **Single-line handoff** `NEXT_SKILL=…` after each step |
 | `scripts/review_scope.py` | Baseline files/LOC; `prose_only` / `skip_heavy_review` |
 | `scripts/check_secrets_diff.py` | Diff-scoped secret scan (gitleaks/trufflehog or regex) |
+| `scripts/check_hardcodes.py` | Paths/URLs/secrets scan (content/vendored trees skipped) |
+| `scripts/smoke_unit.sh` | Portable unit smoke (prefer over nested `bash -c`) |
+| `scripts/daytime_readiness_subset.py` | Daytime hardcodes + validate + smoke (pre-night) |
+| `scripts/vault_fs.py` / `ensure_vault_group_write.py` | Vault group-write for night_shift logs |
 | `scripts/session_viewer.py` | JSONL/text → HTML |
 | `scripts/agent_transcript.py` | find/render sanitized markdown |
 | `scripts/cross_review_gate.py` | Soft large-diff evidence warn |
 | `scripts/pr_validator.py` | Deterministic score + pipeline phase |
+| `scripts/pipeline_state.py` | FSM get/set phase |
 
 ## PR_DRAFT narrative (template)
 

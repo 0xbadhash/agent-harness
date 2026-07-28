@@ -30,9 +30,10 @@ Agents that auto-load skills from `.agents/skills/` (or a configured skills path
 
 ```text
 Full ship FSM for <task description>:
-/execute_dev then /code_review then (if needed) /cross_review and/or /behavior_validator
-then /pr_review --validate then /release_mgmt then /sync_docs
-then git push origin main --tags
+/execute_dev then /code_review then (if NEXT_SKILL says) /cross_review
+and/or /behavior_validator then /pr_review --validate
+then (if required) /vps_infra_ops --verify then /release_mgmt
+then /sync_docs then git push origin main --tags
 ```
 
 Shorter:
@@ -46,6 +47,15 @@ Optional front door:
 ```text
 /spec <idea> then full FSM
 ```
+
+Always run and obey:
+
+```bash
+python3 scripts/next_skill.py --after <just-finished-skill>
+# exactly one line: NEXT_SKILL=/…
+```
+
+Map: [ship-flow.md](ship-flow.md) · catalog: [skills-catalog.md](skills-catalog.md)
 
 ## 4. Phase gates (agent must respect)
 
@@ -88,7 +98,11 @@ python3 scripts/next_skill.py --after behavior_validator
 
 From `config/ship_skills.txt` / `.agents/policy/ship_skills.txt`:
 
-`spec` · `execute_dev` · `code_review` · `cross_review` · `behavior_validator` · `pr_review` · `release_mgmt` · `sync_docs` · plus support: `plan_backend`, `audit_repo`, `sweep`, `feedback`, `test_automation`
+Ship-chain: `spec` · `execute_dev` · `code_review` · `cross_review` · `behavior_validator` · `pr_review` · `release_mgmt` · `sync_docs`  
+
+Support (also installed): `plan_backend` · `audit_repo` · `audit_harness` · `sweep` · `feedback` · `test_automation` · `night_shift` · `handoff` · `session_viewer` · `agent_transcript`  
+
+Product-only (not in portable harness): `vps_infra_ops` when the product needs infra verify.
 
 Verify:
 
@@ -104,7 +118,8 @@ Harness is **language-agnostic**. Set smoke to *your* test command:
 ```yaml
 smoke:
   - name: unit
-    cmd: ["npm", "test"]   # or pytest, go test, cargo test, …
+    # Prefer a wrapper script over bash -c (YAML quote breakage under night_shift)
+    cmd: ["bash", "scripts/smoke_unit.sh"]   # or: npm test, go test, cargo test, …
 ```
 
 ## 8. Failure modes for LLMs

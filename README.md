@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.4.2` (docs synced via `/sync_docs`)
+**Current release:** `v1.4.3` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -38,14 +38,16 @@ python3 scripts/verify_skills.py
 ```
 
 Then open the product in **any** coding LLM and run the ship skills  
-(`/spec` → `/execute_dev` → `/code_review` → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).
+(`/spec` → `/execute_dev` → `/code_review` → … → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).  
+Always honor the printed **`NEXT_SKILL=`** line from `scripts/next_skill.py`.
 
-**Any LLM bootstrap:** [docs/llm-bootstrap.md](docs/llm-bootstrap.md) — what to read, one-shot full-FSM phrase, phase gates, `NEXT_SKILL=` router.
+**Any LLM bootstrap:** [docs/llm-bootstrap.md](docs/llm-bootstrap.md) — what to read, one-shot full-FSM phrase, phase gates, `NEXT_SKILL=` router.  
+**Full FSM map:** [docs/ship-flow.md](docs/ship-flow.md).
 
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
 ```bash
-git clone --branch v1.3.8 --depth 1 https://github.com/0xbadhash/agent-harness.git
+git clone --branch v1.4.2 --depth 1 https://github.com/0xbadhash/agent-harness.git
 ```
 
 ---
@@ -54,8 +56,8 @@ git clone --branch v1.3.8 --depth 1 https://github.com/0xbadhash/agent-harness.g
 
 | Piece | Role |
 |-------|------|
-| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, implement (TDD), review, release, sync docs, anti-slop UI design, sweep |
-| **Scripts** (`scripts/`) | Deterministic gates: **pipeline FSM** (Finite State Machine of ship phases — see [docs/ship-flow.md](docs/ship-flow.md)), validate, PR score, vault notes |
+| **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, TDD implement, code/cross/behavior review, PR score, release, sync docs, night readiness, handoff/session tools |
+| **Scripts** (`scripts/`) | Deterministic gates: **pipeline FSM** ([ship-flow.md](docs/ship-flow.md)), validate, PR score, `next_skill`, hardcodes, vault writers, daytime readiness |
 | **Policy** (`policy/`) | Always-on engineering rules the skills inherit |
 | **Product plugin** | *Your* stack, smoke commands, vault path—never hard-coded in the harness |
 
@@ -89,8 +91,9 @@ See `docs/source-of-truth.md` and `docs/second-brain-optional.md`. Never commit 
                          ▼
 ┌─────────────────────────────────────────────────────────┐
 │  On demand (pull) — skills                              │
-│  /spec  /execute_dev  /cross_review  /pr_review         │
-│  /release_mgmt  /sync_docs  /night_shift  /sweep        │
+│  /spec  /execute_dev  /code_review  /cross_review       │
+│  /behavior_validator  /pr_review  /release_mgmt         │
+│  /sync_docs  /night_shift  /handoff  /sweep             │
 └─────────────────────────────────────────────────────────┘
                          │
                          ▼
@@ -104,19 +107,30 @@ See `docs/source-of-truth.md` and `docs/second-brain-optional.md`. Never commit 
 
 ## Ship flow
 
+Canonical detail: **[docs/ship-flow.md](docs/ship-flow.md)** (phases + skill branches + `NEXT_SKILL=`).
+
 ```text
 init
-  → /spec                 # constitution + clarify → acceptance (+ optional plan) + roadmap OPEN
-  → /execute_dev          # TDD: red → green → refactor
-  → /cross_review         # multi-persona (soft gate on large diffs)
-  → /pr_review --validate # score ≥ 95
-  → [product infra skill] # optional, product-owned
-  → /release_mgmt         # smoke from product_plugin + tag
-  → /sync_docs            # docs + optional vault release entry
-  → init
+  → /spec                      # optional; phase unchanged
+  → /execute_dev               # TDD; set ready_for_review after reviews
+       ├─ prose-only ──────────► /pr_review --validate
+       └─ non-prose ──► /code_review
+              ├─ large ──► /cross_review
+              └─ runtime ► /behavior_validator
+                    └──► /pr_review --validate   # only skill → approved|blocked
+  → (if required) /vps_infra_ops --verify   # product-owned; phase stays approved
+  → /release_mgmt              # smoke + tag → shipped
+  → /sync_docs                 # → init
 ```
 
-Blocked path: `ready_for_review` → `blocked` → fix → re-run review.
+Router (do not invent the next skill):
+
+```bash
+python3 scripts/next_skill.py --after execute_dev --base HEAD~1 --head HEAD
+# → NEXT_SKILL=/code_review   (typical)
+```
+
+Blocked path: `ready_for_review` → `blocked` → `/execute_dev` (remediation) → reviews → `/pr_review` again.
 
 ---
 
@@ -141,23 +155,28 @@ Docs are **progressive**: short skill bodies, deep material only when linked.
 
 ## Skills catalog (one line each)
 
+Full table: **[docs/skills-catalog.md](docs/skills-catalog.md)**.
+
 | Skill | Job |
 |-------|-----|
 | `/spec` | Constitution + interview + clarify → spec (+ optional plan/tickets) + roadmap OPEN |
-| `/execute_dev` | One task, **TDD mandatory**, single sub-task |
-| `/anti_slop_design` | UI/UX design law (pols.dev): confirm, build without AI slop, pre-ship audit |
-| `/night_shift` | Overnight readiness (matrix, smoke, coverage, live); vault TODO; **no** auto-ship — [docs/night-shift.md](docs/night-shift.md) |
-| `/cross_review` | Security · maintainability · domain personas |
-| `/pr_review` | Deterministic compliance score (≥95) |
-| `/release_mgmt` | Smoke (from plugin), version, tag |
-| `/sync_docs` | Drift reset, optional vault **release** entry |
+| `/execute_dev` | One task, **TDD mandatory**; non-prose requires `/code_review` closeout; `NEXT_SKILL=` |
+| `/code_review` | P0-first closeout after implement (required unless prose-only) |
+| `/cross_review` | Multi-persona + obsolete scan when `NEXT_SKILL` says so |
+| `/behavior_validator` | Source-blind behavior contract when runtime surface |
+| `/pr_review` | Deterministic score (≥95) → `approved` / `blocked` |
+| `/release_mgmt` | Smoke (plugin), version, tag → `shipped` |
+| `/sync_docs` | Docs + optional vault release entry → `init` |
+| `/night_shift` | Overnight readiness; vault TODO; **no** auto-ship — [night-shift.md](docs/night-shift.md) |
+| `/handoff` | Clipboard handoff for a fresh agent |
+| `/session_viewer` / `/agent_transcript` | Session HTML / sanitized transcript (ops) |
 | `/sweep` | Hygiene pass |
 | `/feedback` | Session notes (harness only) |
-| `/audit_repo` | Policy gap scan |
+| `/audit_repo` / `/audit_harness` | Policy / harness gap scan |
 | `/plan_backend` | Roadmap from gaps |
 | `/test_automation` | Suite orchestration |
 
-Product-only skills (deploy, host topology) live **in the product repo**, not here.
+Product-only skills (`/vps_infra_ops`, deploy, host topology) live **in the product repo**, not here.
 
 ---
 
@@ -192,4 +211,5 @@ MIT — see [LICENSE](LICENSE).
 
 ## Version
 
-**v1.0.0** — first stable bootstrap. Use the tag for production installs.
+See the **Current release** stamp at the top of this README (and [CHANGELOG.md](CHANGELOG.md)).  
+Pin installs with `git clone --branch vX.Y.Z`.
