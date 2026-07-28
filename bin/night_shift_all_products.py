@@ -418,6 +418,20 @@ def main() -> int:
                 cwd=str(HARNESS_ROOT),
                 check=False,
             )
+            if r.returncode != 0 and norm.is_file():
+                # Second normalize pass (mojibake headings / mid-file inserts)
+                print("--- normalize_vault_devlog (retry after contract fail) ---")
+                subprocess.run(
+                    [sys.executable, str(norm), "--vault", str(vault_path)],
+                    cwd=str(HARNESS_ROOT),
+                    check=False,
+                )
+                print("--- check_dev_log_contract (retry) ---")
+                r = subprocess.run(
+                    [sys.executable, str(check), "--vault", str(vault_path)],
+                    cwd=str(HARNESS_ROOT),
+                    check=False,
+                )
             if r.returncode != 0:
                 contract_rc = 1
         else:
@@ -427,7 +441,10 @@ def main() -> int:
         print("dev-log normalize/check: dry-run skip")
 
     if contract_rc != 0:
-        print("❌ night_shift_all FAIL (dev-log contract drift after normalize)")
+        print(
+            "❌ night_shift_all FAIL (dev-log contract drift after normalize+retry). "
+            "Inspect 01-Projects/*/dev-log.md; fix headings then re-run normalize."
+        )
         return 1
 
     return 0 if overall == "PASS" else 1

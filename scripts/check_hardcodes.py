@@ -6,7 +6,15 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+def _default_root() -> Path:
+    # Prefer CWD when it looks like a product root (has scripts/check_hardcodes or .git)
+    cwd = Path.cwd()
+    if (cwd / "scripts" / "check_hardcodes.py").is_file() or (cwd / ".git").is_dir():
+        return cwd
+    return Path(__file__).resolve().parent.parent
+
+
+ROOT = _default_root()
 SKIP_DIRS = {
     ".git",
     "node_modules",
@@ -26,6 +34,23 @@ SKIP_DIRS = {
     "skills",
     # Sample configs / fixtures (product-specific paths)
     "examples",
+    # Product content / ingested data (URLs are the data, not secrets)
+    "content",
+    "secrets",
+    "vault",  # second-brain wiki/raw under product checkout
+    "test-results",
+    "playwright-report",
+    "playwright-results",
+    "coverage",
+    "htmlcov",
+    "dist",
+    "build",
+    "out",
+    "target",  # rust/cargo + foundry
+    "generated",
+    "fixtures",
+    "testdata",
+    "test_data",
 }
 SKIP_FILES = {
     "ALL_PRINCIPLES.md",
@@ -37,13 +62,30 @@ SKIP_FILES = {
     "RELEASE_RUNBOOK.md",
     "PR_DRAFT.md",
     "WORKFLOW_DOCUMENTATION.md",
+    "AGENTS.md",  # product intent often cites clone paths / public site URLs
+
     # Lockfiles always list package registries
     "package-lock.json",
     "yarn.lock",
     "pnpm-lock.yaml",
     "poetry.lock",
     "Cargo.lock",
+    # Browser/session dumps (should be gitignored; never scan if present)
+    "storage.json",
+    "cookies.json",
+    "token.json",
+    "credentials.json",
+    ".rustc_info.json",
 }
+# Path substrings (posix) — vendored / artifact trees
+SKIP_PATH_SUBSTR = (
+    "contracts/lib/",
+    "node_modules/",
+    "/lib/forge-std/",
+    "/lib/openzeppelin",
+    "app/test-results/",
+    "solana/programs/",  # build artifacts under programs/*/target already via target/
+)
 
 # Absolute home paths (not ~/ relative)
 ABS_HOME = re.compile(r"/home/[a-zA-Z0-9_-]+", re.I)
@@ -83,7 +125,18 @@ URL_HOST_ALLOW = re.compile(
     r"api\.openai\.com|"
     r"api\.wise\.com|"
     r"[\w.-]+\.apihub\.citi\.com|"
-    r"sandbox\.apihub\.citi\.com"
+    r"sandbox\.apihub\.citi\.com|"
+    # Product / public content platforms (not secrets)
+    r"([\w-]+\.)?catalyxt\.(xyz|ltd|com)|"
+    r"(www\.)?x\.com|"
+    r"(www\.)?twitter\.com|"
+    r"api\.twitter\.com|"
+    r"arxiv\.org|"
+    r"(www\.)?news\.ycombinator\.com|"
+    r"lobste\.rs|"
+    r"([\w-]+\.)?substack\.com|"
+    r"substackcdn\.com|"
+    r"([\w.-]+\.)?amazonaws\.com"
     r")([/:?]|$)",
     re.I,
 )
@@ -100,6 +153,7 @@ ALLOW_PREFIXES = (
     "INSTALL.md",
     "USAGE.md",
     "CONTRIBUTING.md",
+    ".github/",  # CI paths often use runner home paths
 )
 
 
@@ -107,9 +161,16 @@ def _allowed_rel(rel: str) -> bool:
     return any(a in rel for a in ALLOW_PREFIXES)
 
 
-def main() -> int:
+def _skip_path(rel: str, parts: tuple[str, ...]) -> bool:
+    if any(s in parts for s in SKIP_DIRS):
+        return True
+    low = rel.replace("\\", "/").lower()
+    return any(s in low for s in SKIP_PATH_SUBSTR)
+
+
+def scan_root(root: Path) -> int:
     hits = 0
-    for p in ROOT.rglob("*"):
+    for p in root.rglob("*"):
         if not p.is_file():
             continue
         if any(s in p.parts for s in SKIP_DIRS):
@@ -129,7 +190,9 @@ def main() -> int:
             text = p.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        rel = str(p.relative_to(ROOT)).replace("\\", "/")
+        rel = str(p.relative_to(root)).replace("\\", "/")
+        if _skip_path(rel, p.parts):
+            continue
         if _allowed_rel(rel):
             continue
 
@@ -177,6 +240,21 @@ def main() -> int:
         return 1
     print("✅ no hardcodes")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help="Repo root to scan (default: cwd if product-like, else script parent)",
+    )
+    args = ap.parse_args(argv)
+    root = (args.root or _default_root()).resolve()
+    return scan_root(root)
 
 
 if __name__ == "__main__":

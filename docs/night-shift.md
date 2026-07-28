@@ -308,6 +308,20 @@ sudo systemctl start night-shift-all.service
 
 Service treats exit **0 and 1** as success for systemd (`SuccessExitStatus=0 1`) so a failed product gate still counts as a completed overnight run; check the report for PASS/FAIL.
 
+### Daytime readiness subset (prevent overnight surprise)
+
+Before the 03:15 HKT multi-product job, run the same **hard** gates day-side:
+
+```bash
+# All products in config/night_shift_products.yaml
+python3 scripts/daytime_readiness_subset.py
+
+# One product
+python3 scripts/daytime_readiness_subset.py --root /home/debian/watchlist
+```
+
+Gates: `check_hardcodes` → `validate full` → `product_smoke`. No vault writes. Fail here → fix before sleep.
+
 ### Vault write permission (group-write)
 
 Night shift runs as the timer user (often `debian`) while vault files may be owned by `secondbrain` mode `0644` → `⚠️ VAULT SKIP: Permission denied`.

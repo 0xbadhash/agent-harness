@@ -18,7 +18,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-TARGETS = ("night-shift-log.md", "TODO.md", "dev-log.md")
+TARGETS = ("night-shift-log.md", "TODO.md", "dev-log.md", "SUMMARY.md", "log.md")
 
 
 def _iter_targets(vault: Path) -> list[Path]:
@@ -31,9 +31,14 @@ def _iter_targets(vault: Path) -> list[Path]:
             continue
         for name in TARGETS:
             p = proj / name
-            if p.is_file() or name == "night-shift-log.md":
-                # include missing night-shift logs for parent dir check
+            if p.is_file() or name in ("night-shift-log.md", "SUMMARY.md", "log.md"):
+                # include missing night-shift / multi-summary logs for parent dir check
                 out.append(p)
+        # multi-product job writes under harness-night-shift/*
+        if proj.name == "harness-night-shift":
+            for extra in proj.iterdir() if proj.is_dir() else []:
+                if extra.is_file() and extra not in out:
+                    out.append(extra)
     return out
 
 
@@ -110,12 +115,26 @@ def apply_sudo(vault: Path) -> int:
             "-o",
             "-name",
             "dev-log.md",
+            "-o",
+            "-name",
+            "SUMMARY.md",
+            "-o",
+            "-name",
+            "log.md",
             ")",
             "-exec",
             "chmod",
             "g+rw",
             "{}",
             "+",
+        ],
+        # Multi-product summary tree (rotate writes SUMMARY.md)
+        [
+            "sudo",
+            "chmod",
+            "-R",
+            "g+rwX",
+            str(projects / "harness-night-shift"),
         ],
     ]
     # Prefer group secondbrain if exists

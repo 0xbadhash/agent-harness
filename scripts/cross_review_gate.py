@@ -91,7 +91,15 @@ def has_cross_review_evidence(
 
 
 def is_large_diff(diff: str | None) -> tuple[bool, str]:
-    paths, churn, non_test = _git_diff_stat(diff)
+    raw = _git_diff_stat(diff)
+    # Accept legacy 2-tuple mocks (paths, churn) used in older product tests
+    if isinstance(raw, tuple) and len(raw) == 2:
+        paths, churn = raw  # type: ignore[misc]
+        non_test = int(churn) if not isinstance(churn, int) else churn
+        if not isinstance(non_test, int):
+            non_test = 0
+    else:
+        paths, churn, non_test = raw  # type: ignore[misc]
     n = len(paths)
     prefixes = load_product_path_prefixes(ROOT)
     product = [p for p in paths if path_matches_product_prefixes(p, prefixes)]

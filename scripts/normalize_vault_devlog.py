@@ -31,11 +31,17 @@ except Exception:  # pragma: no cover
     split_header_and_rest = None  # type: ignore
     _write_full = None  # type: ignore
 
+# Em dash / en dash / hyphen / common mojibake of em dash (Ã¢â‚¬â€ / â€")
+_SEP = r"(?:[—–\-]|Ã¢â‚¬â€|â€\"|â€”)"
 H2_RE = re.compile(
-    r"^##\s+(20\d{2}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?Z?)?\s*[—–-]\s*(.+?)\s*$"
+    rf"^##\s+(20\d{{2}}-\d{{2}}-\d{{2}})(?:T(\d{{2}}):(\d{{2}})(?::(\d{{2}}))?Z?)?\s*{_SEP}\s*(.+?)\s*$"
+)
+# Looser: any ## starting with ISO date (title separator optional / broken)
+H2_LOOSE = re.compile(
+    r"^##\s+(20\d{2}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?Z?)?"
 )
 BARE_RE = re.compile(
-    r"^(20\d{2}-\d{2}-\d{2})\s*[—–-]\s*(.+?)\s*$"
+    rf"^(20\d{{2}}-\d{{2}}-\d{{2}})\s*{_SEP}\s*(.+?)\s*$"
 )
 WHEN_RE = re.compile(
     r"\*\*When:\*\*\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})\s*UTC",
@@ -67,8 +73,18 @@ class Entry:
         # ensure When / Kind at top of body
         has_when = any(ln.strip().startswith("- **When:**") for ln in body)
         has_kind = any(ln.strip().startswith("- **Kind:**") for ln in body)
+        # Drop bogus epoch When lines so we can re-stamp from sort_key
+        body = [
+            ln
+            for ln in body
+            if not (
+                ln.strip().startswith("- **When:**")
+                and re.search(r"1970-01-01", ln)
+            )
+        ]
+        has_when = any(ln.strip().startswith("- **When:**") for ln in body)
         prefix: list[str] = []
-        if not has_when and format_when_line is not None:
+        if not has_when and format_when_line is not None and self.sort_key.year >= 2000:
             prefix.append(format_when_line(self.sort_key))
         if not has_kind:
             kind = "release" if re.search(r"\bsynced\b", self.heading, re.I) else "note"
@@ -84,25 +100,36 @@ class Entry:
         return "\n".join(lines)
 
 
+def _heading_datetime(heading: str) -> datetime | None:
+    for rx in (H2_RE, H2_LOOSE):
+        hm = rx.match(heading.strip())
+        if not hm:
+            continue
+        y, mo, d = hm.group(1).split("-")
+        hh = int(hm.group(2) or 12) if hm.lastindex and hm.lastindex >= 2 else 12
+        mm = int(hm.group(3) or 0) if hm.lastindex and hm.lastindex >= 3 else 0
+        ss = int(hm.group(4) or 0) if hm.lastindex and hm.lastindex >= 4 else 0
+        return datetime(int(y), int(mo), int(d), hh, mm, ss, tzinfo=timezone.utc)
+    return None
+
+
 def _parse_sort_key(heading: str, body: str) -> datetime:
-    # Prefer When line
+    # Prefer When line only if it looks real (not epoch garbage from bad backfill)
     m = WHEN_RE.search(body)
     if m:
-        return datetime(
-            int(m.group(1)[:4]),
-            int(m.group(1)[5:7]),
-            int(m.group(1)[8:10]),
-            int(m.group(2)),
-            int(m.group(3)),
-            tzinfo=timezone.utc,
-        )
-    hm = H2_RE.match(heading.strip())
-    if hm:
-        y, mo, d = hm.group(1).split("-")
-        hh = int(hm.group(2) or 12)
-        mm = int(hm.group(3) or 0)
-        ss = int(hm.group(4) or 0)
-        return datetime(int(y), int(mo), int(d), hh, mm, ss, tzinfo=timezone.utc)
+        y = int(m.group(1)[:4])
+        if y >= 2000:
+            return datetime(
+                y,
+                int(m.group(1)[5:7]),
+                int(m.group(1)[8:10]),
+                int(m.group(2)),
+                int(m.group(3)),
+                tzinfo=timezone.utc,
+            )
+    hd = _heading_datetime(heading)
+    if hd is not None:
+        return hd
     # fallback epoch-ish stable
     return datetime(1970, 1, 1, tzinfo=timezone.utc)
 
