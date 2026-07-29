@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.9 — 2026-07-29
+
+### Added (B5 harden — ticket 02)
+- hard_gates: `## Evidence pack` required for code ships (≥2 of hard_gates/smoke/pytest/validate/coverage/SBOM)
+- PR_DRAFT template + release_mgmt skill wording
+
 ## v1.4.8 — 2026-07-29
 
 ### Added (A3 harden — ticket 01)
@@ -48,7 +54,7 @@
 - **Tickets:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden/tickets/`
 - **Acceptance:**
   - [x] A3 daytime systemd + install + wiring check + product GHA template (ticket 01)
-  - [ ] B5 Evidence pack hard gate (ticket 02)
+  - [x] B5 Evidence pack hard gate (ticket 02)
   - [ ] C5 agent_eval_checklist runner (ticket 03)
 - **Smoke:** harness unit + hard_gates + check_daytime_wiring + agent_eval_checklist
 - **Notes:** Hardens soft gaps from v1.4.6; no new FSM phases

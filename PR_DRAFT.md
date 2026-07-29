@@ -1,61 +1,49 @@
-# PR Draft — A3 daytime ops wire-up (ticket 01)
+# PR Draft — B5 Evidence pack hard gate (ticket 02)
 
-**Range:** 2572cea..HEAD  
+**Range:** c1ea122..HEAD  
 **Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`  
-**Ticket:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden/tickets/01-a3-daytime-ops.md`
+**Ticket:** tickets/02-b5-evidence-score.md
 
 ## What Problem This Solves
-
-Daytime readiness existed as GHA + cron docs only; operators lacked installable systemd units, a wiring check, and a product GHA template — so night_shift was still the first multi-product automated signal on many hosts.
+B5 was skill prose only; reviewers could score 100 without a structured evidence pack.
 
 ## Why This Change Was Made
-
-Mirror proven `night-shift-all` deploy pattern; keep enable opt-in (`--apply`); add deterministic `check_daytime_wiring.py`.
+Mirror B2/B4 hard_gates pattern for ## Evidence pack with ≥2 tokens.
 
 ## User Impact
-
-Operators can dry-run then enable daytime-gates.timer; products can copy `templates/daytime-gates.yml`.
+Agents/operators must fill Evidence pack in PR_DRAFT on code ships before approve.
 
 ## Evidence pack
-
 | Item | Result |
 |------|--------|
-| hard_gates | run at pr_review |
-| unittest | tests.test_daytime_wiring 4 OK |
-| validate full | 5/5 |
-| product_smoke | 2/2 |
-| wiring check | ok=True |
+| hard_gates | ok (self) |
+| unittest | test_hard_gates 9 OK |
+| smoke | product_smoke 2/2 |
+| validate | 5/5 |
 
 ## Evidence
-
 ```text
-red_cmd: python3 -m unittest tests.test_daytime_wiring  # failed before implement (import/missing)
-green_cmd: python3 -m unittest tests.test_daytime_wiring
+red_cmd: python3 -m unittest tests.test_hard_gates.TestHardGates.test_evidence_pack_required_for_code
+green_cmd: python3 -m unittest tests.test_hard_gates -v
 ```
 
 ## Red-proof
-
-- red_cmd: `python3 -m unittest tests.test_daytime_wiring` (missing module / files before green)
-- green_cmd: `python3 -m unittest tests.test_daytime_wiring`
+- red_cmd: evidence_pack_required test fails before hard_gates change
+- green_cmd: full test_hard_gates green
 
 ## Traceability
-
-| AC | Test / smoke |
-|----|----------------|
-| AC-1 deploy service+timer | files present; wiring check |
-| AC-2 install dry-run/--apply | install_daytime_timer.sh dry-run exit 0 |
-| AC-3 check_daytime_wiring | tests/test_daytime_wiring.py |
-| AC-4 product template | templates/daytime-gates.yml |
-| AC-5 docs | night-shift.md, ship-flow.md |
+| AC | Test |
+|----|------|
+| AC-1 missing fails | test_evidence_pack_required_for_code |
+| AC-2 thin fails | test_evidence_pack_thin_fails |
+| AC-3 prose skips | test_prose_skips_evidence_pack |
+| AC-4 template/skill | templates/PR_DRAFT.md + release_mgmt |
 
 ## Threat notes
-
-- **Asset:** systemd timer running multi-product smoke as host user  
-- **Abuse:** premature enable without review — mitigated by default dry-run + sudo  
-- **Abuse:** malicious product path in night_shift_products.yaml — pre-existing; same as night-shift  
+- Asset: PR score / release trust
+- Abuse: fake thin evidence — require ≥2 known tokens and min body length
 
 ## Things that look bad but are actually fine
-
-1. Host absolute paths in deploy units — same pattern as night-shift-all.service (documented host layout).
-2. Timer not enabled on host in this release — install defaults to dry-run; operator must `--apply`.
-3. start_feature F541 fix appears adjacent — required for validate full linter green on this repo.
+1. Existing "## Evidence" narrative section remains; hard gate is "## Evidence pack".
+2. Token list is keyword-based not machine-parsed CI XML.
+3. Does not parse RELEASE_RUNBOOK at pr_review (score-time PR_DRAFT only).
