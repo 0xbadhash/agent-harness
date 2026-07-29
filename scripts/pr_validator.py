@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic PR rubric scorer (≥95% to pass). Validates §9 section."""
+"""Deterministic PR rubric scorer (≥95% to pass). Includes hard gates pack."""
 from __future__ import annotations
 
 import argparse
@@ -10,15 +10,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
 RUBRIC = {
     # Suite green when compliance_engine (pytest/type/lint) exits 0.
-    # This is NOT proof of red-first TDD — that remains process-enforced in /execute_dev.
-    "suite_green": 25,
-    "gate_clean": 25,         # type/lint/test pass (same engine; kept for score shape)
-    "section_9": 20,          # §9 present + ≥3 entries
-    "no_hardcode": 15,        # hardcode scan clean
-    "pr_hygiene": 15,         # single roadmap item, atomic commit
+    "suite_green": 20,
+    "gate_clean": 20,  # type/lint/test pass
+    "section_9": 15,  # §9 present + ≥3 entries
+    "no_hardcode": 10,
+    "pr_hygiene": 10,
+    # Fail-closed evidence pack (all applicable gates must pass for full points)
+    "hard_gates": 25,
 }
+
 
 def _validate_section_9(pr_draft: Path) -> tuple[bool, str, int]:
     if not pr_draft.exists():
@@ -26,7 +32,11 @@ def _validate_section_9(pr_draft: Path) -> tuple[bool, str, int]:
     text = pr_draft.read_text(encoding="utf-8")
     if "Things that look bad but are actually fine" not in text:
         return False, "§9 header missing", 0
-    m = re.search(r"## Things that look bad but are actually fine\s*\n(.*?)(?=\n## |\Z)", text, re.DOTALL)
+    m = re.search(
+        r"## Things that look bad but are actually fine\s*\n(.*?)(?=\n## |\Z)",
+        text,
+        re.DOTALL,
+    )
     if not m:
         return False, "§9 section not parseable", 0
     body = m.group(1).strip()
@@ -35,7 +45,13 @@ def _validate_section_9(pr_draft: Path) -> tuple[bool, str, int]:
         return False, f"§9 has {len(entries)} entries (need ≥3)", len(entries)
     return True, "ok", len(entries)
 
-def score(diff: str | None, pr_draft: Path) -> dict:
+
+def score(
+    diff: str | None,
+    pr_draft: Path,
+    *,
+    skip_hard_gates: bool = False,
+) -> dict:
     breakdown = {k: 0 for k in RUBRIC}
     violations: list[str] = []
     warnings: list[str] = []
@@ -48,24 +64,33 @@ def score(diff: str | None, pr_draft: Path) -> dict:
         violations.append(f"§9: {msg}")
 
     # Hardcodes
-    r = subprocess.run([sys.executable, str(Path(__file__).with_name("check_hardcodes.py"))],
-                       cwd=ROOT, capture_output=True)
+    r = subprocess.run(
+        [sys.executable, str(Path(__file__).with_name("check_hardcodes.py"))],
+        cwd=ROOT,
+        capture_output=True,
+    )
     if r.returncode == 0:
         breakdown["no_hardcode"] = RUBRIC["no_hardcode"]
     else:
         violations.append("hardcode scan failed")
 
-    # Gates (stub: assume pass if compliance_engine exits 0)
-    r = subprocess.run([sys.executable, str(Path(__file__).with_name("compliance_engine.py")),
-                        *(["--diff", diff] if diff else [])],
-                       cwd=ROOT, capture_output=True)
+    # Compliance gates
+    r = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).with_name("compliance_engine.py")),
+            *(["--diff", diff] if diff else []),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+    )
     if r.returncode == 0:
         breakdown["gate_clean"] = RUBRIC["gate_clean"]
         breakdown["suite_green"] = RUBRIC["suite_green"]
     else:
         violations.append("compliance gates failed")
 
-    # PR hygiene: draft narrative + clean-ish git surface (not free points)
+    # PR hygiene
     hygiene_ok = True
     if not pr_draft.is_file():
         hygiene_ok = False
@@ -82,7 +107,6 @@ def score(diff: str | None, pr_draft: Path) -> dict:
                 hygiene_ok = False
                 violations.append(f"pr_hygiene: PR_DRAFT missing section «{needle}»")
                 break
-    # Prefer a single primary branch tip for ship (soft if git missing)
     try:
         log = subprocess.run(
             ["git", "-C", str(ROOT), "rev-list", "--count", "HEAD"],
@@ -100,7 +124,28 @@ def score(diff: str | None, pr_draft: Path) -> dict:
     else:
         breakdown["pr_hygiene"] = 0
 
-    # Soft cross_review gate (does not reduce score unless --strict-cross-review)
+    # Hard gates pack (fail closed)
+    try:
+        from hard_gates import evaluate as _hg_eval  # type: ignore
+
+        hg = _hg_eval(
+            ROOT,
+            pr_draft,
+            diff=diff,
+            skip=skip_hard_gates,
+        )
+        if hg.ok:
+            breakdown["hard_gates"] = RUBRIC["hard_gates"]
+        else:
+            breakdown["hard_gates"] = 0
+            violations.extend(hg.violations)
+        for s in hg.skipped:
+            warnings.append(f"hard_gates skip: {s}")
+    except Exception as e:  # noqa: BLE001
+        breakdown["hard_gates"] = 0
+        violations.append(f"hard_gates: evaluation error: {e}")
+
+    # Soft cross_review
     try:
         from cross_review_gate import evaluate as _xrev_eval  # type: ignore
 
@@ -109,7 +154,7 @@ def score(diff: str | None, pr_draft: Path) -> dict:
             warnings.append(xrev["message"])
         elif xrev.get("message"):
             warnings.append(xrev["message"])
-    except Exception as e:  # noqa: BLE001 — soft path must never break scorer
+    except Exception as e:  # noqa: BLE001
         warnings.append(f"cross_review soft-gate skipped: {e}")
 
     total = sum(breakdown.values())
@@ -120,6 +165,7 @@ def score(diff: str | None, pr_draft: Path) -> dict:
         "violations": violations,
         "warnings": warnings,
     }
+
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -132,12 +178,24 @@ def main() -> int:
         action="store_true",
         help="Exit 1 if large diff lacks CROSS-REVIEW evidence (hard gate; default soft)",
     )
+    ap.add_argument(
+        "--skip-hard-gates",
+        action="store_true",
+        help="Emergency: do not enforce hard gates pack (still reported in warnings)",
+    )
     args = ap.parse_args()
 
-    result = score(args.diff, Path(args.pr_draft))
+    result = score(
+        args.diff,
+        Path(args.pr_draft),
+        skip_hard_gates=args.skip_hard_gates,
+    )
     print(json.dumps(result, indent=2))
     for w in result.get("warnings") or []:
         print(w)
+    for v in result.get("violations") or []:
+        if v.startswith("hard_gates"):
+            print(f"❌ {v}")
 
     if args.strict_cross_review:
         try:
@@ -157,10 +215,12 @@ def main() -> int:
 
     if args.update_pipeline:
         import pipeline_state  # type: ignore
+
         phase = "approved" if result["score"] >= 95 else "blocked"
         pipeline_state.set_phase(phase, score=result["score"])
         print(f"✅ pipeline → {phase} (score {result['score']})")
     return 0 if result["score"] >= 95 else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

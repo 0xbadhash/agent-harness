@@ -1,31 +1,34 @@
-# PR Draft — night_shift P0–P2 readiness hardening
+# PR Draft — Hard gates pack
 
-**Date:** 2026-07-28  
-**Version:** 1.4.2
+**Date:** 2026-07-29  
+**Version:** 1.4.5  
+**Spec:** `.agents/specs/2026-07-29-hard-gates-pack.md`  
+**Plan:** `.agents/specs/2026-07-29-hard-gates-pack-plan.md`
 
 ## What Problem This Solves
-Multi-product night shift showed mass FAIL: hardcodes on content/wiki/vendored trees, vault newest-first drift, harness-night-shift ACL, watchlist cross_review test mocks vs 3-tuple API.
+Soft skill text allowed unreviewed code ships to score ≥95 without CODE-REVIEW, red-proof, behavior proof, or spec linkage.
 
 ## Why This Change Was Made
-- P0 hardcode skips/allowlists + product --root; domain allows
-- P0 watchlist: gate accepts legacy 2-tuple mocks; reinstall scripts
-- P1 vault normalize epoch When fix; contract retry; group-write SUMMARY
-- P2 daytime_readiness_subset + reinstall products
+Fail-closed hard gates in `pr_validator` (25 pts) via `hard_gates.py` so the FSM delivers designed quality.
 
 ## User Impact
-Fewer false night FAILs; daytime pre-check; vault logs writable.
+Operators/agents must produce evidence pack before approve; hotfixes use **Spec waiver**.
 
 ## Evidence
-- pytest 90; validate 5/5; smoke 2/2
-- product hardcodes clean (substack, catalyxt, zk, watchlist, second-brain)
-- check_dev_log_contract 8/8 OK
+- tests/test_hard_gates.py (6 cases)
+- scripts/hard_gates.py + pr_validator integration
+- docs/ship-flow.md Hard gates section
+
+## Red-proof
+- red_cmd: `python3 -m unittest tests.test_hard_gates -v` (failed before implement)
+- green_cmd: `python3 -m unittest tests.test_hard_gates -v` (6 OK after)
 
 ## Things that look bad but are actually fine
-1. Skipping content/vault dirs does not weaken secret scan of src/
-2. Path join for multi-user homes avoids literal /home/debian in source text
-3. Daytime subset does not write vault (by design)
-4. Normalize rewrites When only for epoch garbage
-5. Product reinstall does not overwrite product_plugin smoke lists
+1. --skip-hard-gates exists for emergencies only  
+2. Secrets skip when not a git root (unit fixtures)  
+3. Behavior only when runtime surface  
+4. Rubric rebalance still totals 100  
+5. Spec waiver is intentional escape for hotfix/chore  
 
 ## Cross-review
-See .agents/artifacts/CROSS_REVIEW.md blockers=0
+Hard gates are small, focused module — personas optional; CODE-REVIEW present.

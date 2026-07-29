@@ -331,13 +331,36 @@ Implementers fill `PR_DRAFT.md` from `templates/PR_DRAFT.md` before `/pr_review`
 
 See `docs/dev-log.md`. Overnight multi-product job still normalizes + checks **all** logs.
 
+## Hard gates pack (`pr_validator`)
+
+`/pr_review --validate` awards **hard_gates = 25 points** only when **all applicable**
+evidence checks pass (`scripts/hard_gates.py`). Fail closed → score cannot reach 95.
+
+| Gate | When required | Evidence |
+|------|---------------|----------|
+| **Spec** | Always | `**Spec:** path` **or** `**Spec waiver:** hotfix\|chore\|docs-only\|prose-only` in `PR_DRAFT.md` |
+| **CODE-REVIEW** | Non-prose ships | `.agents/artifacts/CODE_REVIEW.md` with marker `CODE-REVIEW` |
+| **Red-proof** | Non-prose ships | `PR_DRAFT` has red_cmd/green_cmd / Red-proof / TDD N/A |
+| **BEHAVIOR-REPORT** | Non-prose **and** runtime surface | `.agents/artifacts/BEHAVIOR_REPORT.md` with `BEHAVIOR-REPORT` |
+| **Secrets** | Git work tree + diff | `check_secrets_diff` exit 0 |
+
+Prose-only (`review_scope` skip_heavy_review): skips CODE-REVIEW, red-proof, behavior.  
+Emergency: `pr_validator.py --skip-hard-gates` (documented escape hatch).
+
+CLI:
+
+```bash
+python3 scripts/hard_gates.py --diff HEAD~1...HEAD
+python3 scripts/pr_validator.py --diff HEAD~1...HEAD --update-pipeline
+```
+
 ## Soft gates
 
 - **Cross-review:** large diffs warn without evidence; optional `--strict-cross-review`  
   - Product paths come from `product_plugin.product_path_prefixes` (not hard-coded stack paths)
-- **TDD:** process gate in execute_dev (red must fail before green)
+- **TDD process** in execute_dev (red before green) — **red-proof hard gate** records it for score
 - **Smoke:** `python3 scripts/product_smoke.py` reads plugin smoke[] at release
-- **PR score `suite_green`:** green type/lint/test suite only — **not** red-first proof
+- **PR score `suite_green`:** green type/lint/test suite only — **not** red-first proof (see hard Red-proof)
 
 ## Off-pipeline: night readiness (`/night_shift`)
 
