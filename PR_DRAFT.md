@@ -1,49 +1,49 @@
-# PR Draft — B5 Evidence pack hard gate (ticket 02)
+# PR Draft — C5 agent eval checklist (ticket 03)
 
-**Range:** c1ea122..HEAD  
+**Range:** 5089fce..HEAD  
 **Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`  
-**Ticket:** tickets/02-b5-evidence-score.md
+**Ticket:** tickets/03-c5-eval-runner.md
 
 ## What Problem This Solves
-B5 was skill prose only; reviewers could score 100 without a structured evidence pack.
+C5 was markdown-only; operators could not run a conformance smoke for harness skills tooling.
 
 ## Why This Change Was Made
-Mirror B2/B4 hard_gates pattern for ## Evidence pack with ≥2 tokens.
+Minimal runner over existing scripts — not LLM judge.
 
 ## User Impact
-Agents/operators must fill Evidence pack in PR_DRAFT on code ships before approve.
+One command + CI step for skill-conformance smoke.
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
-| hard_gates | ok (self) |
-| unittest | test_hard_gates 9 OK |
-| smoke | product_smoke 2/2 |
+| hard_gates | ok |
+| unittest | test_agent_eval_checklist 3 OK |
+| smoke | product_smoke |
 | validate | 5/5 |
+| agent_eval_checklist | ok=True |
 
 ## Evidence
 ```text
-red_cmd: python3 -m unittest tests.test_hard_gates.TestHardGates.test_evidence_pack_required_for_code
-green_cmd: python3 -m unittest tests.test_hard_gates -v
+red_cmd: python3 -m unittest tests.test_agent_eval_checklist  # before script
+green_cmd: python3 -m unittest tests.test_agent_eval_checklist
 ```
 
 ## Red-proof
-- red_cmd: evidence_pack_required test fails before hard_gates change
-- green_cmd: full test_hard_gates green
+- red_cmd: import agent_eval_checklist fails before green
+- green_cmd: unittest + CLI exit 0
 
 ## Traceability
 | AC | Test |
 |----|------|
-| AC-1 missing fails | test_evidence_pack_required_for_code |
-| AC-2 thin fails | test_evidence_pack_thin_fails |
-| AC-3 prose skips | test_prose_skips_evidence_pack |
-| AC-4 template/skill | templates/PR_DRAFT.md + release_mgmt |
+| AC-1 runner exit 0/1 | test_harness_root_passes / empty fails |
+| AC-2 docs | agent-eval-spike.md |
+| AC-3 daytime yml | daytime-gates.yml C5 step |
 
 ## Threat notes
-- Asset: PR score / release trust
-- Abuse: fake thin evidence — require ≥2 known tokens and min body length
+- Asset: CI compute / agent trust in checklist
+- Abuse: treating checklist as full security audit — docs state non-goals
 
 ## Things that look bad but are actually fine
-1. Existing "## Evidence" narrative section remains; hard gate is "## Evidence pack".
-2. Token list is keyword-based not machine-parsed CI XML.
-3. Does not parse RELEASE_RUNBOOK at pr_review (score-time PR_DRAFT only).
+1. --skip-tests in GHA for speed while local full suite still available
+2. Not replacing /qa_campaign
+3. next_skill without base/head still prints NEXT_SKILL=

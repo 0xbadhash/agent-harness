@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.10 — 2026-07-29
+
+### Added (C5 harden — ticket 03)
+- `scripts/agent_eval_checklist.py` skill-conformance runner
+- tests + daytime-gates.yml C5 step
+- docs/agent-eval-spike.md runner usage
+
 ## v1.4.9 — 2026-07-29
 
 ### Added (B5 harden — ticket 02)
@@ -45,17 +52,17 @@
 
 ## Open work
 
-### [OPEN] ADSLC harden — A3 ops, B5 evidence score, C5 eval runner
-- **Status:** open
+### [DONE] ADSLC harden — A3 ops, B5 evidence score, C5 eval runner
+- **Status:** done (v1.4.8–v1.4.10)
 - **Priority:** P0–P1
-- **Next:** true
+- **Next:** false
 - **Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`
 - **Plan:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden-plan.md`
 - **Tickets:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden/tickets/`
 - **Acceptance:**
   - [x] A3 daytime systemd + install + wiring check + product GHA template (ticket 01)
   - [x] B5 Evidence pack hard gate (ticket 02)
-  - [ ] C5 agent_eval_checklist runner (ticket 03)
+  - [x] C5 agent_eval_checklist runner (ticket 03)
 - **Smoke:** harness unit + hard_gates + check_daytime_wiring + agent_eval_checklist
 - **Notes:** Hardens soft gaps from v1.4.6; no new FSM phases
 

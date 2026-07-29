@@ -1,3 +1,3 @@
 # CROSS-REVIEW
 **Marker:** CROSS-REVIEW
-ACCEPT — B5 fail-closed at score time; no new phases; release skill docs only.
+ACCEPT — C5 remains non-judge; optional tests; CI skip-tests for speed.

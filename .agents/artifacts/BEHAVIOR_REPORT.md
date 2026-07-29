@@ -1,3 +1,3 @@
 # BEHAVIOR-REPORT
 **Marker:** BEHAVIOR-REPORT
-Runtime: hard_gates.py evaluate() behavior verified via unittest (9 tests OK).
+Live: agent_eval_checklist --skip-tests and full both ok=True on harness root.
