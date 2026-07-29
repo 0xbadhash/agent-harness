@@ -27,3 +27,5 @@ jobs:
         run: python scripts/daytime_readiness_subset.py --root .
       - name: Hard gates dry structure
         run: python scripts/hard_gates.py --help
+      - name: C5 agent eval checklist
+        run: python scripts/agent_eval_checklist.py --root . --skip-tests
