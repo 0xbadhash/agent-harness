@@ -27,6 +27,20 @@
 
 ## Open work
 
+### [OPEN] ADSLC harden — A3 ops, B5 evidence score, C5 eval runner
+- **Status:** open
+- **Priority:** P0–P1
+- **Next:** true
+- **Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`
+- **Plan:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden-plan.md`
+- **Tickets:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden/tickets/`
+- **Acceptance:**
+  - [ ] A3 daytime systemd + install + wiring check + product GHA template (ticket 01)
+  - [ ] B5 Evidence pack hard gate (ticket 02)
+  - [ ] C5 agent_eval_checklist runner (ticket 03)
+- **Smoke:** harness unit + hard_gates + check_daytime_wiring + agent_eval_checklist
+- **Notes:** Hardens soft gaps from v1.4.6; no new FSM phases
+
 ### [DONE] Operator front door — start features with /spec
 - **Status:** done (v1.4.7)
 - **Priority:** P1
@@ -35,14 +49,14 @@
 - **Plan:** `.agents/specs/2026-07-29-operator-start-feature-front-door-plan.md`
 - **Tickets:** `.agents/specs/2026-07-29-operator-start-feature-front-door/tickets/`
 - **Acceptance:**
-  - [ ] docs/start-a-feature.md + links
-  - [ ] scripts/start_feature.py + tests
-  - [ ] install copies doc to products
+  - [x] docs/start-a-feature.md + links
+  - [x] scripts/start_feature.py + tests
+  - [x] install copies doc to products
 - **Smoke:** start_feature + spec_gate on temp root
 - **Notes:** Ergonomics on top of hard gates / ADSLC; not a new FSM phase
 
 
-### [OPEN] ADSLC A3–A5 + Layer B (B1/B2 P0) + Layer C
+### [DONE] ADSLC A3–A5 + Layer B (B1/B2 P0) + Layer C
 - **Status:** done (v1.4.6)
 - **Priority:** P0–P2
 - **Next:** false
@@ -50,11 +64,11 @@
 - **Plan:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c-plan.md`
 - **Tickets:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c/tickets/`
 - **Acceptance:**
-  - [ ] B1 spec gate + B2 traceability (ticket 01)
-  - [ ] A3 daytime CI + A4 install delete/stamp + A5 pipeline identity (ticket 02)
-  - [ ] B3–B5 context/threat/release evidence (ticket 03)
-  - [ ] C1/C2/C4 retro + self-tests + qa large-only (ticket 04)
-  - [ ] C3/C5 taxonomy + eval spike (ticket 05)
+  - [x] B1 spec gate + B2 traceability (ticket 01)
+  - [x] A3 daytime CI + A4 install delete/stamp + A5 pipeline identity (ticket 02)
+  - [x] B3–B5 context/threat/release evidence (ticket 03)
+  - [x] C1/C2/C4 retro + self-tests + qa large-only (ticket 04)
+  - [x] C3/C5 taxonomy + eval spike (ticket 05)
 - **Smoke:** harness unit + hard_gates + daytime_readiness_subset --root .
 - **Notes:** Builds on v1.4.5 hard gates; no new FSM phases
 
