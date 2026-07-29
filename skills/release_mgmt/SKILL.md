@@ -26,10 +26,14 @@ When invoked with `/release_mgmt`:
    - Loads `.agents/product_plugin.yaml` → `smoke[]` (argv + optional cwd).
    - All steps must exit 0. Empty smoke → warn (do not invent a stack).
    - Also run `python3 scripts/validate.py full` when the product vendors harness scripts.
-6. **Generate `RELEASE_RUNBOOK.md`** with smoke table, infra reference (if any), rollback, §9 (≥3).
+6. **Generate `RELEASE_RUNBOOK.md`** with:
+   - smoke table (commands + exit)
+   - infra reference (if any)
+   - **Evidence pack (B5):** link or paste hard_gates summary, coverage note if any, SBOM path if generated
+   - rollback, §9 (≥3)
 7. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`
 8. **Branch cleanup (optional when `gh` available):** delete merged feature branches per product policy.
-9. Output: `✅ RELEASED. Run /sync_docs`
+9. Output: `✅ RELEASED. Run /sync_docs` then honor `NEXT_SKILL=` (qa_campaign only if large)
 
 ```
 /pr_review --validate → approved → [product infra] → /release_mgmt → shipped → /sync_docs

@@ -338,14 +338,17 @@ evidence checks pass (`scripts/hard_gates.py`). Fail closed → score cannot rea
 
 | Gate | When required | Evidence |
 |------|---------------|----------|
-| **Spec** | Always | `**Spec:** path` **or** `**Spec waiver:** hotfix\|chore\|docs-only\|prose-only` in `PR_DRAFT.md` |
+| **Spec** | Always | `**Spec:** path` **or** `**Spec waiver:** …` in PR_DRAFT (also `spec_gate.py` / pipeline `spec_id`/`waiver`) |
 | **CODE-REVIEW** | Non-prose ships | `.agents/artifacts/CODE_REVIEW.md` with marker `CODE-REVIEW` |
 | **Red-proof** | Non-prose ships | `PR_DRAFT` has red_cmd/green_cmd / Red-proof / TDD N/A |
-| **BEHAVIOR-REPORT** | Non-prose **and** runtime surface | `.agents/artifacts/BEHAVIOR_REPORT.md` with `BEHAVIOR-REPORT` |
+| **Traceability** | Non-prose ships | `## Traceability` mapping AC → test/smoke |
+| **BEHAVIOR-REPORT** | Non-prose **and** runtime | `.agents/artifacts/BEHAVIOR_REPORT.md` |
+| **Threat notes** | Non-prose **and** runtime | `## Threat notes` ≥2 bullets in PR_DRAFT |
 | **Secrets** | Git work tree + diff | `check_secrets_diff` exit 0 |
 
-Prose-only (`review_scope` skip_heavy_review): skips CODE-REVIEW, red-proof, behavior.  
-Emergency: `pr_validator.py --skip-hard-gates` (documented escape hatch).
+Prose-only (`review_scope` skip_heavy_review): skips CODE-REVIEW, red-proof, traceability, behavior, threat.  
+**B1:** `/execute_dev` runs `python3 scripts/spec_gate.py` before code work.  
+Emergency: `pr_validator.py --skip-hard-gates`.
 
 CLI:
 

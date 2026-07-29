@@ -93,8 +93,10 @@ class TestNextSkill(unittest.TestCase):
         nxt, _ = ns.decide("vps_infra_ops", base="a", head="b", repo=ROOT)
         self.assertEqual(nxt, "/release_mgmt")
 
-    def test_sync_docs_suggests_qa_campaign(self):
-        nxt, meta = ns.decide("sync_docs", base="a", head="b", repo=ROOT)
+    def test_sync_docs_suggests_qa_when_forced(self):
+        nxt, meta = ns.decide(
+            "sync_docs", base="a", head="b", repo=ROOT, force_qa=True
+        )
         self.assertEqual(nxt, "/qa_campaign")
         self.assertEqual(meta.get("qa"), "suggested")
 

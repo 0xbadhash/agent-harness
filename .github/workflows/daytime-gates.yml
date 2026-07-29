@@ -1,0 +1,29 @@
+# A3 — Daytime readiness subset (same hard gates family as night_shift).
+# Copy or enable in product repos; here it validates the harness itself.
+name: daytime-gates
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  harness-daytime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dev deps
+        run: |
+          python -m pip install -U pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install pytest ruff mypy || true
+      - name: Unit tests
+        run: python -m pytest tests/ -q
+      - name: Daytime readiness (this repo)
+        run: python scripts/daytime_readiness_subset.py --root .
+      - name: Hard gates dry structure
+        run: python scripts/hard_gates.py --help

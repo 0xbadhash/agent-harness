@@ -308,7 +308,7 @@ sudo systemctl start night-shift-all.service
 
 Service treats exit **0 and 1** as success for systemd (`SuccessExitStatus=0 1`) so a failed product gate still counts as a completed overnight run; check the report for PASS/FAIL.
 
-### Daytime readiness subset (prevent overnight surprise)
+### Daytime readiness subset (prevent overnight surprise) — A3
 
 Before the 03:15 HKT multi-product job, run the same **hard** gates day-side:
 
@@ -321,6 +321,13 @@ python3 scripts/daytime_readiness_subset.py --root /home/debian/watchlist
 ```
 
 Gates: `check_hardcodes` → `validate full` → `product_smoke`. No vault writes. Fail here → fix before sleep.
+
+**GitHub Actions:** see `.github/workflows/daytime-gates.yml` (harness self-check).  
+**Operator cron example** (18:00 UTC, before night timer):
+
+```cron
+0 18 * * * cd $HOME/agent-harness && ./scripts/daytime_readiness_subset.py >>/tmp/daytime-gates.log 2>&1
+```
 
 ### Vault write permission (group-write)
 

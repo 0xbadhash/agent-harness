@@ -18,7 +18,8 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 | `vps_infra_ops` | After `approved`, **only if required** | **Product-owned** (not in portable install). `--verify` → `INFRA_RUNBOOK.md`; phase stays `approved`; then `NEXT_SKILL=/release_mgmt` |
 | `release_mgmt` | Shipping | Smoke (plugin), version, tag, `shipped` (expects infra PASS when required) |
 | `sync_docs` | After ship | Full repo+vault doc sync → `init` |
-| `qa_campaign` | After full FSM / huge release | Deep multi-layer QA + bug hunt + root-cause fixes; **not** a phase; suggested by `NEXT_SKILL` after `/sync_docs` |
+| `qa_campaign` | After full FSM / **large** release | Deep multi-layer QA + bug hunt; suggested after `/sync_docs` only when diff is large (`--force-qa` to always) |
+| `retrospect` | After ship or night_shift fail | Learning loop → `RETRO.md` backlog items; not a phase |
 
 Ship-chain manifest (must install): `config/ship_skills.txt`.
 

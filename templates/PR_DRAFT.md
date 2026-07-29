@@ -36,7 +36,28 @@ green_cmd: <exact command that passed after fix>
 # or: live: curl / puppeteer / health …
 ```
 
-## Red-proof (optional Phase 2 — process honesty)
+## Spec
+
+**Spec:** `.agents/specs/<file>.md`  
+<!-- or: **Spec waiver:** hotfix | chore | docs-only | prose-only -->
+
+## Traceability
+
+Map each acceptance criterion to a test and/or smoke step (hard gate for code ships):
+
+| AC | Test / smoke |
+|----|----------------|
+| AC-1 | `pytest …` / `product_smoke` |
+| … | … |
+
+## Threat notes
+
+Required when the ship has **runtime surface** (≥2 bullets):
+
+- Asset / trust boundary: …
+- Abuse case / mitigation: …
+
+## Red-proof (process honesty)
 
 Same commands as Evidence when TDD applies. Not scored by pr_validator; required by team policy when enabled.
 

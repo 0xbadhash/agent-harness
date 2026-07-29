@@ -41,7 +41,8 @@ class TestHardGates(unittest.TestCase):
             _write(
                 draft,
                 "**Spec:** .agents/specs/x.md\n"
-                "## Red-proof\n- red_cmd: pytest -q t\n- green_cmd: pytest -q t\n",
+                "## Red-proof\n- red_cmd: pytest -q t\n- green_cmd: pytest -q t\n"
+                "## Traceability\n| AC | Test |\n| AC-1 | pytest |\n",
             )
             with mock.patch.object(hg, "_scope_flags", return_value=(False, False)):
                 with mock.patch.object(hg, "_secrets_ok", return_value=True):
@@ -56,7 +57,8 @@ class TestHardGates(unittest.TestCase):
             _write(
                 draft,
                 "**Spec waiver:** chore\n"
-                "## Red-proof\n- red_cmd: true\n- green_cmd: true\nTDD done\n",
+                "## Red-proof\n- red_cmd: true\n- green_cmd: true\nTDD done\n"
+                "## Traceability\n| AC-1 | tests/test_x.py |\n| smoke | product_smoke |\n",
             )
             _write(
                 root / ".agents" / "artifacts" / "CODE_REVIEW.md",
@@ -74,7 +76,9 @@ class TestHardGates(unittest.TestCase):
             _write(
                 draft,
                 "**Spec:** .agents/specs/x.md\n"
-                "## Red-proof\nred_cmd: x\ngreen_cmd: y\n",
+                "## Red-proof\nred_cmd: x\ngreen_cmd: y\n"
+                "## Traceability\n| AC-1 | pytest |\n"
+                "## Threat notes\n- asset: API\n- abuse: injection\n",
             )
             _write(
                 root / ".agents" / "artifacts" / "CODE_REVIEW.md",
@@ -100,7 +104,11 @@ class TestHardGates(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             draft = root / "PR_DRAFT.md"
-            _write(draft, "**Spec waiver:** hotfix\nNo tests mentioned.\n")
+            _write(
+                draft,
+                "**Spec waiver:** hotfix\nNo tests mentioned.\n"
+                "## Traceability\n| AC-1 | n/a |\n",
+            )
             _write(
                 root / ".agents" / "artifacts" / "CODE_REVIEW.md",
                 "CODE-REVIEW\n",

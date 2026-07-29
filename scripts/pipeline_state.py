@@ -45,8 +45,20 @@ def _atomic_write(path: Path, data: dict[str, Any]) -> None:
         raise
 
 
+# Optional ADSLC identity fields (A5) — preserved across set-phase
+IDENTITY_KEYS = ("spec_id", "card_id", "waiver")
+
+
 def _default_state() -> dict[str, Any]:
-    return {"phase": "init", "score": None, "task": None, "remediation": []}
+    return {
+        "phase": "init",
+        "score": None,
+        "task": None,
+        "remediation": [],
+        "spec_id": None,
+        "card_id": None,
+        "waiver": None,
+    }
 
 
 def get() -> dict[str, Any]:
@@ -64,10 +76,21 @@ def get() -> dict[str, Any]:
         # Corrupt / hand-edited illegal phase → safe default
         data = {**_default_state(), **{k: v for k, v in data.items() if k != "phase"}}
         data["phase"] = "init"
+    # Ensure identity keys exist for readers
+    for k in IDENTITY_KEYS:
+        data.setdefault(k, None)
     return data
 
 
-def set_phase(phase: str, score: float | None = None, task: str | None = None) -> None:
+def set_phase(
+    phase: str,
+    score: float | None = None,
+    task: str | None = None,
+    *,
+    spec_id: str | None = None,
+    card_id: str | None = None,
+    waiver: str | None = None,
+) -> None:
     if phase not in VALID_PHASES:
         raise ValueError(f"Invalid phase: {phase}. Valid: {sorted(VALID_PHASES)}")
     path = _state_path()
@@ -84,6 +107,12 @@ def set_phase(phase: str, score: float | None = None, task: str | None = None) -
             state["score"] = score
         if task is not None:
             state["task"] = task
+        if spec_id is not None:
+            state["spec_id"] = spec_id
+        if card_id is not None:
+            state["card_id"] = card_id
+        if waiver is not None:
+            state["waiver"] = waiver
         _atomic_write(path, state)
     finally:
         if lock_f is not None:
@@ -102,11 +131,21 @@ def main() -> int:
     sp.add_argument("phase", choices=sorted(VALID_PHASES))
     sp.add_argument("--score", type=float)
     sp.add_argument("--task", type=str)
+    sp.add_argument("--spec-id", type=str, dest="spec_id")
+    sp.add_argument("--card-id", type=str, dest="card_id")
+    sp.add_argument("--waiver", type=str, help="hotfix|chore|docs-only|prose-only")
     args = ap.parse_args()
     if args.cmd == "get":
         print(json.dumps(get(), indent=2))
     else:
-        set_phase(args.phase, args.score, args.task)
+        set_phase(
+            args.phase,
+            args.score,
+            args.task,
+            spec_id=args.spec_id,
+            card_id=args.card_id,
+            waiver=args.waiver,
+        )
         print(f"✅ phase → {args.phase}")
     return 0
 

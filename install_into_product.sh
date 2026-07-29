@@ -16,12 +16,22 @@ else
   HARNESS_ROOT="$(cd "$(dirname "$0")" && pwd)"
 fi
 VERIFY=0
+DELETE_STALE=0
 PRODUCT_ARG=""
 for a in "$@"; do
   case "$a" in
     --verify) VERIFY=1 ;;
+    --delete-stale-skills) DELETE_STALE=1 ;;
     -h|--help)
-      sed -n '2,12p' "$0"
+      cat <<'EOF'
+Usage: install_into_product.sh [PRODUCT_ROOT] [--verify] [--delete-stale-skills]
+
+  --verify               Run bootstrap_check after install
+  --delete-stale-skills  Remove portable skills that no longer exist in harness SoT
+                         (never deletes product-only skill directories)
+
+AGENTS_HARNESS_ROOT=... overrides harness source root.
+EOF
       exit 0
       ;;
     *)
@@ -61,6 +71,37 @@ RSYNC_EX=(--exclude '__pycache__/' --exclude '*.py[cod]' --exclude '.pytest_cach
 # Overwrite portable skills only; never delete product-only skill directories
 rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/skills/" "$PRODUCT_ROOT/.agents/skills/"
 echo "  ~ skills/ (portable skills refreshed; product-only dirs kept)"
+
+# A4: remove portable skills that were deleted from harness SoT
+if [[ "$DELETE_STALE" -eq 1 ]]; then
+  mapfile -t PORTABLE < <(find "$HARNESS_ROOT/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+  if [[ ${#PORTABLE[@]} -gt 0 ]]; then
+    for d in "$PRODUCT_ROOT/.agents/skills"/*; do
+      [[ -d "$d" ]] || continue
+      name="$(basename "$d")"
+      # only consider names that look like former portable skills: listed in ship_skills
+      # or were once under harness (we only delete if NOT in current portable set AND
+      # appears in ship_skills history file OR matches known portable set from ship_skills.txt)
+      in_portable=0
+      for p in "${PORTABLE[@]}"; do
+        if [[ "$name" == "$p" ]]; then in_portable=1; break; fi
+      done
+      if [[ "$in_portable" -eq 1 ]]; then
+        continue
+      fi
+      # Product-only: keep unless name is in STALE_PORTABLE allowlist (skills removed from SoT)
+      # Stale portable = not in current harness skills/ but was shipped as portable (ship_skills or known)
+      if [[ -f "$HARNESS_ROOT/config/removed_portable_skills.txt" ]] && \
+         grep -qxF "$name" "$HARNESS_ROOT/config/removed_portable_skills.txt" 2>/dev/null; then
+        rm -rf "$d"
+        echo "  - removed stale portable skill: $name"
+      fi
+    done
+  fi
+  # Also remove skills that exist neither in harness nor as obvious product-only:
+  # safer path: only delete if present in removed_portable_skills.txt (explicit)
+  echo "  ~ stale portable skills pruned (see config/removed_portable_skills.txt)"
+fi
 
 rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/scripts/" "$PRODUCT_ROOT/scripts/"
 echo "  ~ scripts/"
@@ -146,6 +187,10 @@ fi
 
 echo "$HARNESS_ROOT" > "$PRODUCT_ROOT/.agents/HARNESS_ROOT"
 date -u +%Y-%m-%dT%H:%M:%SZ > "$PRODUCT_ROOT/.agents/HARNESS_INSTALLED_AT"
+if [[ -f "$HARNESS_ROOT/VERSION" ]]; then
+  cp -a "$HARNESS_ROOT/VERSION" "$PRODUCT_ROOT/.agents/HARNESS_VERSION"
+  echo "  ~ .agents/HARNESS_VERSION=$(tr -d '\n' < "$HARNESS_ROOT/VERSION")"
+fi
 
 # Count ship skills
 SHIP_N=0

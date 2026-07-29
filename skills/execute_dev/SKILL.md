@@ -17,12 +17,24 @@ When invoked with `/execute_dev`:
    - Read `.agents/state/pipeline.json`
    - If `phase` ∉ {`init`, `blocked`} → `🛑 WRONG STATE. Current: {phase}. Run /pr_review or /sync_docs first.` and halt.
    - If working tree dirty (`git status --porcelain` non-empty, ignore `__pycache__` if policy allows) → `🛑 DIRTY TREE. Commit or stash changes first.` and halt.
+0b. **Spec gate (B1 — code ships):**
+   ```bash
+   python3 scripts/spec_gate.py --root .
+   ```
+   - Requires `**Spec:**` path (file exists) **or** `**Spec waiver:** hotfix|chore|docs-only|prose-only` in `PR_DRAFT.md`,
+     or pipeline fields `spec_id` / `waiver` (`pipeline_state.py set-phase … --spec-id … --waiver …`).
+   - Exit ≠ 0 → `🛑 SPEC MISSING` / waiver required and halt (docs-only tasks: use waiver `docs-only` or `prose-only`).
+0c. **Context pack (B3 — recommended):**
+   ```bash
+   python3 scripts/context_pack.py --root .
+   ```
 1. **Load task:**
    - If user args specify a task → use that (acceptance must be clear).
    - Else product: first open priority item in the product roadmap file (see `product_plugin.yaml` → `product_roadmap`).
-   - Else harness: first open row in `.agents/BACKLOG.md`.
+   - Else harness: first open row in `.agents/BACKLOG.md` / CHANGELOG Open work.
    - If none → `✅ ROADMAP EMPTY.`
 2. **Spec check:** Missing acceptance criteria → `🛑 SPEC MISSING.` and halt.
+   - For code ships, fill **## Traceability** (AC → test/smoke) in PR_DRAFT before `/pr_review` (hard gate B2).
 3. **TDD (mandatory for behavior/code changes) — Red → Green → Refactor:**
    1. **Red:** Add or extend failing tests that express the public contract *before* (or with) the first implementation edit.
       - Optional helper: `scripts/scaffold_tests.py --task "<name>" --module "<target>"` (adapt to product layout).

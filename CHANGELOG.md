@@ -1,11 +1,29 @@
 # Changelog
 
+## v1.4.6 — 2026-07-29
+
+### Added (ADSLC tickets 01–05)
+- **B1** `scripts/spec_gate.py` + execute_dev pre-check
+- **B2** Traceability hard gate in `hard_gates.py`
+- **A3** `.github/workflows/daytime-gates.yml` + cron docs
+- **A4** install `--delete-stale-skills` + `HARNESS_VERSION` + `config/removed_portable_skills.txt`
+- **A5** pipeline `spec_id` / `card_id` / `waiver` on `pipeline_state`
+- **B3** `scripts/context_pack.py`
+- **B4** Threat notes hard gate (runtime)
+- **B5** release_mgmt evidence pack notes
+- **C1** `/retrospect` skill
+- **C2** `tests/test_fsm_conformance.py`
+- **C3** `scripts/night_shift_taxonomy.py`
+- **C4** qa_campaign only for large post-sync_docs (`--force-qa`)
+- **C5** `docs/agent-eval-spike.md`
+
+
 ## Open work
 
 ### [OPEN] ADSLC A3–A5 + Layer B (B1/B2 P0) + Layer C
-- **Status:** open
-- **Priority:** P0 (B1/B2, A3–A5) then P1/P2
-- **Next:** true
+- **Status:** done (v1.4.6)
+- **Priority:** P0–P2
+- **Next:** false
 - **Spec:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c.md`
 - **Plan:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c-plan.md`
 - **Tickets:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c/tickets/`

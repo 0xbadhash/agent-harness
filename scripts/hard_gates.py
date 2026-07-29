@@ -29,6 +29,14 @@ RED_PROOF_RE = re.compile(
     r"red\s*→\s*green|went red then green)",
     re.I,
 )
+# B2: AC → test/smoke mapping
+TRACE_HEADER_RE = re.compile(r"^##\s+Traceability\b", re.I | re.M)
+TRACE_ROW_RE = re.compile(
+    r"(AC-\d+|acceptance|smoke|pytest|test_|unittest|\.py\b|scripts/)",
+    re.I,
+)
+THREAT_HEADER_RE = re.compile(r"^##\s+Threat notes\b", re.I | re.M)
+THREAT_BULLET_RE = re.compile(r"^\s*[-*]\s+\S+", re.M)
 
 
 @dataclass
@@ -202,6 +210,23 @@ def evaluate(
             violations.append(
                 "hard_gates: Red-proof missing — document red_cmd/green_cmd or TDD N/A in PR_DRAFT"
             )
+        # B2 Traceability: AC → tests/smoke
+        if not TRACE_HEADER_RE.search(draft_text):
+            violations.append(
+                "hard_gates: Traceability missing — add ## Traceability mapping AC → test/smoke"
+            )
+        else:
+            # section body should mention tests or smoke
+            m = re.search(
+                r"##\s+Traceability\b(.*?)(?=\n## |\Z)",
+                draft_text,
+                re.I | re.S,
+            )
+            body = m.group(1) if m else ""
+            if not TRACE_ROW_RE.search(body) or len(body.strip()) < 20:
+                violations.append(
+                    "hard_gates: Traceability section too thin — map each AC to a test or smoke"
+                )
         if runtime:
             beh = root / ".agents" / "artifacts" / "BEHAVIOR_REPORT.md"
             if not _has_marker(
@@ -211,8 +236,26 @@ def evaluate(
                     "hard_gates: BEHAVIOR-REPORT missing for runtime surface — "
                     "run /behavior_validator or write .agents/artifacts/BEHAVIOR_REPORT.md"
                 )
+            # B4 Threat notes
+            if not THREAT_HEADER_RE.search(draft_text):
+                violations.append(
+                    "hard_gates: Threat notes missing — add ## Threat notes (≥2 bullets) for runtime ships"
+                )
+            else:
+                tm = re.search(
+                    r"##\s+Threat notes\b(.*?)(?=\n## |\Z)",
+                    draft_text,
+                    re.I | re.S,
+                )
+                tbody = tm.group(1) if tm else ""
+                bullets = THREAT_BULLET_RE.findall(tbody)
+                if len(bullets) < 2:
+                    violations.append(
+                        "hard_gates: Threat notes need ≥2 bullets (assets / abuse cases)"
+                    )
         else:
             skipped.append("BEHAVIOR-REPORT (no runtime surface)")
+            skipped.append("Threat notes (no runtime surface)")
 
     # Secrets on diff (fail closed when check fails)
     if not _secrets_ok(root, diff):

@@ -1,0 +1,4 @@
+# Portable skills removed from agent-harness SoT — safe to delete from products
+# when install_into_product.sh --delete-stale-skills is used.
+# One skill directory name per line.
+anti_slop_design

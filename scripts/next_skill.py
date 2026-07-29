@@ -191,6 +191,7 @@ def decide(
     skip_behavior: bool = False,
     skip_infra: bool = False,
     skip_qa: bool = False,
+    force_qa: bool = False,
 ) -> tuple[str, dict[str, str]]:
     """Return (next_skill_token, meta).
 
@@ -228,17 +229,35 @@ def decide(
         return "/sync_docs", {**meta, "reason": "after shipped"}
 
     if after == "sync_docs":
-        # After full FSM: suggest deep QA (esp. large releases). Optional; not a phase.
+        # After full FSM: suggest deep QA only for large ships (C4), unless forced.
         if skip_qa:
             return "(done)", {
                 **meta,
                 "reason": "cycle complete → init (qa_campaign skipped)",
                 "qa": "skipped",
             }
-        return "/qa_campaign", {
+        force = bool(meta.get("_force_qa")) or force_qa
+        large = False
+        if force:
+            large = True
+        else:
+            try:
+                # Use module-level imports only (local import would shadow build_baseline)
+                b = build_baseline(repo, base=base, head=head)
+                large = _large(b, repo)
+            except Exception:  # noqa: BLE001
+                # No git range / small product → default skip qa noise
+                large = False
+        if large or force:
+            return "/qa_campaign", {
+                **meta,
+                "reason": "full FSM complete + large (or --force-qa) → deep QA",
+                "qa": "suggested",
+            }
+        return "(done)", {
             **meta,
-            "reason": "full FSM complete → optional deep QA / bug-hunt campaign",
-            "qa": "suggested",
+            "reason": "cycle complete → init (qa_campaign only for large ships)",
+            "qa": "skipped_small",
         }
 
     if after in ("qa_campaign", "qa-campaign", "full_qa", "e2e_qa"):
@@ -335,6 +354,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="After sync_docs, do not suggest /qa_campaign (print NEXT_SKILL=(done))",
     )
+    ap.add_argument(
+        "--force-qa",
+        action="store_true",
+        help="After sync_docs, always suggest /qa_campaign even if diff is small",
+    )
     ap.add_argument("--verbose", action="store_true", help="Print meta on stderr")
     args = ap.parse_args(argv)
 
@@ -348,6 +372,7 @@ def main(argv: list[str] | None = None) -> int:
             skip_behavior=args.skip_behavior,
             skip_infra=args.skip_infra,
             skip_qa=args.skip_qa,
+            force_qa=args.force_qa,
         )
     except ValueError as exc:
         print(f"❌ {exc}", file=sys.stderr)
