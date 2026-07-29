@@ -24,7 +24,7 @@ Related (product vaults / second-brain kanban): a **card-level ship FSM** may us
 
 | State | Meaning | Typical next skill |
 |-------|---------|-------------------|
-| `init` | Idle / cycle open; ready to implement | `/spec` (optional), then `/execute_dev` |
+| `init` | Idle / cycle open; ready to implement | **`/spec` for features** (or Spec waiver), then `/execute_dev` |
 | `ready_for_review` | Implement + required reviews done; scoring next | `/pr_review --validate` |
 | `approved` | Score ≥ 95; may ship | `/vps_infra_ops --verify` **only if required**, then `/release_mgmt` |
 | `blocked` | Score failed; remediation | `/execute_dev` (fix only cited issues) |
@@ -104,8 +104,9 @@ Do **not** invent the next slash skill.
 
   ┌─ STATE: init ─────────────────────────────────────────────┐
   │                                                             │
-  │   /spec          optional; phase stays init                 │
-  │   /execute_dev   needs: init | blocked                      │
+  │   /spec          REQUIRED for features (or Spec waiver)     │
+  │                  phase stays init — hard gates need Spec    │
+  │   /execute_dev   needs: init | blocked; runs spec_gate      │
   │        │                                                    │
   │        ▼                                                    │
   │   [implement + TDD + validate + smoke as needed]            │
@@ -238,8 +239,9 @@ python3 scripts/next_skill.py --after vps_infra_ops
 
 ### 6. Recommended order (same path, numbered)
 
-0. `/spec` — constitution + interview + **clarify**; `.agents/specs/` (+ optional plan/tickets); roadmap OPEN; **phase stays `init`**  
-1. `/execute_dev` — one task, TDD for code; needs `init` or `blocked`  
+0. `/spec` — **required for features** (or **Spec waiver** for hotfix/chore/docs-only/prose-only). Constitution + clarify; `.agents/specs/`; roadmap OPEN; **phase stays `init`** but score/spec_gate enforce Spec. See [start-a-feature.md](start-a-feature.md).  
+1. `/execute_dev` — one task, TDD for code; needs `init` or `blocked`; runs `scripts/spec_gate.py`  
+
 2. `next_skill.py --after execute_dev` → usually `NEXT_SKILL=/code_review`  
 3. `/code_review` — required for non-prose; then `next_skill` again  
 4. `/cross_review` and/or `/behavior_validator` — **only if** `NEXT_SKILL` says so  

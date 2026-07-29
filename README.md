@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.4.6` (docs synced via `/sync_docs`)
+**Current release:** `v1.4.7` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -37,17 +37,20 @@ bash scripts/bootstrap_check.sh
 python3 scripts/verify_skills.py
 ```
 
-Then open the product in **any** coding LLM and run the ship skills  
-(`/spec` → `/execute_dev` → `/code_review` → … → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).  
-Always honor the printed **`NEXT_SKILL=`** line from `scripts/next_skill.py`.
+Then open the product in **any** coding LLM and ship:
 
-**Any LLM bootstrap:** [docs/llm-bootstrap.md](docs/llm-bootstrap.md) — what to read, one-shot full-FSM phrase, phase gates, `NEXT_SKILL=` router.  
-**Full FSM map:** [docs/ship-flow.md](docs/ship-flow.md).
+1. **Start features with `/spec`** (required for code work — or an explicit **Spec waiver** for hotfix/chore/docs).  
+   Guide: **[docs/start-a-feature.md](docs/start-a-feature.md)** · scaffold: `python3 scripts/start_feature.py --slug my-feature --write-spec-stub`
+2. `/execute_dev` → follow **`NEXT_SKILL=`** (`/code_review` → … → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).
+
+**Any LLM bootstrap:** [docs/llm-bootstrap.md](docs/llm-bootstrap.md)  
+**Full FSM map:** [docs/ship-flow.md](docs/ship-flow.md)  
+**Start a feature:** [docs/start-a-feature.md](docs/start-a-feature.md)
 
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
 ```bash
-git clone --branch v1.4.2 --depth 1 https://github.com/0xbadhash/agent-harness.git
+git clone --branch v1.4.6 --depth 1 https://github.com/0xbadhash/agent-harness.git
 ```
 
 ---
@@ -111,8 +114,9 @@ Canonical detail: **[docs/ship-flow.md](docs/ship-flow.md)** (phases + skill bra
 
 ```text
 init
-  → /spec                      # optional; phase unchanged
-  → /execute_dev               # TDD; set ready_for_review after reviews
+  → /spec                      # REQUIRED for features (or Spec waiver: hotfix|chore|docs-only)
+                               # does not change phase, but hard gates / spec_gate require it
+  → /execute_dev               # TDD; runs spec_gate; set ready_for_review after reviews
        ├─ prose-only ──────────► /pr_review --validate
        └─ non-prose ──► /code_review
               ├─ large ──► /cross_review
@@ -121,7 +125,7 @@ init
   → (if required) /vps_infra_ops --verify   # product-owned; phase stays approved
   → /release_mgmt              # smoke + tag → shipped
   → /sync_docs                 # → init
-  → /qa_campaign               # optional deep QA after full FSM / huge release
+  → /qa_campaign               # optional deep QA if large ship (--force-qa)
 ```
 
 Router (do not invent the next skill):
@@ -163,7 +167,7 @@ Full table: **[docs/skills-catalog.md](docs/skills-catalog.md)**.
 
 | Skill | Job |
 |-------|-----|
-| `/spec` | Constitution + interview + clarify → spec (+ optional plan/tickets) + roadmap OPEN |
+| `/spec` | **Front door for features** — constitution + clarify → checkable acceptance (+ plan/tickets); or use Spec waiver for hotfix/chore/docs |
 | `/execute_dev` | One task, **TDD mandatory**; non-prose requires `/code_review` closeout; `NEXT_SKILL=` |
 | `/code_review` | P0-first closeout after implement (required unless prose-only) |
 | `/cross_review` | Multi-persona + obsolete scan when `NEXT_SKILL` says so |

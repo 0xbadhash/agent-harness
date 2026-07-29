@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.7 — 2026-07-29
+
+### Docs / operator front door
+- **`/spec` is required for features** (not optional): README, ship-flow, skills-catalog, llm-bootstrap, AGENTS template — Spec path or **Spec waiver** for hotfix/chore/docs.
+- **`docs/start-a-feature.md`** + install copy to `.agents/docs/`.
+- **`scripts/start_feature.py`** scaffold PR_DRAFT (+ optional spec stub); tests.
+
 ## v1.4.6 — 2026-07-29
 
 ### Added (ADSLC tickets 01–05)
@@ -20,10 +27,10 @@
 
 ## Open work
 
-### [OPEN] Operator front door — start features with /spec
-- **Status:** open
+### [DONE] Operator front door — start features with /spec
+- **Status:** done (v1.4.7)
 - **Priority:** P1
-- **Next:** true
+- **Next:** false
 - **Spec:** `.agents/specs/2026-07-29-operator-start-feature-front-door.md`
 - **Plan:** `.agents/specs/2026-07-29-operator-start-feature-front-door-plan.md`
 - **Tickets:** `.agents/specs/2026-07-29-operator-start-feature-front-door/tickets/`

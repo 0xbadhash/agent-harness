@@ -9,7 +9,7 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 | Skill | When to fire | Does |
 |-------|--------------|------|
-| `spec` | Before coding a new idea | Constitution → interview → draft → clarify → `.agents/specs/` (+ optional plan/tickets) + roadmap OPEN (no pipeline advance) |
+| `spec` | **Start of every feature** (not optional for code ships) | Constitution → interview → draft → clarify → checkable AC in `.agents/specs/` (+ plan/tickets) + roadmap OPEN. Phase stays `init`, but hard gates / `spec_gate` require Spec path or waiver. Guide: [start-a-feature.md](start-a-feature.md) |
 | `execute_dev` | Building one task | TDD, implement, validate; mandatory `/code_review` closeout for non-prose; handoff → `ready_for_review`; prints `NEXT_SKILL=` |
 | `code_review` | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only; secrets + scope; prints `NEXT_SKILL=` |
 | `cross_review` | When `NEXT_SKILL=/cross_review` | Multi-persona + obsolete scan; P0-first; then `NEXT_SKILL=` |

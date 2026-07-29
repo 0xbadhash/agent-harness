@@ -43,11 +43,26 @@ Shorter:
 Ship <task> end-to-end: execute → code-review → pr-review --validate → release → sync-docs → push
 ```
 
-Optional front door:
+**Front door (required for features):**
 
 ```text
 /spec <idea> then full FSM
 ```
+
+Or scaffold files then implement:
+
+```bash
+python3 scripts/start_feature.py --slug my-feature --write-spec-stub
+# then /execute_dev after refining acceptance
+```
+
+Hotfix / docs without a full spec interview:
+
+```text
+**Spec waiver:** hotfix   # or chore | docs-only | prose-only
+```
+
+Guide: [start-a-feature.md](start-a-feature.md) (installed as `.agents/docs/start-a-feature.md`).
 
 Always run and obey:
 
