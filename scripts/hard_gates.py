@@ -37,6 +37,12 @@ TRACE_ROW_RE = re.compile(
 )
 THREAT_HEADER_RE = re.compile(r"^##\s+Threat notes\b", re.I | re.M)
 THREAT_BULLET_RE = re.compile(r"^\s*[-*]\s+\S+", re.M)
+# B5: release-style evidence pack in PR_DRAFT (code ships)
+EVIDENCE_HEADER_RE = re.compile(r"^##\s+Evidence pack\b", re.I | re.M)
+EVIDENCE_TOKEN_RE = re.compile(
+    r"\b(hard_gates|smoke|pytest|unittest|validate|coverage|sbom|product_smoke)\b",
+    re.I,
+)
 
 
 @dataclass
@@ -256,6 +262,26 @@ def evaluate(
         else:
             skipped.append("BEHAVIOR-REPORT (no runtime surface)")
             skipped.append("Threat notes (no runtime surface)")
+
+        # B5 Evidence pack (code ships only)
+        if not EVIDENCE_HEADER_RE.search(draft_text):
+            violations.append(
+                "hard_gates: Evidence pack missing — add ## Evidence pack "
+                "(hard_gates / smoke / pytest / validate / coverage / SBOM)"
+            )
+        else:
+            em = re.search(
+                r"##\s+Evidence pack\b(.*?)(?=\n## |\Z)",
+                draft_text,
+                re.I | re.S,
+            )
+            ebody = em.group(1) if em else ""
+            tokens = set(t.lower() for t in EVIDENCE_TOKEN_RE.findall(ebody))
+            if len(tokens) < 2 or len(ebody.strip()) < 20:
+                violations.append(
+                    "hard_gates: Evidence pack too thin — cite ≥2 of "
+                    "hard_gates, smoke, pytest/unittest, validate, coverage, SBOM"
+                )
 
     # Secrets on diff (fail closed when check fails)
     if not _secrets_ok(root, diff):

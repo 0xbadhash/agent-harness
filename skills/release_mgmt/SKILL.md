@@ -29,7 +29,7 @@ When invoked with `/release_mgmt`:
 6. **Generate `RELEASE_RUNBOOK.md`** with:
    - smoke table (commands + exit)
    - infra reference (if any)
-   - **Evidence pack (B5):** link or paste hard_gates summary, coverage note if any, SBOM path if generated
+   - **Evidence pack (B5):** required at score time in PR_DRAFT (`## Evidence pack` with ≥2 of hard_gates / smoke / pytest / validate / coverage / SBOM). Also paste into RELEASE_RUNBOOK: hard_gates summary, smoke table, coverage/SBOM if any.
    - rollback, §9 (≥3)
 7. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`
 8. **Branch cleanup (optional when `gh` available):** delete merged feature branches per product policy.

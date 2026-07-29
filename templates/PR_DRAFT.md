@@ -36,6 +36,16 @@ green_cmd: <exact command that passed after fix>
 # or: live: curl / puppeteer / health …
 ```
 
+## Evidence pack
+
+Code ships only (hard_gates B5). Table or bullets citing **≥2** of: hard_gates, smoke, pytest/unittest, validate, coverage, SBOM.
+
+| Item | Result |
+|------|--------|
+| hard_gates | ok / pending |
+| smoke | product_smoke exit 0 |
+| pytest | N passed |
+
 ## Spec
 
 **Spec:** `.agents/specs/<file>.md`  

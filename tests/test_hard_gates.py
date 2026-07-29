@@ -58,7 +58,8 @@ class TestHardGates(unittest.TestCase):
                 draft,
                 "**Spec waiver:** chore\n"
                 "## Red-proof\n- red_cmd: true\n- green_cmd: true\nTDD done\n"
-                "## Traceability\n| AC-1 | tests/test_x.py |\n| smoke | product_smoke |\n",
+                "## Traceability\n| AC-1 | tests/test_x.py |\n| smoke | product_smoke |\n"
+                "## Evidence pack\n| hard_gates | ok |\n| smoke | product_smoke |\n",
             )
             _write(
                 root / ".agents" / "artifacts" / "CODE_REVIEW.md",
@@ -67,6 +68,61 @@ class TestHardGates(unittest.TestCase):
             with mock.patch.object(hg, "_scope_flags", return_value=(False, False)):
                 with mock.patch.object(hg, "_secrets_ok", return_value=True):
                     r = hg.evaluate(root, draft, diff=None)
+            self.assertTrue(r.ok, r.violations)
+
+    def test_evidence_pack_required_for_code(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = root / "PR_DRAFT.md"
+            _write(
+                draft,
+                "**Spec waiver:** chore\n"
+                "## Red-proof\n- red_cmd: true\n- green_cmd: true\n"
+                "## Traceability\n| AC-1 | tests/test_x.py |\n| smoke | product_smoke |\n",
+            )
+            _write(
+                root / ".agents" / "artifacts" / "CODE_REVIEW.md",
+                "CODE-REVIEW\n",
+            )
+            with mock.patch.object(hg, "_scope_flags", return_value=(False, False)):
+                with mock.patch.object(hg, "_secrets_ok", return_value=True):
+                    r = hg.evaluate(root, draft, diff=None)
+            self.assertFalse(r.ok)
+            self.assertTrue(any("Evidence pack" in v for v in r.violations))
+
+    def test_evidence_pack_thin_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = root / "PR_DRAFT.md"
+            _write(
+                draft,
+                "**Spec waiver:** chore\n"
+                "## Red-proof\n- red_cmd: true\n- green_cmd: true\n"
+                "## Traceability\n| AC-1 | tests/test_x.py |\n| smoke | product_smoke |\n"
+                "## Evidence pack\nok\n",
+            )
+            _write(
+                root / ".agents" / "artifacts" / "CODE_REVIEW.md",
+                "CODE-REVIEW\n",
+            )
+            with mock.patch.object(hg, "_scope_flags", return_value=(False, False)):
+                with mock.patch.object(hg, "_secrets_ok", return_value=True):
+                    r = hg.evaluate(root, draft, diff=None)
+            self.assertFalse(r.ok)
+            self.assertTrue(any("Evidence pack" in v for v in r.violations))
+
+    def test_prose_skips_evidence_pack(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = root / "PR_DRAFT.md"
+            _write(
+                draft,
+                "## What\n"
+                "**Spec waiver:** docs-only\n"
+                "## Red-proof\nTDD N/A docs-only\n",
+            )
+            with mock.patch.object(hg, "_scope_flags", return_value=(True, False)):
+                r = hg.evaluate(root, draft, diff=None)
             self.assertTrue(r.ok, r.violations)
 
     def test_runtime_requires_behavior(self):
