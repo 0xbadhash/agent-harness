@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.5 — 2026-07-29
+
+### Added
+- **Hard gates pack** for `/pr_review --validate`: `scripts/hard_gates.py` (CODE-REVIEW, red-proof, BEHAVIOR-REPORT when runtime, Spec/waiver, secrets). Rubric `hard_gates=25` all-or-nothing.
+- Spec: `.agents/specs/2026-07-29-hard-gates-pack.md` (+ plan).
+- Docs: ship-flow hard gates section; `pr_review` skill updated.
+
+### Changed
+- `pr_validator` rubric rebalanced (suite/gate 20 each, section_9 15, hardcode/hygiene 10, hard_gates 25).
+
+
 ## v1.4.4 — 2026-07-29
 
 ### Added
