@@ -1,16 +1,17 @@
-# RELEASE_RUNBOOK — agent-harness v1.4.6
+# RELEASE_RUNBOOK — agent-harness v1.4.8
 
-**Scope:** ADSLC tickets 01–05 (A3–A5, Layer B, Layer C)  
-**Score:** 100 (hard gates pack)
+**Scope:** ADSLC harden ticket 01 (A3 daytime ops)  
+**Score:** 100  
+**Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | ok |
-| pytest | 107+ |
+| unittest | test_daytime_wiring 4 OK |
 | validate full | 5/5 |
 | product_smoke | 2/2 |
-| Spec | `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c.md` |
+| wiring | check_daytime_wiring ok |
 
 ## Smoke
 | Step | Exit |
@@ -18,10 +19,10 @@
 | hardcodes | 0 |
 | unit (smoke_unit.sh) | 0 |
 
-## §9
-1. Single release for five tickets  
-2. delete-stale-skills only explicit removed list  
-3. qa_campaign large-only by default  
+## Things that look bad but are actually fine
+1. Deploy unit host paths match night-shift-all
+2. Timer not auto-enabled
+3. start_feature ruff fix in same commit
 
 ## Rollback
-`git checkout v1.4.5`
+`git checkout v1.4.7`

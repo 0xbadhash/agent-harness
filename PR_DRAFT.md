@@ -1,58 +1,61 @@
-# PR Draft — ADSLC A3–A5 + Layer B + Layer C
+# PR Draft — A3 daytime ops wire-up (ticket 01)
 
-**Date:** 2026-07-29  
-**Version:** 1.4.6  
-**Spec:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c.md`  
-**Plan:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c-plan.md`
+**Range:** 2572cea..HEAD  
+**Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`  
+**Ticket:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden/tickets/01-a3-daytime-ops.md`
 
 ## What Problem This Solves
-After hard gates, remaining ADSLC gaps: no daytime CI wire-up, install leave stale skills, pipeline lacks structured identity, no spec gate / AC traceability, weak context/threat/release evidence, no retro flywheel, qa_campaign noise on every sync_docs.
+
+Daytime readiness existed as GHA + cron docs only; operators lacked installable systemd units, a wiring check, and a product GHA template — so night_shift was still the first multi-product automated signal on many hosts.
 
 ## Why This Change Was Made
-Implement tickets 01–05 from the ADSLC spec in one coherent release: B1/B2 first, then A3–A5, B3–B5, C1–C5.
+
+Mirror proven `night-shift-all` deploy pattern; keep enable opt-in (`--apply`); add deterministic `check_daytime_wiring.py`.
 
 ## User Impact
-Stricter execute_dev entry (spec_gate), richer PR_DRAFT, install --delete-stale-skills + HARNESS_VERSION, daytime GH workflow, retrospect skill, large-only qa_campaign suggestion.
+
+Operators can dry-run then enable daytime-gates.timer; products can copy `templates/daytime-gates.yml`.
+
+## Evidence pack
+
+| Item | Result |
+|------|--------|
+| hard_gates | run at pr_review |
+| unittest | tests.test_daytime_wiring 4 OK |
+| validate full | 5/5 |
+| product_smoke | 2/2 |
+| wiring check | ok=True |
 
 ## Evidence
-- pytest 107+  
-- validate full 5/5  
-- product_smoke 2/2  
-- hard_gates + new unit tests  
+
+```text
+red_cmd: python3 -m unittest tests.test_daytime_wiring  # failed before implement (import/missing)
+green_cmd: python3 -m unittest tests.test_daytime_wiring
+```
 
 ## Red-proof
-- red_cmd: `python3 -m unittest tests.test_hard_gates tests.test_spec_gate` (failed before B1/B2)
-- green_cmd: `python3 -m pytest tests/ -q` (107 passed)
+
+- red_cmd: `python3 -m unittest tests.test_daytime_wiring` (missing module / files before green)
+- green_cmd: `python3 -m unittest tests.test_daytime_wiring`
 
 ## Traceability
+
 | AC | Test / smoke |
 |----|----------------|
-| B1 spec gate | tests/test_spec_gate.py |
-| B2 Traceability | tests/test_hard_gates.py |
-| A3 daytime CI | .github/workflows/daytime-gates.yml |
-| A4 install delete/stamp | install_into_product.sh + removed_portable_skills.txt |
-| A5 pipeline identity | tests/test_fsm_conformance.py |
-| B3 context pack | scripts/context_pack.py |
-| B4 threat notes | tests/test_hard_gates (runtime path) |
-| B5 release evidence | skills/release_mgmt/SKILL.md |
-| C1 retrospect | skills/retrospect/SKILL.md |
-| C2 FSM tests | tests/test_fsm_conformance.py |
-| C3 taxonomy | scripts/night_shift_taxonomy.py |
-| C4 qa large-only | tests/test_next_skill + test_fsm_conformance |
-| C5 eval spike | docs/agent-eval-spike.md |
-| Smoke | product_smoke + validate full |
+| AC-1 deploy service+timer | files present; wiring check |
+| AC-2 install dry-run/--apply | install_daytime_timer.sh dry-run exit 0 |
+| AC-3 check_daytime_wiring | tests/test_daytime_wiring.py |
+| AC-4 product template | templates/daytime-gates.yml |
+| AC-5 docs | night-shift.md, ship-flow.md |
 
 ## Threat notes
-- Asset: ship score / phase integrity — mitigated by hard_gates + pipeline flock
-- Abuse: skip evidence via --skip-hard-gates — emergency only, documented
-- Asset: install wipe product skills — mitigated by removed_portable_skills allowlist only
+
+- **Asset:** systemd timer running multi-product smoke as host user  
+- **Abuse:** premature enable without review — mitigated by default dry-run + sudo  
+- **Abuse:** malicious product path in night_shift_products.yaml — pre-existing; same as night-shift  
 
 ## Things that look bad but are actually fine
-1. Single release for five tickets reduces process overhead  
-2. qa_campaign default off for small diffs  
-3. C5 is docs spike not full eval platform  
-4. Install delete only explicit removed list  
-5. Spec gate uses PR_DRAFT or pipeline fields  
 
-## Cross-review
-See artifacts after review pass.
+1. Host absolute paths in deploy units — same pattern as night-shift-all.service (documented host layout).
+2. Timer not enabled on host in this release — install defaults to dry-run; operator must `--apply`.
+3. start_feature F541 fix appears adjacent — required for validate full linter green on this repo.

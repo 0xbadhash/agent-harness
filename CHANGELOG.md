@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.8 — 2026-07-29
+
+### Added (A3 harden — ticket 01)
+- `deploy/daytime-gates.service` + `.timer` (18:00 UTC multi-product daytime readiness)
+- `scripts/install_daytime_timer.sh` (dry-run default, `--apply` enable)
+- `scripts/check_daytime_wiring.py` + tests
+- `templates/daytime-gates.yml` product GHA template
+- Docs: night-shift.md, ship-flow.md
+
+### Fixed
+- `start_feature.py` ruff F541 for validate full
+
 ## v1.4.7 — 2026-07-29
 
 ### Docs / operator front door
@@ -35,7 +47,7 @@
 - **Plan:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden-plan.md`
 - **Tickets:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden/tickets/`
 - **Acceptance:**
-  - [ ] A3 daytime systemd + install + wiring check + product GHA template (ticket 01)
+  - [x] A3 daytime systemd + install + wiring check + product GHA template (ticket 01)
   - [ ] B5 Evidence pack hard gate (ticket 02)
   - [ ] C5 agent_eval_checklist runner (ticket 03)
 - **Smoke:** harness unit + hard_gates + check_daytime_wiring + agent_eval_checklist
