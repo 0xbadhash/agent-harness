@@ -97,7 +97,10 @@ def test_pr_validator_rubric_uses_suite_green_not_tdd_evidence():
 
     assert "suite_green" in pv.RUBRIC
     assert "tdd_evidence" not in pv.RUBRIC
-    assert pv.RUBRIC["suite_green"] == 25
+    assert "hard_gates" in pv.RUBRIC
+    assert pv.RUBRIC["suite_green"] == 20
+    assert pv.RUBRIC["hard_gates"] == 25
+    assert sum(pv.RUBRIC.values()) == 100
 
 
 def test_parse_minimal_plugin_multiple_smoke_entries():
