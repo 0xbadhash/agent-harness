@@ -94,9 +94,7 @@ def evaluate(root: Path, *, run_tests: bool = True) -> EvalResult:
             "tests.test_hard_gates",
             "tests.test_next_skill",
         ):
-            # only if module file exists
-            rel = name.replace(".", "/") + ".py"
-            # tests/test_x.py
+            # only if module file exists (tests/test_x.py)
             parts = name.split(".")
             path = root.joinpath(*parts[:-1], parts[-1] + ".py")
             if path.is_file():
