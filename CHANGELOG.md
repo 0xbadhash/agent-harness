@@ -20,6 +20,21 @@
 
 ## Open work
 
+### [OPEN] Operator front door — start features with /spec
+- **Status:** open
+- **Priority:** P1
+- **Next:** true
+- **Spec:** `.agents/specs/2026-07-29-operator-start-feature-front-door.md`
+- **Plan:** `.agents/specs/2026-07-29-operator-start-feature-front-door-plan.md`
+- **Tickets:** `.agents/specs/2026-07-29-operator-start-feature-front-door/tickets/`
+- **Acceptance:**
+  - [ ] docs/start-a-feature.md + links
+  - [ ] scripts/start_feature.py + tests
+  - [ ] install copies doc to products
+- **Smoke:** start_feature + spec_gate on temp root
+- **Notes:** Ergonomics on top of hard gates / ADSLC; not a new FSM phase
+
+
 ### [OPEN] ADSLC A3–A5 + Layer B (B1/B2 P0) + Layer C
 - **Status:** done (v1.4.6)
 - **Priority:** P0–P2
