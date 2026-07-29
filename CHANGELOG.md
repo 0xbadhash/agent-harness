@@ -1,5 +1,24 @@
 # Changelog
 
+## Open work
+
+### [OPEN] ADSLC A3–A5 + Layer B (B1/B2 P0) + Layer C
+- **Status:** open
+- **Priority:** P0 (B1/B2, A3–A5) then P1/P2
+- **Next:** true
+- **Spec:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c.md`
+- **Plan:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c-plan.md`
+- **Tickets:** `.agents/specs/2026-07-29-adslc-a3-a5-layer-b-c/tickets/`
+- **Acceptance:**
+  - [ ] B1 spec gate + B2 traceability (ticket 01)
+  - [ ] A3 daytime CI + A4 install delete/stamp + A5 pipeline identity (ticket 02)
+  - [ ] B3–B5 context/threat/release evidence (ticket 03)
+  - [ ] C1/C2/C4 retro + self-tests + qa large-only (ticket 04)
+  - [ ] C3/C5 taxonomy + eval spike (ticket 05)
+- **Smoke:** harness unit + hard_gates + daytime_readiness_subset --root .
+- **Notes:** Builds on v1.4.5 hard gates; no new FSM phases
+
+
 ## v1.4.5 — 2026-07-29
 
 ### Added
