@@ -271,9 +271,9 @@ def evaluate(
             )
         else:
             em = re.search(
-                r"##\s+Evidence pack\b(.*?)(?=\n## |\Z)",
+                r"^##\s+Evidence pack\b(.*?)(?=\n## |\Z)",
                 draft_text,
-                re.I | re.S,
+                re.I | re.S | re.M,
             )
             ebody = em.group(1) if em else ""
             tokens = set(t.lower() for t in EVIDENCE_TOKEN_RE.findall(ebody))
