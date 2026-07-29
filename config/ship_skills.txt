@@ -8,8 +8,13 @@ behavior_validator
 pr_review
 release_mgmt
 sync_docs
+qa_campaign
 plan_backend
 audit_repo
 sweep
 feedback
 test_automation
+night_shift
+handoff
+session_viewer
+agent_transcript

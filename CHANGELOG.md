@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.4 — 2026-07-29
+
+### Added
+- **`/qa_campaign` skill** — full end-to-end autonomous QA + bug hunt + root-cause fix campaign (subagents, worktrees, multi-layer tests, vault report). Protocol in `skills/qa_campaign/references/campaign-protocol.md`.
+- **`next_skill.py` after `/sync_docs`:** suggests `NEXT_SKILL=/qa_campaign` (full FSM complete); `--skip-qa` → `(done)`.
+
+### Docs / install
+- README, ship-flow, skills-catalog, llm-bootstrap, AGENTS template; `config/ship_skills.txt` includes `qa_campaign` (+ support skills for verify).
+
 ## v1.4.3 — 2026-07-28
 
 ### Removed

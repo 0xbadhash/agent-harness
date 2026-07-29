@@ -190,6 +190,7 @@ def decide(
     force_cross: bool = False,
     skip_behavior: bool = False,
     skip_infra: bool = False,
+    skip_qa: bool = False,
 ) -> tuple[str, dict[str, str]]:
     """Return (next_skill_token, meta).
 
@@ -227,7 +228,24 @@ def decide(
         return "/sync_docs", {**meta, "reason": "after shipped"}
 
     if after == "sync_docs":
-        return "(done)", {**meta, "reason": "cycle complete → init"}
+        # After full FSM: suggest deep QA (esp. large releases). Optional; not a phase.
+        if skip_qa:
+            return "(done)", {
+                **meta,
+                "reason": "cycle complete → init (qa_campaign skipped)",
+                "qa": "skipped",
+            }
+        return "/qa_campaign", {
+            **meta,
+            "reason": "full FSM complete → optional deep QA / bug-hunt campaign",
+            "qa": "suggested",
+        }
+
+    if after in ("qa_campaign", "qa-campaign", "full_qa", "e2e_qa"):
+        return "(done)", {
+            **meta,
+            "reason": "QA campaign finished (or skipped) → idle",
+        }
 
     if after == "handoff":
         return "(continue with task)", {**meta, "reason": "handoff is not a ship step"}
@@ -312,6 +330,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="After pr_review, never route to /vps_infra_ops even if product has it",
     )
+    ap.add_argument(
+        "--skip-qa",
+        action="store_true",
+        help="After sync_docs, do not suggest /qa_campaign (print NEXT_SKILL=(done))",
+    )
     ap.add_argument("--verbose", action="store_true", help="Print meta on stderr")
     args = ap.parse_args(argv)
 
@@ -324,6 +347,7 @@ def main(argv: list[str] | None = None) -> int:
             force_cross=args.force_cross,
             skip_behavior=args.skip_behavior,
             skip_infra=args.skip_infra,
+            skip_qa=args.skip_qa,
         )
     except ValueError as exc:
         print(f"❌ {exc}", file=sys.stderr)

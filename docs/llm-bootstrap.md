@@ -34,6 +34,7 @@ Full ship FSM for <task description>:
 and/or /behavior_validator then /pr_review --validate
 then (if required) /vps_infra_ops --verify then /release_mgmt
 then /sync_docs then git push origin main --tags
+then (optional, large releases) /qa_campaign
 ```
 
 Shorter:
@@ -76,6 +77,7 @@ init → ready_for_review → approved → shipped → init
 | `/vps_infra_ops --verify` | `approved` | *(none)* — **only if required** for product; then `NEXT_SKILL=/release_mgmt` |
 | `/release_mgmt` | `approved` | `shipped` |
 | `/sync_docs` | `shipped` | `init` |
+| `/qa_campaign` | any (after full FSM) | *(none)* — deep QA; suggested after `/sync_docs` |
 
 Check:
 
@@ -98,7 +100,7 @@ python3 scripts/next_skill.py --after behavior_validator
 
 From `config/ship_skills.txt` / `.agents/policy/ship_skills.txt`:
 
-Ship-chain: `spec` · `execute_dev` · `code_review` · `cross_review` · `behavior_validator` · `pr_review` · `release_mgmt` · `sync_docs`  
+Ship-chain: `spec` · `execute_dev` · `code_review` · `cross_review` · `behavior_validator` · `pr_review` · `release_mgmt` · `sync_docs` · `qa_campaign`  
 
 Support (also installed): `plan_backend` · `audit_repo` · `audit_harness` · `sweep` · `feedback` · `test_automation` · `night_shift` · `handoff` · `session_viewer` · `agent_transcript`  
 

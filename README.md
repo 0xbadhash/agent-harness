@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.4.3` (docs synced via `/sync_docs`)
+**Current release:** `v1.4.4` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -121,6 +121,7 @@ init
   → (if required) /vps_infra_ops --verify   # product-owned; phase stays approved
   → /release_mgmt              # smoke + tag → shipped
   → /sync_docs                 # → init
+  → /qa_campaign               # optional deep QA after full FSM / huge release
 ```
 
 Router (do not invent the next skill):
@@ -128,6 +129,9 @@ Router (do not invent the next skill):
 ```bash
 python3 scripts/next_skill.py --after execute_dev --base HEAD~1 --head HEAD
 # → NEXT_SKILL=/code_review   (typical)
+
+python3 scripts/next_skill.py --after sync_docs
+# → NEXT_SKILL=/qa_campaign   (post full FSM; --skip-qa to finish)
 ```
 
 Blocked path: `ready_for_review` → `blocked` → `/execute_dev` (remediation) → reviews → `/pr_review` again.
@@ -167,6 +171,7 @@ Full table: **[docs/skills-catalog.md](docs/skills-catalog.md)**.
 | `/pr_review` | Deterministic score (≥95) → `approved` / `blocked` |
 | `/release_mgmt` | Smoke (plugin), version, tag → `shipped` |
 | `/sync_docs` | Docs + optional vault release entry → `init` |
+| `/qa_campaign` | Post-FSM deep E2E QA + bug hunt + root-cause fixes (suggested after `/sync_docs`) |
 | `/night_shift` | Overnight readiness; vault TODO; **no** auto-ship — [night-shift.md](docs/night-shift.md) |
 | `/handoff` | Clipboard handoff for a fresh agent |
 | `/session_viewer` / `/agent_transcript` | Session HTML / sanitized transcript (ops) |

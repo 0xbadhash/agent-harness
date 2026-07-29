@@ -21,6 +21,7 @@ init
   → /pr_review --validate # score ≥ 95 → approved
   → /release_mgmt         # smoke + tag → shipped
   → /sync_docs            # docs stamps → init
+  → /qa_campaign          # optional deep QA after full FSM (NEXT_SKILL)
 ```
 
 **Any LLM:** load `SKILL.md` from `.agents/skills/<name>/` when the user names `/name`.  
@@ -50,7 +51,7 @@ Plugin: `.agents/product_plugin.yaml` (edit stack + smoke for *your* language)
 Full FSM for <task>: /execute_dev then /code_review then (if NEXT_SKILL says)
 /cross_review and/or /behavior_validator then /pr_review --validate
 then (if required) /vps_infra_ops --verify then /release_mgmt then /sync_docs
-then git push origin main --tags
+then git push origin main --tags then (optional) /qa_campaign
 ```
 
 See `.agents/docs/ship-flow.md` and `.agents/docs/skills-catalog.md`.

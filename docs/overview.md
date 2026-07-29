@@ -56,6 +56,7 @@ Keep skill bodies short. Put long checklists in `docs/` and link them.
 | Entropy | `/sweep`, architecture notes in product |
 | Red suite blocking next work | `/night_shift` readiness (report + TODO; no auto-ship) — [night-shift.md](night-shift.md) |
 | Switch agent mid-task | `/handoff` (not a ship phase) |
+| Huge release / deep quality debt | `/qa_campaign` after full FSM (orchestrated bug hunt; not a phase) |
 
 ## Related
 

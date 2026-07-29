@@ -78,6 +78,7 @@ No other phase strings are valid.
 | `approved` | *(no phase change)* | `/vps_infra_ops --verify` | **Only when infra is required** (see below); writes `INFRA_RUNBOOK.md` |
 | `approved` | `shipped` | `/release_mgmt` | Smoke OK; version/tag; fresh infra PASS if required |
 | `shipped` | `init` | `/sync_docs` | Repo (and optional vault) stamps |
+| `init` (post-ship) | *(no phase)* | `/qa_campaign` | **Suggested** after full FSM (esp. large releases); does not change phase |
 
 **Illegal (must halt with `🛑 WRONG STATE`):** e.g. `/pr_review` from `init`, `/release_mgmt` from `ready_for_review`, `/sync_docs` advancing without `shipped`, inventing phases, hand-editing `pipeline.json` outside `pipeline_state.py`.
 
@@ -174,6 +175,11 @@ Do **not** invent the next slash skill.
             ▼
   ┌─ STATE: shipped ──────────────────────────────────────────┐
   │   /sync_docs  →  stamps + optional vault → phase init     │
+  │        │                                                  │
+  │        │  next_skill.py --after sync_docs                 │
+  │        ▼                                                  │
+  │   NEXT_SKILL=/qa_campaign   (optional deep QA; not a phase)│
+  │   skip: --skip-qa → (done)                                │
   └───────────────────────────────────────────────────────────┘
 ```
 
@@ -242,6 +248,7 @@ python3 scripts/next_skill.py --after vps_infra_ops
 7. `/vps_infra_ops --verify` — **only if required** for this product; phase stays `approved`  
 8. `/release_mgmt` — smoke from **product_plugin**, tag → `shipped`  
 9. `/sync_docs` — docs + optional vault → `init`  
+10. `/qa_campaign` — **optional** deep E2E QA + bug hunt after full FSM (suggested by `next_skill`; not a phase)  
 
 **Always parse one line:** `NEXT_SKILL=/skill …`
 
@@ -253,6 +260,7 @@ Full ship FSM for <task>:
 and/or /behavior_validator then /pr_review --validate
 then (if required) /vps_infra_ops --verify then /release_mgmt
 then /sync_docs then git push origin main --tags
+then (optional, after huge release) /qa_campaign
 ```
 
 See [llm-bootstrap.md](llm-bootstrap.md) for install + discovery.
@@ -265,6 +273,7 @@ See [llm-bootstrap.md](llm-bootstrap.md) for install + discovery.
 | `/session_viewer` | HTML view of a local session log (P3) |
 | `/agent_transcript` | Sanitized transcript for PR body; ask user first (P3) |
 | `/night_shift` | Overnight readiness; no phase advance — [night-shift.md](night-shift.md) |
+| `/qa_campaign` | Post-FSM deep QA / bug hunt (orchestrated); no phase advance |
 | `/sweep` / `/audit_*` | Hygiene / gap analysis |
 
 Full catalog: [skills-catalog.md](skills-catalog.md).
