@@ -1,0 +1,19 @@
+[Unit]
+Description=Agent harness multi-product daytime readiness (A3)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+# Absolute path avoids %h CHDIR failures (same pattern as night-shift-all).
+WorkingDirectory=/home/debian/agent-harness
+Environment=NIGHT_SHIFT_PRODUCTS_FILE=/home/debian/agent-harness/config/night_shift_products.yaml
+Environment=PATH=/home/debian/watchlist/.venv/bin:/home/debian/agent-harness/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash -c 'PY="/home/debian/agent-harness/.venv/bin/python"; if [ ! -x "$PY" ]; then PY="/home/debian/watchlist/.venv/bin/python"; fi; if [ ! -x "$PY" ]; then PY=/usr/bin/python3; fi; exec "$PY" /home/debian/agent-harness/scripts/daytime_readiness_subset.py'
+# Partial product failures still complete the oneshot for timer accounting.
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

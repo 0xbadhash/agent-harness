@@ -323,7 +323,27 @@ python3 scripts/daytime_readiness_subset.py --root /home/debian/watchlist
 Gates: `check_hardcodes` → `validate full` → `product_smoke`. No vault writes. Fail here → fix before sleep.
 
 **GitHub Actions:** see `.github/workflows/daytime-gates.yml` (harness self-check).  
-**Operator cron example** (18:00 UTC, before night timer):
+**Product GHA template:** copy `templates/daytime-gates.yml` → product `.github/workflows/daytime-gates.yml`.
+
+**Systemd (recommended, parallel to night-shift-all):**
+
+```bash
+# Dry-run (default) — print actions only
+bash scripts/install_daytime_timer.sh --dry-run
+
+# Operator apply (requires write to /etc/systemd/system)
+sudo bash scripts/install_daytime_timer.sh --apply
+
+# Verify artifacts present (no enable)
+python3 scripts/check_daytime_wiring.py --root .
+# Optional: require product workflows
+python3 scripts/check_daytime_wiring.py --root . \
+  --product ~/watchlist --require-product-workflow
+```
+
+Units: `deploy/daytime-gates.service` + `deploy/daytime-gates.timer` (18:00 UTC daily).
+
+**Operator cron example** (if not using systemd; 18:00 UTC, before night timer):
 
 ```cron
 0 18 * * * cd $HOME/agent-harness && ./scripts/daytime_readiness_subset.py >>/tmp/daytime-gates.log 2>&1

@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pr = root / "PR_DRAFT.md"
     if pr.is_file() and not args.force:
-        print(f"= PR_DRAFT.md exists (use --force to overwrite)")
+        print("= PR_DRAFT.md exists (use --force to overwrite)")
         # ensure Spec line present
         text = pr.read_text(encoding="utf-8", errors="replace")
         if "**Spec" not in text and "**Spec waiver" not in text:

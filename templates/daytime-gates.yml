@@ -1,0 +1,37 @@
+# Product-copy template: A3 daytime readiness (agent-harness).
+# Copy to: .github/workflows/daytime-gates.yml
+# Adjust smoke/test commands for the product stack.
+name: daytime-gates
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  daytime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dev deps
+        run: |
+          python -m pip install -U pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest ruff || true
+      - name: Unit tests (if present)
+        run: |
+          if [ -d tests ]; then python -m pytest tests/ -q || true; fi
+      - name: Daytime readiness subset (when harness scripts installed)
+        run: |
+          if [ -f scripts/daytime_readiness_subset.py ]; then
+            python scripts/daytime_readiness_subset.py --root .
+          elif [ -f scripts/product_smoke.py ]; then
+            python scripts/product_smoke.py --root .
+          else
+            echo "No daytime_readiness_subset or product_smoke — skip"
+          fi

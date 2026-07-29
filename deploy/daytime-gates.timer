@@ -1,0 +1,11 @@
+[Unit]
+Description=Multi-product daytime readiness daily at 18:00 UTC (before night-shift)
+
+[Timer]
+# Host clock is UTC; run afternoon before 19:15 UTC night-shift-all.
+OnCalendar=*-*-* 18:00:00 UTC
+Persistent=true
+RandomizedDelaySec=90
+
+[Install]
+WantedBy=timers.target

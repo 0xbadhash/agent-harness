@@ -290,6 +290,10 @@ Full catalog: [skills-catalog.md](skills-catalog.md).
 | `scripts/check_hardcodes.py` | Paths/URLs/secrets scan (content/vendored trees skipped) |
 | `scripts/smoke_unit.sh` | Portable unit smoke (prefer over nested `bash -c`) |
 | `scripts/daytime_readiness_subset.py` | Daytime hardcodes + validate + smoke (pre-night) |
+| `scripts/check_daytime_wiring.py` | A3: verify workflow + deploy units + product template present |
+| `scripts/install_daytime_timer.sh` | A3: dry-run / `--apply` install of daytime-gates systemd timer |
+| `deploy/daytime-gates.{service,timer}` | A3: multi-product daytime (18:00 UTC) |
+| `templates/daytime-gates.yml` | A3: product-copy GHA workflow |
 | `scripts/vault_fs.py` / `ensure_vault_group_write.py` | Vault group-write for night_shift logs |
 | `scripts/session_viewer.py` | JSONL/text → HTML |
 | `scripts/agent_transcript.py` | find/render sanitized markdown |
