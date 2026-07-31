@@ -77,6 +77,13 @@ git clone --branch v1.4.6 --depth 1 https://github.com/0xbadhash/agent-harness.g
 **This repository** is the SoT for shared agent **skills** and **policies**.  
 Products install a copy via `install_into_product.sh`; re-run install to refresh.
 
+**Script protect (reinstall-safe):** `config/default_protect_scripts.txt` and optional
+product `.agents/harness_protect_scripts.txt` list forks that must not be overwritten.
+Protect applies **only when the destination file already exists** (fresh install still
+gets full harness scripts). Without this, reinstall can clobber product FSM/hardcodes
+and break night_shift.
+
+
 Personal knowledge vaults (e.g. second-brain / Obsidian) are **optional** and **off by default**.  
 See `docs/source-of-truth.md` and `docs/second-brain-optional.md`. Never commit host-only vault paths as harness defaults.
 

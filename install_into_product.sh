@@ -106,6 +106,8 @@ fi
 # Protect product-forked scripts from silent overwrite (night_shift regression class).
 # List one relative path per line under PRODUCT_ROOT, e.g. scripts/pipeline_state.py
 # Optional also: $HARNESS_ROOT/config/default_protect_scripts.txt (shared defaults).
+# IMPORTANT: only exclude when the destination file already exists — fresh installs
+# must still receive harness scripts (post-install CRITICAL checks require them).
 PROTECT_EX=()
 _load_protect() {
   local f="$1"
@@ -114,17 +116,22 @@ _load_protect() {
     line="${line%%#*}"
     line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
     [[ -z "$line" ]] && continue
-    # rsync --exclude is relative to transfer root (scripts/)
+    local rel="$line"
     case "$line" in
-      scripts/*) PROTECT_EX+=(--exclude "${line#scripts/}") ;;
-      *) PROTECT_EX+=(--exclude "$line") ;;
+      scripts/*) rel="${line#scripts/}" ;;
     esac
+    # Skip protect when product has not forked this file yet
+    if [[ ! -f "$PRODUCT_ROOT/scripts/$rel" && ! -f "$PRODUCT_ROOT/$line" ]]; then
+      continue
+    fi
+    # rsync --exclude is relative to transfer root (scripts/)
+    PROTECT_EX+=(--exclude "$rel")
   done < "$f"
 }
 _load_protect "$HARNESS_ROOT/config/default_protect_scripts.txt"
 _load_protect "$PRODUCT_ROOT/.agents/harness_protect_scripts.txt"
 if [[ ${#PROTECT_EX[@]} -gt 0 ]]; then
-  echo "  i protecting ${#PROTECT_EX[@]} script exclude(s) from harness rsync"
+  echo "  i protecting ${#PROTECT_EX[@]} existing product fork(s) from harness rsync"
 fi
 rsync -a "${RSYNC_EX[@]}" "${PROTECT_EX[@]}" "$HARNESS_ROOT/scripts/" "$PRODUCT_ROOT/scripts/"
 echo "  ~ scripts/"
