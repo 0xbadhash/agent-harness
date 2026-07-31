@@ -1,0 +1,20 @@
+# Scripts products often fork — do not blindly overwrite on harness reinstall.
+# Paths are relative to product root (or scripts/ name only; both accepted by installer).
+# Products may add more in .agents/harness_protect_scripts.txt
+
+scripts/pipeline_state.py
+scripts/pr_validator.py
+scripts/check_hardcodes.py
+scripts/check_module_coverage.py
+scripts/kanban_schema.py
+scripts/kanban_orchestrator.py
+scripts/kanban_ensure_spec.py
+scripts/kanban_auto_auth.py
+scripts/kanban_auto_execute.py
+scripts/kanban_auto_config.py
+scripts/kanban_auto_prompts.py
+scripts/kanban_fs.py
+scripts/kanban_watch.py
+scripts/product_smoke.py
+scripts/night_shift_readiness.py
+scripts/check_dev_log_contract.py

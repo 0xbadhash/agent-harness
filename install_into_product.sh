@@ -103,7 +103,30 @@ if [[ "$DELETE_STALE" -eq 1 ]]; then
   echo "  ~ stale portable skills pruned (see config/removed_portable_skills.txt)"
 fi
 
-rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/scripts/" "$PRODUCT_ROOT/scripts/"
+# Protect product-forked scripts from silent overwrite (night_shift regression class).
+# List one relative path per line under PRODUCT_ROOT, e.g. scripts/pipeline_state.py
+# Optional also: $HARNESS_ROOT/config/default_protect_scripts.txt (shared defaults).
+PROTECT_EX=()
+_load_protect() {
+  local f="$1"
+  [[ -f "$f" ]] || return 0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%#*}"
+    line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [[ -z "$line" ]] && continue
+    # rsync --exclude is relative to transfer root (scripts/)
+    case "$line" in
+      scripts/*) PROTECT_EX+=(--exclude "${line#scripts/}") ;;
+      *) PROTECT_EX+=(--exclude "$line") ;;
+    esac
+  done < "$f"
+}
+_load_protect "$HARNESS_ROOT/config/default_protect_scripts.txt"
+_load_protect "$PRODUCT_ROOT/.agents/harness_protect_scripts.txt"
+if [[ ${#PROTECT_EX[@]} -gt 0 ]]; then
+  echo "  i protecting ${#PROTECT_EX[@]} script exclude(s) from harness rsync"
+fi
+rsync -a "${RSYNC_EX[@]}" "${PROTECT_EX[@]}" "$HARNESS_ROOT/scripts/" "$PRODUCT_ROOT/scripts/"
 echo "  ~ scripts/"
 
 rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/policy/" "$PRODUCT_ROOT/.agents/policy/"
