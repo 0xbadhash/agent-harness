@@ -1,49 +1,48 @@
-# PR Draft — C5 agent eval checklist (ticket 03)
+# PR Draft — night-shift morning triage
 
-**Range:** 5089fce..HEAD  
-**Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`  
-**Ticket:** tickets/03-c5-eval-runner.md
+**Range:** 87c56739b8a6d092765c5a750690f9baf152e8de..HEAD  
+**Spec:** `.agents/specs/2026-08-02-night-shift-morning-triage.md`
 
 ## What Problem This Solves
-C5 was markdown-only; operators could not run a conformance smoke for harness skills tooling.
+Night FAIL/TODO required manual hunting every morning.
 
 ## Why This Change Was Made
-Minimal runner over existing scripts — not LLM judge.
+Bounded morning aggregate + optional recheck; no unattended ship yet.
 
 ## User Impact
-One command + CI step for skill-conformance smoke.
+One command/timer answers what failed overnight.
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
-| hard_gates | ok |
-| unittest | test_agent_eval_checklist 3 OK |
+| hard_gates | pending score |
+| unittest | test_night_shift_morning_triage 4 OK |
 | smoke | product_smoke |
-| validate | 5/5 |
-| agent_eval_checklist | ok=True |
+| validate | full |
 
 ## Evidence
 ```text
-red_cmd: python3 -m unittest tests.test_agent_eval_checklist  # before script
-green_cmd: python3 -m unittest tests.test_agent_eval_checklist
+red_cmd: python3 -m unittest tests.test_night_shift_morning_triage
+green_cmd: python3 -m unittest tests.test_night_shift_morning_triage
 ```
 
 ## Red-proof
-- red_cmd: import agent_eval_checklist fails before green
-- green_cmd: unittest + CLI exit 0
+- red_cmd: missing module before implement
+- green_cmd: unittest green
 
 ## Traceability
 | AC | Test |
 |----|------|
-| AC-1 runner exit 0/1 | test_harness_root_passes / empty fails |
-| AC-2 docs | agent-eval-spike.md |
-| AC-3 daytime yml | daytime-gates.yml C5 step |
+| AC-1 script | tests + CLI |
+| AC-2 exit codes | test_cli_all_pass / fail detect |
+| AC-3 recheck | test_recheck_can_clear |
+| AC-4 docs/timer | night-shift.md + deploy units |
 
 ## Threat notes
-- Asset: CI compute / agent trust in checklist
-- Abuse: treating checklist as full security audit — docs state non-goals
+- Asset: multi-product readiness truth
+- Abuse: treating triage as ship authority — docs say no auto-ship
 
 ## Things that look bad but are actually fine
-1. --skip-tests in GHA for speed while local full suite still available
-2. Not replacing /qa_campaign
-3. next_skill without base/head still prints NEXT_SKILL=
+1. Exit 1 with SuccessExitStatus for systemd
+2. UNKNOWN only if report unreadable
+3. Does not clear vault TODO checkboxes

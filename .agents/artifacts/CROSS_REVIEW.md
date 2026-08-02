@@ -1,3 +1,3 @@
 # CROSS-REVIEW
 **Marker:** CROSS-REVIEW
-ACCEPT — C5 remains non-judge; optional tests; CI skip-tests for speed.
+ACCEPT — morning aggregate only; SuccessExitStatus 0 1 like other timers.

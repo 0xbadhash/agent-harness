@@ -1,17 +1,16 @@
-# RELEASE_RUNBOOK — agent-harness v1.4.10
+# RELEASE_RUNBOOK — agent-harness v1.4.11
 
-**Scope:** ADSLC harden ticket 03 (C5 eval runner)  
+**Scope:** night_shift morning triage (feedback loop slice 1)  
 **Score:** 100  
-**Spec:** `.agents/specs/2026-07-29-adslc-a3-b5-c5-harden.md`
+**Spec:** `.agents/specs/2026-08-02-night-shift-morning-triage.md`
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | ok |
-| unittest | test_agent_eval_checklist + subset |
+| unittest | morning_triage 4 OK |
 | validate full | 5/5 |
 | product_smoke | 2/2 |
-| agent_eval_checklist | ok=True |
 
 ## Smoke
 | Step | Exit |
@@ -20,9 +19,9 @@
 | unit | 0 |
 
 ## Things that look bad but are actually fine
-1. GHA uses --skip-tests for speed
-2. Not LLM-as-judge
-3. Completes ADSLC harden tickets 01–03
+1. Exit 1 when products FAIL is intentional
+2. No auto-ship of TODOs
+3. Timer opt-in via --apply
 
 ## Rollback
-`git checkout v1.4.9`
+`git checkout v1.4.10`

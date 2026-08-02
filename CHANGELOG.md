@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.11 — 2026-08-02
+
+### Added (feedback loop slice 1)
+- `scripts/night_shift_morning_triage.py` — multi-product morning FAIL aggregate + optional `--recheck`
+- `deploy/morning-triage.{service,timer}` + install dry-run script
+- Docs: night-shift.md morning triage section
+
 ## v1.4.10 — 2026-07-29
 
 ### Added (C5 harden — ticket 03)
@@ -52,17 +59,17 @@
 
 ## Open work
 
-### [OPEN] Night-shift morning triage (feedback loop slice 1)
-- **Status:** open
+### [DONE] Night-shift morning triage (feedback loop slice 1)
+- **Status:** done (v1.4.11)
 - **Priority:** P0
-- **Next:** true
+- **Next:** false
 - **Spec:** `.agents/specs/2026-08-02-night-shift-morning-triage.md`
 - **Plan:** `.agents/specs/2026-08-02-night-shift-morning-triage-plan.md`
 - **Tickets:** `.agents/specs/2026-08-02-night-shift-morning-triage/tickets/`
 - **Acceptance:**
-  - [ ] morning_triage script + tests + MORNING_TRIAGE.md
-  - [ ] optional recheck + timer units dry-run
-  - [ ] docs
+  - [x] morning_triage script + tests + MORNING_TRIAGE.md
+  - [x] optional recheck + timer units dry-run
+  - [x] docs
 - **Smoke:** unittest + product_smoke
 - **Notes:** No auto-ship; aggregate FAIL/TODO after night_shift
 
