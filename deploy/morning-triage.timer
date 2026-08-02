@@ -1,0 +1,10 @@
+[Unit]
+Description=Morning triage daily at 00:30 UTC (08:30 HKT) after night-shift-all
+
+[Timer]
+OnCalendar=*-*-* 00:30:00 UTC
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

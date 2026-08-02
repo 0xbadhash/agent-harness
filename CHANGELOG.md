@@ -52,6 +52,20 @@
 
 ## Open work
 
+### [OPEN] Night-shift morning triage (feedback loop slice 1)
+- **Status:** open
+- **Priority:** P0
+- **Next:** true
+- **Spec:** `.agents/specs/2026-08-02-night-shift-morning-triage.md`
+- **Plan:** `.agents/specs/2026-08-02-night-shift-morning-triage-plan.md`
+- **Tickets:** `.agents/specs/2026-08-02-night-shift-morning-triage/tickets/`
+- **Acceptance:**
+  - [ ] morning_triage script + tests + MORNING_TRIAGE.md
+  - [ ] optional recheck + timer units dry-run
+  - [ ] docs
+- **Smoke:** unittest + product_smoke
+- **Notes:** No auto-ship; aggregate FAIL/TODO after night_shift
+
 ### [DONE] ADSLC harden — A3 ops, B5 evidence score, C5 eval runner
 - **Status:** done (v1.4.8–v1.4.10)
 - **Priority:** P0–P1

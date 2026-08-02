@@ -308,6 +308,29 @@ sudo systemctl start night-shift-all.service
 
 Service treats exit **0 and 1** as success for systemd (`SuccessExitStatus=0 1`) so a failed product gate still counts as a completed overnight run; check the report for PASS/FAIL.
 
+### Morning triage (after night_shift) — feedback loop
+
+When residual **FAIL** or open TODOs remain after overnight readiness, do **not** re-discover product-by-product:
+
+```bash
+# Aggregate last-night Overall PASS/FAIL → .agents/artifacts/MORNING_TRIAGE.md
+python3 scripts/night_shift_morning_triage.py
+
+# Re-run daytime readiness once for non-PASS products
+python3 scripts/night_shift_morning_triage.py --recheck
+```
+
+Exit **1** if any product is still not PASS (for cron/systemd).  
+**Does not** auto-ship or clear TODO by inventing features.
+
+**Systemd (opt-in):**
+
+```bash
+bash scripts/install_morning_triage_timer.sh --dry-run
+sudo bash scripts/install_morning_triage_timer.sh --apply
+# 00:30 UTC = 08:30 HKT (after 19:15 UTC night-shift-all)
+```
+
 ### Daytime readiness subset (prevent overnight surprise) — A3
 
 Before the 03:15 HKT multi-product job, run the same **hard** gates day-side:
