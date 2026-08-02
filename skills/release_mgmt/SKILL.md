@@ -34,6 +34,13 @@ When invoked with `/release_mgmt`:
 7. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`
 8. **Branch cleanup (optional when `gh` available):** delete merged feature branches per product policy.
 9. Output: `✅ RELEASED. Run /sync_docs` then honor `NEXT_SKILL=` (qa_campaign only if large)
+10. **Portfolio + remaining (P0–P1 feedback):** after tag, refresh board + optional residual install report:
+    ```bash
+    python3 scripts/remaining_board.py
+    python3 scripts/portfolio_install_report.py          # report only
+    # python3 scripts/portfolio_install_report.py --install --push  # opt-in
+    python3 scripts/finish_ship.py --require-push        # after remote push
+    ```
 
 ```
 /pr_review --validate → approved → [product infra] → /release_mgmt → shipped → /sync_docs

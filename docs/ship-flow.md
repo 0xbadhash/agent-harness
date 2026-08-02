@@ -300,6 +300,11 @@ Full catalog: [skills-catalog.md](skills-catalog.md).
 | `scripts/cross_review_gate.py` | Soft large-diff evidence warn |
 | `scripts/pr_validator.py` | Deterministic score + pipeline phase |
 | `scripts/pipeline_state.py` | FSM get/set phase |
+| `scripts/finish_ship.py` | A1/A3: NEXT_SKILL plan + PUSH_PROOF (optional `--require-push`) |
+| `scripts/promote_night_fails.py` | A5/A8: promote repeated FAIL gates → NIGHT_FAIL_PROMOTIONS |
+| `scripts/portfolio_install_report.py` | A4: product HARNESS_VERSION residual; optional `--install`/`--push` |
+| `scripts/remaining_board.py` | A2/B6: durable REMAINING.md (OPEN + night signals) |
+| `scripts/night_shift_morning_triage.py` | Morning FAIL aggregate after night_shift |
 
 ## PR_DRAFT narrative (template)
 

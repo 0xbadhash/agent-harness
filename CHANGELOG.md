@@ -59,6 +59,21 @@
 
 ## Open work
 
+### [OPEN] P0–P1 feedback loops (finish-ship, promote fails, portfolio, remaining)
+- **Status:** open
+- **Priority:** P0–P1
+- **Next:** true
+- **Spec:** `.agents/specs/2026-08-02-p0-p1-feedback-loops.md`
+- **Plan:** `.agents/specs/2026-08-02-p0-p1-feedback-loops-plan.md`
+- **Tickets:** `.agents/specs/2026-08-02-p0-p1-feedback-loops/tickets/`
+- **Acceptance:**
+  - [ ] finish_ship + PUSH_PROOF (A1/A3)
+  - [ ] promote_night_fails (A5/A8)
+  - [ ] portfolio_install_report (A4)
+  - [ ] remaining_board REMAINING.md (A2/B6)
+- **Smoke:** unittest + product_smoke
+- **Notes:** No LLM auto-skill; install/push opt-in
+
 ### [DONE] Night-shift morning triage (feedback loop slice 1)
 - **Status:** done (v1.4.11)
 - **Priority:** P0
