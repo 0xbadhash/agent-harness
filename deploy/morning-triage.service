@@ -10,7 +10,8 @@ Group=debian
 WorkingDirectory=/home/debian/agent-harness
 Environment=NIGHT_SHIFT_PRODUCTS_FILE=/home/debian/agent-harness/config/night_shift_products.yaml
 Environment=PATH=/home/debian/agent-harness/.venv/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/bin/bash -c 'PY="/home/debian/agent-harness/.venv/bin/python"; if [ ! -x "$PY" ]; then PY=/usr/bin/python3; fi; exec "$PY" /home/debian/agent-harness/scripts/night_shift_morning_triage.py --recheck'
+# Triage then bounded remediate (autofix + tickets). Exit 1 if residual FAIL.
+ExecStart=/bin/bash -c 'PY="/home/debian/agent-harness/.venv/bin/python"; if [ ! -x "$PY" ]; then PY=/usr/bin/python3; fi; "$PY" /home/debian/agent-harness/scripts/night_shift_morning_triage.py --recheck; "$PY" /home/debian/agent-harness/scripts/night_fail_remediate.py; exit $?'
 # Exit 1 (any FAIL) still counts as completed oneshot for timer accounting
 SuccessExitStatus=0 1
 

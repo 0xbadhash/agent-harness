@@ -34,12 +34,17 @@ When invoked with `/release_mgmt`:
 7. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`
 8. **Branch cleanup (optional when `gh` available):** delete merged feature branches per product policy.
 9. Output: `✅ RELEASED. Run /sync_docs` then honor `NEXT_SKILL=` (qa_campaign only if large)
-10. **Portfolio + remaining (P0–P1 feedback):** after tag, refresh board + optional residual install report:
+10. **Post-tag portfolio (default when this repo is agent-harness SoT):** after tag + push of harness:
     ```bash
     python3 scripts/remaining_board.py
-    python3 scripts/portfolio_install_report.py          # report only
-    # python3 scripts/portfolio_install_report.py --install --push  # opt-in
-    python3 scripts/finish_ship.py --require-push        # after remote push
+    # DEFAULT: reinstall + push lagging products (A4)
+    python3 scripts/portfolio_install_report.py --install --push
+    python3 scripts/finish_ship.py --require-push
+    ```
+    Skip portfolio only if operator sets `PORTFOLIO_INSTALL=0` or passes explicit report-only for a dry run.
+11. **Unattended deterministic closeout (optional):** if reviews already done and you want scripted score→ship→push:
+    ```bash
+    python3 scripts/run_ship_chain.py --root . --base <task-base> --head HEAD --push
     ```
 
 ```

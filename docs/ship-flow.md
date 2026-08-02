@@ -305,6 +305,8 @@ Full catalog: [skills-catalog.md](skills-catalog.md).
 | `scripts/portfolio_install_report.py` | A4: product HARNESS_VERSION residual; optional `--install`/`--push` |
 | `scripts/remaining_board.py` | A2/B6: durable REMAINING.md (OPEN + night signals) |
 | `scripts/night_shift_morning_triage.py` | Morning FAIL aggregate after night_shift |
+| `scripts/night_fail_remediate.py` | P0: bounded autofix + recheck + NIGHT_FAIL_TICKETS |
+| `scripts/run_ship_chain.py` | P0: deterministic unattended score→ship→push (no LLM) |
 
 ## PR_DRAFT narrative (template)
 

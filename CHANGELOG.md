@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.13 — 2026-08-02
+
+### Added
+- **P0 A1** `scripts/run_ship_chain.py` — deterministic unattended score→ship→push (no LLM)
+- **P0 A5/A8** `scripts/night_fail_remediate.py` — bounded autofix + recheck + NIGHT_FAIL_TICKETS
+- **A4 default** release_mgmt: post-tag `portfolio_install_report.py --install --push`
+- Morning timer runs triage then remediate
+
 ## v1.4.12 — 2026-08-02
 
 ### Added (P0–P1 feedback loops)
@@ -67,6 +75,17 @@
 
 
 ## Open work
+
+### [OPEN] P0 unattended chain + night remediate + default portfolio push
+- **Status:** open
+- **Priority:** P0
+- **Next:** true
+- **Spec:** `.agents/specs/2026-08-02-p0-unattended-and-remediate.md` (inline ship)
+- **Acceptance:**
+  - [ ] run_ship_chain
+  - [ ] night_fail_remediate
+  - [ ] release default portfolio --install --push
+- **Smoke:** unittest + product_smoke
 
 ### [DONE] P0–P1 feedback loops (finish-ship, promote fails, portfolio, remaining)
 - **Status:** done (v1.4.12)

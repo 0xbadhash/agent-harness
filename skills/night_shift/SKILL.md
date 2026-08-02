@@ -38,7 +38,8 @@ Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate fu
 
 **Auto-fix + proposals:** on gate failure → mechanical autofix → re-run gates once → TODO gets fix log + **PROPOSE confidence=… kind=… lean=… | action | evidence:** lines (refactor/standardize/lean waste only when fact-backed).
 
-**Morning after:** residual FAIL/TODO → `python3 scripts/night_shift_morning_triage.py` (optional `--recheck`). Writes `MORNING_TRIAGE.md`. Does **not** auto-ship.
+**Morning after:** residual FAIL/TODO → `python3 scripts/night_shift_morning_triage.py` (optional `--recheck`). Writes `MORNING_TRIAGE.md`.  
+**Bounded remediate + tickets:** `python3 scripts/night_fail_remediate.py` (autofix + daytime recheck + `NIGHT_FAIL_TICKETS.md`). Does **not** invent features / auto full ship.
 
 **ORCH-TOOLS:** `tools/bin/lint_and_test.sh` → `validate full` (+ optional `--coverage`).
 
