@@ -1,6 +1,6 @@
-# Night shift readiness — agent-harness — 2026-07-28 19:34 UTC · 2026-07-29 03:34 HKT
+# Night shift readiness — agent-harness — 2026-08-01 19:33 UTC · 2026-08-02 03:33 HKT
 
-**When:** 2026-07-28 19:34 UTC · 2026-07-29 03:34 HKT
+**When:** 2026-08-01 19:33 UTC · 2026-08-02 03:33 HKT
 **Overall:** PASS (6/6 gates) · mode=`full` · product=`agent-harness`
 **Repo:** `/home/debian/agent-harness`
 **Hard-stops:** no release/tag/force-push; autofix is mechanical only (deps/format)

@@ -1,3 +1,3 @@
 # CROSS-REVIEW
 **Marker:** CROSS-REVIEW
-ACCEPT — morning aggregate only; SuccessExitStatus 0 1 like other timers.
+ACCEPT — closes inventory P0/P1 without LLM auto-skill or force-push.

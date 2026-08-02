@@ -1,3 +1,3 @@
 # BEHAVIOR-REPORT
 **Marker:** BEHAVIOR-REPORT
-Live: unittest 4 OK; morning_triage runs multi-product; install dry-run OK.
+Live: 6 unittests OK; finish_ship/promote/portfolio/remaining run on harness.

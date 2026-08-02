@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.12 — 2026-08-02
+
+### Added (P0–P1 feedback loops)
+- **A1/A3** `scripts/finish_ship.py` → PUSH_PROOF.md (+ `--require-push`)
+- **A5/A8** `scripts/promote_night_fails.py` → NIGHT_FAIL_PROMOTIONS.md (+ optional stubs)
+- **A4** `scripts/portfolio_install_report.py` residual HARNESS_VERSION report (`--install`/`--push` opt-in)
+- **A2/B6** `scripts/remaining_board.py` → REMAINING.md
+- Docs: ship-flow helpers; release_mgmt post-tag pointers
+
 ## v1.4.11 — 2026-08-02
 
 ### Added (feedback loop slice 1)
@@ -59,18 +68,18 @@
 
 ## Open work
 
-### [OPEN] P0–P1 feedback loops (finish-ship, promote fails, portfolio, remaining)
-- **Status:** open
+### [DONE] P0–P1 feedback loops (finish-ship, promote fails, portfolio, remaining)
+- **Status:** done (v1.4.12)
 - **Priority:** P0–P1
-- **Next:** true
+- **Next:** false
 - **Spec:** `.agents/specs/2026-08-02-p0-p1-feedback-loops.md`
 - **Plan:** `.agents/specs/2026-08-02-p0-p1-feedback-loops-plan.md`
 - **Tickets:** `.agents/specs/2026-08-02-p0-p1-feedback-loops/tickets/`
 - **Acceptance:**
-  - [ ] finish_ship + PUSH_PROOF (A1/A3)
-  - [ ] promote_night_fails (A5/A8)
-  - [ ] portfolio_install_report (A4)
-  - [ ] remaining_board REMAINING.md (A2/B6)
+  - [x] finish_ship + PUSH_PROOF (A1/A3)
+  - [x] promote_night_fails (A5/A8)
+  - [x] portfolio_install_report (A4)
+  - [x] remaining_board REMAINING.md (A2/B6)
 - **Smoke:** unittest + product_smoke
 - **Notes:** No LLM auto-skill; install/push opt-in
 
