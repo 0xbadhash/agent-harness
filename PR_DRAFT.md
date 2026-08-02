@@ -1,47 +1,45 @@
-# PR Draft — P0–P1 feedback loops
+# PR Draft — P0 unattended + remediate
 
-**Range:** dcb3093125fd03b676ad862b0376c1500f9d5764..HEAD  
-**Spec:** `.agents/specs/2026-08-02-p0-p1-feedback-loops.md`
+**Range:** 85080cd4543454960e61a49352facac9a495e25b..HEAD  
+**Spec:** `.agents/specs/2026-08-02-p0-unattended-and-remediate.md`
 
 ## What Problem This Solves
-Operators re-ask finish/push, night FAIL stuck as TODO, products lag harness, no remaining board.
+Manual FSM re-asks; night FAIL parked; portfolio reinstall forgotten.
 
 ## Why This Change Was Made
-Bounded scripts per inventory P0/P1; no invent-and-ship loop.
+Deterministic chain + bounded remediate + default portfolio push.
 
 ## User Impact
-Four commands close the feedback gaps with artifacts under .agents/artifacts/.
+run_ship_chain / night_fail_remediate; harness release reinstalls products.
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
-| hard_gates | score |
-| unittest | finish_ship, promote, portfolio, remaining |
+| hard_gates | ok |
+| unittest | 3 OK |
 | smoke | product_smoke |
 | validate | full |
 
 ## Evidence
 ```text
-green_cmd: python3 -m unittest tests.test_finish_ship tests.test_promote_night_fails tests.test_portfolio_install_report tests.test_remaining_board
+green_cmd: python3 -m unittest tests.test_run_ship_chain tests.test_night_fail_remediate
 ```
 
 ## Red-proof
-- red_cmd: tests fail before scripts exist
-- green_cmd: 6 tests OK
+- red_cmd: pre
+- green_cmd: unittest
 
 ## Traceability
-| AC | Test / smoke |
-|----|----------------|
-| A1/A3 finish_ship | test_finish_ship |
-| A5/A8 promote | test_promote_night_fails |
-| A4 portfolio | test_portfolio_install_report |
-| A2/B6 remaining | test_remaining_board |
+| AC | Test |
+|----|------|
+| chain | test_run_ship_chain |
+| remediate | test_night_fail_remediate |
 
 ## Threat notes
-- Asset: multi-product git push surface
-- Abuse: silent portfolio push — requires --install --push
+- Asset: multi-product push
+- Abuse: no invent features
 
 ## Things that look bad but are actually fine
-1. finish_ship does not spawn LLM skills
-2. portfolio lag exit 1 is intentional residual signal
-3. promotion stubs optional (--write-stubs)
+1. Minimal review markers
+2. Remediaten leaves domain bugs
+3. Portfolio only on harness SoT

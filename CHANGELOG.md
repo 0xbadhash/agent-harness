@@ -76,15 +76,15 @@
 
 ## Open work
 
-### [OPEN] P0 unattended chain + night remediate + default portfolio push
-- **Status:** open
+### [DONE] P0 unattended chain + night remediate + default portfolio push
+- **Status:** done (v1.4.13)
 - **Priority:** P0
-- **Next:** true
+- **Next:** false
 - **Spec:** `.agents/specs/2026-08-02-p0-unattended-and-remediate.md` (inline ship)
 - **Acceptance:**
-  - [ ] run_ship_chain
-  - [ ] night_fail_remediate
-  - [ ] release default portfolio --install --push
+  - [x] run_ship_chain
+  - [x] night_fail_remediate
+  - [x] release default portfolio --install --push
 - **Smoke:** unittest + product_smoke
 
 ### [DONE] P0–P1 feedback loops (finish-ship, promote fails, portfolio, remaining)
