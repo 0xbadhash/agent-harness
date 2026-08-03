@@ -1,3 +1,3 @@
 # CROSS-REVIEW
 **Marker:** CROSS-REVIEW
-ACCEPT — docs pack; no runtime surface change beyond install rsync of docs.
+ACCEPT — CODER is overlay; hard gates unchanged.

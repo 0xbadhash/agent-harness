@@ -1,6 +1,6 @@
-# RELEASE_RUNBOOK — agent-harness v1.4.14
+# RELEASE_RUNBOOK — agent-harness v1.4.15
 
-**Scope:** detailed ship-flow docs (Mermaid + Draw.io/SVG) for operators + LLMs  
+**Scope:** CODER P2–P3 (session_context, mode labels, prompt-patterns)  
 **Score:** 100  
 **Spec waiver:** docs-only
 
@@ -8,20 +8,18 @@
 | Item | Result |
 |------|--------|
 | hard_gates | ok |
-| validate full | 5/5 |
+| unittest | test_session_context 2 OK |
+| validate | 5/5 |
 | product_smoke | 2/2 |
-| remote | tag v1.4.14 + ship-flow-detailed.md |
 
 ## Smoke
-| Step | Exit |
-|------|------|
 | hardcodes | 0 |
 | unit | 0 |
 
 ## Things that look bad but are actually fine
-1. Docs tagged before this formal FSM closeout in-session
-2. SVG hand-authored alongside Draw.io
-3. Portfolio reinstall still run for doc install path
+1. CODER is teaching overlay not FSM
+2. Prompt pattern names informal
+3. session_context may show product night FAILs
 
 ## Rollback
-`git checkout v1.4.13`
+`git checkout v1.4.14`

@@ -1,48 +1,46 @@
-# PR Draft — detailed ship flow docs (v1.4.14)
+# PR Draft — CODER P2–P3 overlay
 
-**Range:** 38c0d19..HEAD  
+**Range:** 375e8e149f9c142a960d7ab198aec891fdabe047..HEAD  
 **Spec waiver:** docs-only
 
 ## What Problem This Solves
-Operators and LLMs lacked one detailed map of skills, hard/soft gates, TDD, and NEXT_SKILL routing.
+LLMs lacked a session Organize pack and explicit mapping from prompt patterns / CODER modes to skills.
 
 ## Why This Change Was Made
-Mermaid (GitHub-native) + Draw.io/SVG poster; multi-diagram pack for maintainability.
+P2: labels + session_context.py. P3: prompt-patterns.md. No new FSM.
 
 ## User Impact
-Any LLM/operator reads ship-flow-detailed.md; products get copy on install.
+session_context --write; clearer skill modes; pattern catalog.
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | score |
-| validate | full (repo) |
+| unittest | test_session_context |
 | smoke | product_smoke |
-| remote | origin/main + tag v1.4.14 |
+| validate | full |
 
 ## Evidence
 ```text
-TDD N/A (docs-only)
-green_cmd: python3 scripts/product_smoke.py --root .
-live: docs/ship-flow-detailed.md + diagrams on origin
+TDD N/A for pure docs parts; green_cmd: python3 -m unittest tests.test_session_context
 ```
 
 ## Red-proof
-TDD N/A docs-only — Mermaid/SVG/docs only.
+- red_cmd: n/a docs + small script with unit tests first
+- green_cmd: python3 -m unittest tests.test_session_context
 
 ## Traceability
-| AC | Evidence |
-|----|----------|
-| AC-1 detailed doc | docs/ship-flow-detailed.md |
-| AC-2 Mermaid | embedded in detailed md |
-| AC-3 Draw.io/SVG | docs/diagrams/ship-flow-overview.{drawio,svg} |
-| AC-4 links + install | ship-flow, llm-bootstrap, skills-catalog, README, install_into_product.sh |
-
-## Things that look bad but are actually fine
-1. Version already tagged before formal FSM closeout this session
-2. Diagram SVG is hand-authored companion to Draw.io
-3. Product reinstall optional if already on 1.4.14 scripts
+| AC | Test / evidence |
+|----|-----------------|
+| CODER labels | ship-flow-detailed + skills-catalog Mode columns |
+| session_context | tests/test_session_context.py |
+| prompt-patterns | docs/prompt-patterns.md |
 
 ## Threat notes
-- Asset: process truth for agents
-- Abuse: ignoring hard_gates table — still enforced in hard_gates.py
+- Asset: process truth
+- Abuse: treating Reason as hard gate — catalog forbids
+
+## Things that look bad but are actually fine
+1. CODER is teaching overlay not pipeline
+2. Pattern names are informal mappings
+3. session_context reads harness morning triage for portfolio view
