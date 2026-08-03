@@ -1,25 +1,27 @@
-# RELEASE_RUNBOOK — agent-harness v1.4.13
+# RELEASE_RUNBOOK — agent-harness v1.4.14
 
-**Scope:** P0 run_ship_chain + night_fail_remediate + default portfolio push  
+**Scope:** detailed ship-flow docs (Mermaid + Draw.io/SVG) for operators + LLMs  
 **Score:** 100  
-**Spec:** `.agents/specs/2026-08-02-p0-unattended-and-remediate.md`
+**Spec waiver:** docs-only
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | ok |
-| unittest | run_ship_chain + night_fail_remediate |
-| validate | 5/5 |
+| validate full | 5/5 |
 | product_smoke | 2/2 |
+| remote | tag v1.4.14 + ship-flow-detailed.md |
 
 ## Smoke
+| Step | Exit |
+|------|------|
 | hardcodes | 0 |
 | unit | 0 |
 
 ## Things that look bad but are actually fine
-1. No LLM auto slash skills
-2. Portfolio push on harness release only
-3. Remediaten does not invent product features
+1. Docs tagged before this formal FSM closeout in-session
+2. SVG hand-authored alongside Draw.io
+3. Portfolio reinstall still run for doc install path
 
 ## Rollback
-`git checkout v1.4.12`
+`git checkout v1.4.13`

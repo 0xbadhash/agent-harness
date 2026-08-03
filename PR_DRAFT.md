@@ -1,45 +1,48 @@
-# PR Draft — P0 unattended + remediate
+# PR Draft — detailed ship flow docs (v1.4.14)
 
-**Range:** 85080cd4543454960e61a49352facac9a495e25b..HEAD  
-**Spec:** `.agents/specs/2026-08-02-p0-unattended-and-remediate.md`
+**Range:** 38c0d19..HEAD  
+**Spec waiver:** docs-only
 
 ## What Problem This Solves
-Manual FSM re-asks; night FAIL parked; portfolio reinstall forgotten.
+Operators and LLMs lacked one detailed map of skills, hard/soft gates, TDD, and NEXT_SKILL routing.
 
 ## Why This Change Was Made
-Deterministic chain + bounded remediate + default portfolio push.
+Mermaid (GitHub-native) + Draw.io/SVG poster; multi-diagram pack for maintainability.
 
 ## User Impact
-run_ship_chain / night_fail_remediate; harness release reinstalls products.
+Any LLM/operator reads ship-flow-detailed.md; products get copy on install.
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
-| hard_gates | ok |
-| unittest | 3 OK |
+| hard_gates | score |
+| validate | full (repo) |
 | smoke | product_smoke |
-| validate | full |
+| remote | origin/main + tag v1.4.14 |
 
 ## Evidence
 ```text
-green_cmd: python3 -m unittest tests.test_run_ship_chain tests.test_night_fail_remediate
+TDD N/A (docs-only)
+green_cmd: python3 scripts/product_smoke.py --root .
+live: docs/ship-flow-detailed.md + diagrams on origin
 ```
 
 ## Red-proof
-- red_cmd: pre
-- green_cmd: unittest
+TDD N/A docs-only — Mermaid/SVG/docs only.
 
 ## Traceability
-| AC | Test |
-|----|------|
-| chain | test_run_ship_chain |
-| remediate | test_night_fail_remediate |
-
-## Threat notes
-- Asset: multi-product push
-- Abuse: no invent features
+| AC | Evidence |
+|----|----------|
+| AC-1 detailed doc | docs/ship-flow-detailed.md |
+| AC-2 Mermaid | embedded in detailed md |
+| AC-3 Draw.io/SVG | docs/diagrams/ship-flow-overview.{drawio,svg} |
+| AC-4 links + install | ship-flow, llm-bootstrap, skills-catalog, README, install_into_product.sh |
 
 ## Things that look bad but are actually fine
-1. Minimal review markers
-2. Remediaten leaves domain bugs
-3. Portfolio only on harness SoT
+1. Version already tagged before formal FSM closeout this session
+2. Diagram SVG is hand-authored companion to Draw.io
+3. Product reinstall optional if already on 1.4.14 scripts
+
+## Threat notes
+- Asset: process truth for agents
+- Abuse: ignoring hard_gates table — still enforced in hard_gates.py

@@ -1,3 +1,3 @@
 # BEHAVIOR-REPORT
 **Marker:** BEHAVIOR-REPORT
-OK
+Docs/install path only. product_smoke green; remote files present on origin.

@@ -1,3 +1,3 @@
 # CROSS-REVIEW
 **Marker:** CROSS-REVIEW
-ACCEPT
+ACCEPT — docs pack; no runtime surface change beyond install rsync of docs.
