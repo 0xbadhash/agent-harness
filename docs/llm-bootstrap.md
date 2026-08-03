@@ -77,6 +77,8 @@ Map: [ship-flow.md](ship-flow.md) · catalog: [skills-catalog.md](skills-catalog
 
 **Full FSM (states + transitions + skill branches):** [ship-flow.md](ship-flow.md)  
 **Detailed (skills · hard/soft gates · TDD · Mermaid + poster):** [ship-flow-detailed.md](ship-flow-detailed.md)  
+**Prompt patterns → skills:** [prompt-patterns.md](prompt-patterns.md)  
+**Session start (Organize pack):** `python3 scripts/session_context.py --write`  
 (product install: `.agents/docs/ship-flow.md` · optional detailed copy when installed)
 
 ```text

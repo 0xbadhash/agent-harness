@@ -19,6 +19,18 @@
 3. **Hard gates fail closed** at `/pr_review --validate` (`hard_gates=25` all-or-nothing).  
 4. **Five phases only:** `init` · `ready_for_review` · `approved` · `blocked` · `shipped`.
 
+### CODER modes (teaching overlay — not a new FSM)
+
+Jules White–style work modes. Prefer **C → O → D → E**; open **R** only at decision points. Patterns: [prompt-patterns.md](prompt-patterns.md). Session pack: `python3 scripts/session_context.py --write`.
+
+| Mode | Meaning | Harness examples |
+|------|---------|------------------|
+| **C** Compute | Deterministic tools / exit codes | hard_gates, pr_validator, product_smoke, next_skill, timers |
+| **O** Organize | Structure memory | specs/tickets, pipeline.json, REMAINING, SESSION_CONTEXT, triage |
+| **D** Display | Make state legible | NEXT_SKILL line, Mermaid/SVG, PUSH_PROOF, STATUS-style reports |
+| **E** Engineer | Build & ship | execute_dev, TDD, release_mgmt, portfolio install |
+| **R** Reason | Judgment under ambiguity | /spec clarify, cross_review personas, retrospect — **never** replaces hard gates |
+
 ---
 
 ## 0. Overview poster
@@ -244,28 +256,28 @@ flowchart TB
 
 ### 6.1 On-phase / ship chain (must follow NEXT_SKILL)
 
-| Skill | Phase effect | Hard inputs |
-|-------|--------------|-------------|
-| `/spec` | none | Spec file + roadmap OPEN |
-| `/execute_dev` | → ready_for_review | init\|blocked; TDD; validate |
-| `/code_review` | none | CODE-REVIEW artifact |
-| `/cross_review` | none | CROSS-REVIEW (large) |
-| `/behavior_validator` | none | BEHAVIOR-REPORT (runtime) |
-| `/pr_review` | → approved \| blocked | score ≥ 95 |
-| `/vps_infra_ops` | none | INFRA_RUNBOOK if required |
-| `/release_mgmt` | → shipped | smoke; tag; portfolio install if harness SoT |
-| `/sync_docs` | → init | stamps |
-| `/qa_campaign` | none | after full cycle when suggested |
+| Skill | Mode | Phase effect | Hard inputs |
+|-------|------|--------------|-------------|
+| `/spec` | R/O | none | Spec file + roadmap OPEN |
+| `/execute_dev` | E/C | → ready_for_review | init\|blocked; TDD; validate |
+| `/code_review` | E/R | none | CODE-REVIEW artifact |
+| `/cross_review` | R | none | CROSS-REVIEW (large) |
+| `/behavior_validator` | C/E | none | BEHAVIOR-REPORT (runtime) |
+| `/pr_review` | C | → approved \| blocked | score ≥ 95 |
+| `/vps_infra_ops` | C/E | none | INFRA_RUNBOOK if required |
+| `/release_mgmt` | E/C | → shipped | smoke; tag; portfolio install if harness SoT |
+| `/sync_docs` | O/D | → init | stamps |
+| `/qa_campaign` | E/C | none | after full cycle when suggested |
 
 ### 6.2 Off-phase / support (do not invent as “next ship step”)
 
-| Skill | Role |
-|-------|------|
-| `/night_shift` | Overnight readiness |
-| `/retrospect` | Learning notes |
-| `/feedback` | Session notes (harness meta) |
-| `/handoff` / `/session_viewer` / `/agent_transcript` | Continuity / audit |
-| `/plan_backend` / `/audit_repo` / `/sweep` / `/test_automation` | Support, not phase drivers |
+| Skill | Mode | Role |
+|-------|------|------|
+| `/night_shift` | C/O | Overnight readiness |
+| `/retrospect` | O/R | Learning notes |
+| `/feedback` | O | Session notes (harness meta) |
+| `/handoff` / `/session_viewer` / `/agent_transcript` | D/O | Continuity / audit |
+| `/plan_backend` / `/audit_repo` / `/sweep` / `/test_automation` | E/C | Support, not phase drivers |
 
 Install manifest: `config/ship_skills.txt`.
 
@@ -311,6 +323,7 @@ Install manifest: `config/ship_skills.txt`.
 ## 9. LLM operating loop (copy-paste)
 
 ```text
+0. python3 scripts/session_context.py --write   # Organize pack
 1. python3 scripts/pipeline_state.py get
 2. If feature work and no Spec/waiver → /spec first
 3. /execute_dev  (TDD if code; spec_gate)
@@ -343,6 +356,7 @@ Use for chore/closeout automation; **do not** use as an excuse to skip real revi
 | [tdd.md](tdd.md) | Red→green |
 | [night-shift.md](night-shift.md) | Overnight + morning |
 | [start-a-feature.md](start-a-feature.md) | /spec front door |
+| [prompt-patterns.md](prompt-patterns.md) | White-style patterns → skills (P3) |
 | [security.md](security.md) | Secrets / threat posture |
 
 ---

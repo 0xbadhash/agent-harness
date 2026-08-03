@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.15 — 2026-08-03
+
+### Docs / CODER overlay (P2–P3)
+- **CODER mode labels** on ship-flow-detailed + skills-catalog (C/O/D/E/R teaching overlay)
+- **`scripts/session_context.py`** — one-shot Organize pack → SESSION_CONTEXT.md
+- **`docs/prompt-patterns.md`** — Jules White–style prompt patterns → harness skills
+- Install copies `prompt-patterns.md`; llm-bootstrap session-start pointer
+
 ## v1.4.14 — 2026-08-03
 
 ### Docs

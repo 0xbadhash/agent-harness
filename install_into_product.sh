@@ -148,7 +148,7 @@ fi
 
 # Progressive-disclosure docs for any LLM (optional mirror under .agents/docs)
 mkdir -p "$PRODUCT_ROOT/.agents/docs"
-for doc in ship-flow.md ship-flow-detailed.md skills-catalog.md llm-bootstrap.md bootstrap.md start-a-feature.md; do
+for doc in ship-flow.md ship-flow-detailed.md skills-catalog.md llm-bootstrap.md bootstrap.md start-a-feature.md prompt-patterns.md; do
   if [[ -f "$HARNESS_ROOT/docs/$doc" ]]; then
     cp -a "$HARNESS_ROOT/docs/$doc" "$PRODUCT_ROOT/.agents/docs/$doc"
   fi
