@@ -148,12 +148,18 @@ fi
 
 # Progressive-disclosure docs for any LLM (optional mirror under .agents/docs)
 mkdir -p "$PRODUCT_ROOT/.agents/docs"
-for doc in ship-flow.md skills-catalog.md llm-bootstrap.md bootstrap.md start-a-feature.md; do
+for doc in ship-flow.md ship-flow-detailed.md skills-catalog.md llm-bootstrap.md bootstrap.md start-a-feature.md; do
   if [[ -f "$HARNESS_ROOT/docs/$doc" ]]; then
     cp -a "$HARNESS_ROOT/docs/$doc" "$PRODUCT_ROOT/.agents/docs/$doc"
   fi
 done
-echo "  ~ .agents/docs/ (ship-flow, skills-catalog, llm-bootstrap, start-a-feature)"
+# Poster diagrams for detailed flow (optional; ignore if missing)
+if [[ -d "$HARNESS_ROOT/docs/diagrams" ]]; then
+  mkdir -p "$PRODUCT_ROOT/.agents/docs/diagrams"
+  rsync -a "$HARNESS_ROOT/docs/diagrams/" "$PRODUCT_ROOT/.agents/docs/diagrams/" 2>/dev/null || \
+    cp -a "$HARNESS_ROOT/docs/diagrams/." "$PRODUCT_ROOT/.agents/docs/diagrams/" 2>/dev/null || true
+fi
+echo "  ~ .agents/docs/ (ship-flow, ship-flow-detailed, skills-catalog, llm-bootstrap, start-a-feature)"
 
 if [[ -d "$HARNESS_ROOT/tools" ]]; then
   rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/tools/" "$PRODUCT_ROOT/tools/"

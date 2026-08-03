@@ -45,6 +45,7 @@ Then open the product in **any** coding LLM and ship:
 
 **Any LLM bootstrap:** [docs/llm-bootstrap.md](docs/llm-bootstrap.md)  
 **Full FSM map:** [docs/ship-flow.md](docs/ship-flow.md)  
+**Detailed flow (skills · gates · TDD · Mermaid/SVG):** [docs/ship-flow-detailed.md](docs/ship-flow-detailed.md)  
 **Start a feature:** [docs/start-a-feature.md](docs/start-a-feature.md)
 
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:

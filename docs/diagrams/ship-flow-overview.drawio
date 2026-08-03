@@ -1,0 +1,104 @@
+<mxfile host="app.diagrams.net" modified="2026-08-03T00:00:00.000Z" agent="agent-harness" version="22.0.0" type="device">
+  <diagram id="ship-flow-overview" name="Ship flow overview">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t1" value="agent-harness ship flow overview&#xa;Detail: docs/ship-flow-detailed.md · Phases hard · NEXT_SKILL routing · Hard gates at pr_review" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_init" value="init" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="100" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_rfr" value="ready_for_review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="90" width="130" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_app" value="approved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="390" y="90" width="100" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_blk" value="blocked" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="550" y="90" width="100" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="p_shp" value="shipped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="710" y="90" width="100" height="44" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="p_init" target="p_rfr">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1l" value="execute_dev" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e1">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="p_rfr" target="p_app">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2l" value="pr_review ≥95" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e2">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#b85450;" edge="1" parent="1" source="p_rfr" target="p_blk">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3l" value="&lt;95" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e3">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="p_blk" target="p_rfr">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="600" y="170"/><mxPoint x="265" y="170"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4l" value="remediate execute_dev" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e4">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="p_app" target="p_shp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5l" value="release_mgmt" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e5">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="p_shp" target="p_init">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="760" y="200"/><mxPoint x="90" y="200"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6l" value="sync_docs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e6">
+          <mxGeometry x="-0.1" y="1" relative="1" as="geometry"><mxPoint as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="sk_title" value="Ship skills (follow next_skill.py — do not invent next step)" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="500" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="s1" value="/spec&#xa;(no phase)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="90" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s2" value="/execute_dev&#xa;+ TDD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="150" y="280" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s3" value="/code_review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="270" y="280" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s4" value="/cross_review&#xa;(soft/large)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="390" y="280" width="110" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s5" value="/behavior_val&#xa;(runtime)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="280" width="110" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s6" value="/pr_review&#xa;HARD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="280" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s7" value="/release_mgmt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="770" y="280" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="s8" value="/sync_docs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="890" y="280" width="90" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="hg" value="HARD GATES (hard_gates.py @ pr_review)&#xa;Always: Spec|waiver · Secrets&#xa;Non-prose: CODE-REVIEW · Red-proof · Traceability · Evidence pack&#xa;Runtime: BEHAVIOR-REPORT · Threat notes · Score ≥95 · Release: product_smoke" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="40" y="370" width="940" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="ops" value="OPS (off-phase): night_shift → autofix×1 → morning_triage → night_fail_remediate → tickets&#xa;Post-tag harness: portfolio_install --install --push · finish_ship · remaining_board · qa_campaign (large)" style="rounded=1;whiteSpace=wrap;html=1;align=left;spacingLeft=10;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="940" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg" value="Legend: blue=phase · gray=skill · yellow dashed=soft/conditional · red=hard gate · green=ops&#xa;LLM: after each ship skill run scripts/next_skill.py — never invent NEXT_SKILL" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="590" width="900" height="50" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

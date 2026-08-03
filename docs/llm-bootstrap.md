@@ -76,7 +76,8 @@ Map: [ship-flow.md](ship-flow.md) · catalog: [skills-catalog.md](skills-catalog
 ## 4. Phase gates (agent must respect)
 
 **Full FSM (states + transitions + skill branches):** [ship-flow.md](ship-flow.md)  
-(product install: `.agents/docs/ship-flow.md`)
+**Detailed (skills · hard/soft gates · TDD · Mermaid + poster):** [ship-flow-detailed.md](ship-flow-detailed.md)  
+(product install: `.agents/docs/ship-flow.md` · optional detailed copy when installed)
 
 ```text
 init → ready_for_review → approved → shipped → init

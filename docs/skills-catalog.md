@@ -3,6 +3,7 @@
 Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 **Full ship map (ASCII):** [ship-flow.md](ship-flow.md) — phases + skill branches  
+**Detailed flow (Mermaid + SVG poster):** [ship-flow-detailed.md](ship-flow-detailed.md)  
 (`/code_review`, `/cross_review`, `/behavior_validator`, `/vps_infra_ops` when required, `NEXT_SKILL=`).
 
 ## User-invoked (ship)

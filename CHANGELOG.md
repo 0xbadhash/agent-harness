@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.14 — 2026-08-03
+
+### Docs
+- **`docs/ship-flow-detailed.md`** — detailed harness flow for operators + LLMs (phases, NEXT_SKILL, TDD, hard/soft gates, skills, scripts)
+- **Mermaid** diagrams embedded; **Draw.io + SVG** poster under `docs/diagrams/ship-flow-overview.{drawio,svg}`
+- Links from ship-flow, llm-bootstrap, skills-catalog, README; install copies detailed flow + diagrams into products
+
 ## v1.4.13 — 2026-08-02
 
 ### Added
