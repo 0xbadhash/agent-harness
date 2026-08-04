@@ -25,6 +25,7 @@ vault:
   root_env: PRODUCT_VAULT_ROOT
   default_root: ""
   project_label: agent-harness
+  extra_dirs: []
   dev_log_rel: 01-Projects/agent-harness/dev-log.md
   mirror_docs: []
 
