@@ -342,3 +342,49 @@ def write_text(
 def append_or_write(path: Path, content: str, *, encoding: str = "utf-8") -> None:
     """Convenience: same as write_text (callers build full file content)."""
     write_text(path, content, encoding=encoding)
+
+
+def append_text(
+    path: Path,
+    content: str,
+    *,
+    encoding: str = "utf-8",
+    vault_root: Path | None = None,
+    enforce_gateway: bool | None = None,
+) -> None:
+    """Append text with the same gateway + group-write / sudo-tee strategy."""
+    path = Path(path)
+    if _gateway_enabled(enforce_gateway):
+        check_write_allowed(path, vault_root=vault_root)
+    data = content if isinstance(content, str) else str(content)
+    if not data.endswith("\n") and data:
+        # callers may pass full lines; do not force when empty
+        pass
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except PermissionError as exc:
+        raise PermissionError(remediation_hint(path)) from exc
+    try:
+        with path.open("a", encoding=encoding) as f:
+            f.write(data)
+            f.flush()
+        _try_chmod_group_write(path)
+        return
+    except PermissionError:
+        pass
+    except OSError as exc:
+        if getattr(exc, "errno", None) not in (13, 1) and not isinstance(exc, PermissionError):
+            raise
+    for user in VAULT_USER_CANDIDATES:
+        try:
+            proc = subprocess.run(
+                ["sudo", "-n", "-u", user, "tee", "-a", str(path)],
+                input=data.encode(encoding),
+                capture_output=True,
+                check=False,
+            )
+            if proc.returncode == 0:
+                return
+        except OSError:
+            continue
+    raise PermissionError(remediation_hint(path))

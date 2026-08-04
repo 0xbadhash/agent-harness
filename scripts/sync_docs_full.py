@@ -21,6 +21,16 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+def _vw(path: Path, text: str) -> None:
+    try:
+        from vault_fs import write_text as _w  # type: ignore
+    except ImportError:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return
+    _w(path, text)
+
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 DEFAULT_VAULT = None
@@ -174,7 +184,7 @@ def update_workflow(
 
     if dry_run:
         return "workflow: would update"
-    path.write_text(text2, encoding="utf-8")
+    _vw(path, text2)
     return f"workflow: updated Last Release → {version}"
 
 
@@ -208,7 +218,7 @@ def stamp_current_release(path: Path, version: str, *, dry_run: bool = False) ->
         )
     if dry_run:
         return f"{path.name}: would stamp {version}"
-    path.write_text(text2, encoding="utf-8")
+    _vw(path, text2)
     return f"{path.name}: stamped {version}"
 
 
@@ -250,7 +260,7 @@ def mirror_to_vault(
             count=1,
             flags=re.DOTALL,
         )
-        dest.write_text(banner + body, encoding="utf-8")
+        _vw(dest, banner + body)
         notes.append(f"mirror ok: {rel} → {dest.relative_to(vault)}")
     return notes
 
@@ -314,7 +324,7 @@ Dev logging for **{project_label}** lives under `01-Projects/{project_label}/`.
     if dry_run:
         return "wiki: would update"
     wiki.parent.mkdir(parents=True, exist_ok=True)
-    wiki.write_text(block, encoding="utf-8")
+    _vw(wiki, block)
     return f"wiki: updated {wiki}"
 
 

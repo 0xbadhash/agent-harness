@@ -20,6 +20,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+def _vw(path: Path, text: str) -> None:
+    """Vault write via gateway when available."""
+    try:
+        from vault_fs import write_text as _w  # type: ignore
+    except ImportError:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return
+    _w(path, text)
+
+
 
 def _label_from_plugin(product_root: Path) -> str:
     plugin = product_root / ".agents" / "product_plugin.yaml"
@@ -67,7 +78,7 @@ def ensure_file(path: Path, label: str, *, dry_run: bool) -> str:
         if dry_run:
             return f"would create {path} (label={label})"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(header, encoding="utf-8")
+        _vw(path, header)
         return f"created {path}"
 
     existing = path.read_text(encoding="utf-8", errors="replace")
@@ -84,7 +95,7 @@ def ensure_file(path: Path, label: str, *, dry_run: bool) -> str:
     new_text = header + rest.lstrip("\n")
     if dry_run:
         return f"would normalize header {path} (label={label}, keep {rest.count('## ')} entries)"
-    path.write_text(new_text, encoding="utf-8")
+    _vw(path, new_text)
     return f"normalized {path}"
 
 

@@ -38,6 +38,17 @@ DEFAULT_VAULT = Path(
 )
 
 
+def _vw(path: Path, text: str) -> None:
+    """Vault write via gateway when available."""
+    try:
+        from vault_fs import write_text as _w  # type: ignore
+    except ImportError:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        return
+    _w(path, text)
+
+
 def rotate_project(
     project_dir: Path,
     *,
@@ -99,11 +110,11 @@ def rotate_project(
     except OSError:
         pass
     try:
-        archive_path.write_text(text, encoding="utf-8")
+        _vw(archive_path, text)
     except PermissionError as exc:
         return f"fail {project_dir.name}: cannot write archive {archive_path.name}: {exc}"
     try:
-        log.write_text(new_text, encoding="utf-8")
+        _vw(log, new_text)
     except PermissionError as exc:
         return f"fail {project_dir.name}: cannot rewrite log: {exc}"
     return (
@@ -169,7 +180,7 @@ _Auto-rebuilt by `rotate_night_shift_logs.py` at {when_s}._
     if dry_run:
         return f"dry-run multi: would write {out} ({len(rows)} projects)"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out.write_text(body, encoding="utf-8")
+    _vw(out, body)
     return f"wrote multi SUMMARY ({len(rows)} projects) → {out}"
 
 

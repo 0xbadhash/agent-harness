@@ -97,31 +97,15 @@ def _run(
 
 
 def _venv_python(root: Path = ROOT) -> str:
-    """Prefer project virtualenv (``.venv`` or ``venv``), else current interpreter.
-
-    Uses ``product_venv.product_venv_python`` so Unix venv symlinks are not
-    collapsed via ``Path.resolve()`` (keeps site-packages / pytest).
-    """
-    try:
-        from product_venv import product_venv_python  # type: ignore
-    except ImportError:
-        # scripts/ on sys.path when run as file; allow sibling import failure
-        product_venv_python = None  # type: ignore
-    if product_venv_python is not None:
-        vpy = product_venv_python(root)
-        if vpy is not None:
-            return str(vpy)
-    # Fallback if helper missing (partial install)
+    """Prefer project virtualenv (``.venv`` or ``venv``), else current interpreter."""
     for candidate in (
         root / ".venv" / "bin" / "python",
         root / "venv" / "bin" / "python",
         root / ".venv" / "bin" / "python3",
         root / "venv" / "bin" / "python3",
-        root / ".venv" / "Scripts" / "python.exe",
-        root / "venv" / "Scripts" / "python.exe",
     ):
         if candidate.is_file():
-            return str(candidate.absolute())
+            return str(candidate)
     return sys.executable
 
 
@@ -202,11 +186,26 @@ def _vault_project_rel(plugin: dict[str, Any]) -> Path:
 
 
 def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
+    """Prefer vault_resolve single SoT; fall back to plugin defaults."""
     if cli_vault is not None:
         return cli_vault
+    try:
+        from vault_resolve import resolve_vault_root  # type: ignore
+
+        r = resolve_vault_root(cli_vault=None, product_root=ROOT, require_enabled=False)
+        if r is not None:
+            return Path(r)
+    except Exception:
+        pass
     vault = plugin.get("vault") or {}
-    env_key = vault.get("root_env") or "PRODUCT_VAULT_ROOT"
-    for key in (env_key, "WATCHLIST_VAULT_ROOT", "PRODUCT_VAULT_ROOT"):
+    # Canonical first, then plugin root_env, then legacy aliases
+    for key in (
+        "PRODUCT_VAULT_ROOT",
+        vault.get("root_env") or "",
+        "WATCHLIST_VAULT_ROOT",
+        "SUBSTACK_PUSH_VAULT_ROOT",
+        "SECOND_BRAIN_VAULT",
+    ):
         if key and os.environ.get(key):
             return Path(os.environ[key])
     default = vault.get("default_root") or str(DEFAULT_VAULT)
@@ -713,7 +712,11 @@ def sync_kanban_readiness_file(
     if new_text == original:
         return msg
     try:
-        kanban.write_text(new_text, encoding="utf-8")
+        try:
+            from vault_fs import write_text as _vw  # type: ignore
+            _vw(kanban, new_text)
+        except ImportError:
+            kanban.write_text(new_text, encoding="utf-8")
     except OSError as exc:
         return f"kanban: skip (write {exc})"
     return f"{msg} → {kanban}"
@@ -746,9 +749,8 @@ def write_vault(
 
         todo_path = proj / "TODO.md"
         try:
-            from vault_fs import write_text as _vault_write  # type: ignore
-
-            _vault_write(todo_path, todo_md)
+            from vault_fs import write_text as _vw  # type: ignore
+            _vw(todo_path, todo_md)
         except ImportError:
             todo_path.write_text(todo_md, encoding="utf-8")
         notes.append(f"vault TODO: {todo_path}")
