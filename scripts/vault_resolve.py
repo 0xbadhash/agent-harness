@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Resolve optional knowledge-vault path. Vault is never required by default.
 
-Order:
+Single resolver SoT (Option B). Order:
   1. CLI --vault if provided by caller
-  2. Env named by product_plugin.vault.root_env (default PRODUCT_VAULT_ROOT)
-  3. product_plugin.vault.default_root if non-empty
-  4. None → vault steps skipped
+  2. PRODUCT_VAULT_ROOT (canonical env for all products)
+  3. Env named by product_plugin.vault.root_env (if different)
+  4. Legacy aliases: WATCHLIST_VAULT_ROOT, SUBSTACK_PUSH_VAULT_ROOT,
+     SECOND_BRAIN_VAULT, VAULT_ROOT, CATALYXT_VAULT_ROOT (deprecated)
+  5. product_plugin.vault.default_root if non-empty
+  6. None → vault steps skipped
 
-Does not hardcode /opt/second-brain or any host path.
+Does not hardcode /opt/second-brain or any host path (defaults come from plugin).
 """
 from __future__ import annotations
 
@@ -15,17 +18,30 @@ import os
 import re
 from pathlib import Path
 
+# Canonical + deprecated aliases (read-only fallbacks)
+CANONICAL_VAULT_ENV = "PRODUCT_VAULT_ROOT"
+LEGACY_VAULT_ENVS = (
+    "WATCHLIST_VAULT_ROOT",
+    "SUBSTACK_PUSH_VAULT_ROOT",
+    "SECOND_BRAIN_VAULT",
+    "VAULT_ROOT",
+    "CATALYXT_VAULT_ROOT",
+    "EMAIL_DETACH_VAULT_ROOT",
+)
+
 
 def load_vault_config(product_root: Path | None = None) -> dict:
     root = product_root or Path.cwd()
     plugin = root / ".agents" / "product_plugin.yaml"
-    cfg = {
+    cfg: dict = {
         "enabled": False,
-        "root_env": "PRODUCT_VAULT_ROOT",
+        "root_env": CANONICAL_VAULT_ENV,
         "default_root": "",
         "project_label": "product",
         "dev_log_rel": "",
+        "product_id": "",
         "mirror_docs": [],
+        "extra_dirs": [],
     }
     if not plugin.is_file():
         return cfg
@@ -39,10 +55,26 @@ def load_vault_config(product_root: Path | None = None) -> dict:
         m = re.search(rf"^\s*{key}:\s*(.+)$", text, re.M)
         if m:
             val = m.group(1).strip().strip("\"'")
-            if key == "product_id" and cfg["project_label"] == "product":
-                cfg["project_label"] = val
-            elif key != "product_id":
+            # strip inline comments
+            if " #" in val:
+                val = val.split(" #", 1)[0].rstrip()
+            if key == "product_id":
+                cfg["product_id"] = val
+                if cfg["project_label"] == "product":
+                    cfg["project_label"] = val
+            else:
                 cfg[key] = val
+    # extra_dirs list under vault:
+    block = re.search(
+        r"(?ms)^[ \t]+extra_dirs:\s*\n((?:[ \t]+-[ \t]+.+\n?)*)",
+        text,
+    )
+    if block:
+        cfg["extra_dirs"] = [
+            e.strip().strip("\"'")
+            for e in re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", block.group(1), re.M)
+            if e.strip()
+        ]
     # mirror_docs list under vault:
     in_vault = False
     in_mirrors = False
@@ -70,6 +102,13 @@ def load_vault_config(product_root: Path | None = None) -> dict:
     return cfg
 
 
+def project_rel(product_root: Path | None = None, *parts: str) -> Path:
+    """Relative path under 01-Projects/<label>/… from plugin."""
+    cfg = load_vault_config(product_root)
+    label = (cfg.get("project_label") or cfg.get("product_id") or "product").strip()
+    return Path("01-Projects") / label / Path(*parts) if parts else Path("01-Projects") / label
+
+
 def resolve_vault_root(
     *,
     cli_vault: Path | str | None = None,
@@ -81,20 +120,28 @@ def resolve_vault_root(
     if require_enabled and not cfg.get("enabled"):
         # Explicit CLI vault still allowed (operator override)
         if cli_vault:
-            p = Path(str(cli_vault)).expanduser()
-            return p if p.is_dir() or not p.exists() else p
-        return None
+            return Path(str(cli_vault)).expanduser()
+        # Plugins that omit `enabled:` but declare default_root still resolve
+        if not (cfg.get("default_root") or "").strip():
+            return None
 
     if cli_vault:
         return Path(str(cli_vault)).expanduser()
 
-    env_name = cfg.get("root_env") or "PRODUCT_VAULT_ROOT"
-    env_val = os.environ.get(env_name, "").strip()
-    if env_val:
-        return Path(env_val).expanduser()
+    # 1) Canonical env first
+    canon = os.environ.get(CANONICAL_VAULT_ENV, "").strip()
+    if canon:
+        return Path(canon).expanduser()
 
-    # Common alias env vars (still no hardcoded host path)
-    for alt in ("PRODUCT_VAULT_ROOT", "SECOND_BRAIN_VAULT", "VAULT_ROOT"):
+    # 2) Plugin-declared root_env (should already be PRODUCT_VAULT_ROOT)
+    env_name = cfg.get("root_env") or CANONICAL_VAULT_ENV
+    if env_name and env_name != CANONICAL_VAULT_ENV:
+        env_val = os.environ.get(env_name, "").strip()
+        if env_val:
+            return Path(env_val).expanduser()
+
+    # 3) Legacy aliases
+    for alt in LEGACY_VAULT_ENVS:
         v = os.environ.get(alt, "").strip()
         if v:
             return Path(v).expanduser()
