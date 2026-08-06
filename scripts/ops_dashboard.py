@@ -590,7 +590,7 @@ def render(d: Dashboard, vault: Path | None) -> str:
         "",
         f"**Overall:** {emoji} **{d.overall}**  ",
         f"**Updated:** {d.when_utc} · {d.when_hkt}  ",
-        f"**Generator:** `python3 scripts/ops_dashboard.py --write`  ",
+        "**Generator:** `python3 scripts/ops_dashboard.py --write`  ",
         "",
         "> **How to use:** Open this note first every morning.  ",
         "> - 🟢 **GREEN** → nothing required  ",
@@ -598,8 +598,8 @@ def render(d: Dashboard, vault: Path | None) -> str:
         "",
         "## At a glance",
         "",
-        f"| | Count |",
-        f"|--|------:|",
+        "| | Count |",
+        "|--|------:|",
         f"| Went well | {len(d.went_well)} |",
         f"| Needs attention | {len(d.attention)} |",
         f"| Failing | {len(d.failing)} |",
@@ -635,8 +635,8 @@ def render(d: Dashboard, vault: Path | None) -> str:
         lines.extend(
             [
                 f"| Night shift multi-product | {_wiki_link(vault, '01-Projects/harness-night-shift/SUMMARY.md', 'harness-night-shift SUMMARY')} |",
-                f"| Per-product night TODO | `01-Projects/<product>/TODO.md` |",
-                f"| Catalyxt news inbox | `01-Projects/catalyxt/news-inbox/YYYY-MM-DD` |",
+                "| Per-product night TODO | `01-Projects/<product>/TODO.md` |",
+                "| Catalyxt news inbox | `01-Projects/catalyxt/news-inbox/YYYY-MM-DD` |",
                 f"| Vault health | {_wiki_link(vault, 'agent-tasks/health-status.md', 'health-status')} |",
                 f"| Hygiene | {_wiki_link(vault, 'agent-tasks/hygiene-status.md', 'hygiene-status')} |",
                 f"| Pipeline | {_wiki_link(vault, 'agent-tasks/pipeline-status.md', 'pipeline-status')} |",
@@ -665,7 +665,7 @@ def render(d: Dashboard, vault: Path | None) -> str:
             "This dashboard re-scans home product lockfiles for **keyv/ChainDrop** seed malicious versions "
             "and obvious payload filenames. For root/containerd, re-run occasionally with sudo forensic script.",
             "",
-            f"_Auto-generated — do not hand-edit the tables; fix sources and re-run generator._",
+            "_Auto-generated — do not hand-edit the tables; fix sources and re-run generator._",
             "",
         ]
     )
