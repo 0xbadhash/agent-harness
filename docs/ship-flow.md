@@ -311,6 +311,7 @@ Full catalog: [skills-catalog.md](skills-catalog.md).
 | `scripts/night_fail_remediate.py` | P0: bounded autofix + recheck + NIGHT_FAIL_TICKETS |
 | `scripts/run_ship_chain.py` | P0: deterministic unattended score→ship→push (no LLM) |
 | `scripts/session_context.py` | P2: Organize pack (phase, OPEN, night FAIL, portfolio lag) |
+| `scripts/ops_dashboard.py` | Obsidian single front door (OPS-DASHBOARD.md) |
 
 ## PR_DRAFT narrative (template)
 

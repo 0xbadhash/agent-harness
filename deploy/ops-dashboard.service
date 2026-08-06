@@ -1,0 +1,16 @@
+[Unit]
+Description=Write Obsidian OPS-DASHBOARD.md (single ops front door)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=debian
+Group=debian
+WorkingDirectory=/home/debian/agent-harness
+Environment=PRODUCT_VAULT_ROOT=/opt/second-brain/vault
+Environment=PATH=/home/debian/agent-harness/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/python3 /home/debian/agent-harness/scripts/ops_dashboard.py --write
+SuccessExitStatus=0 2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh Obsidian OPS-DASHBOARD (morning + midday UTC)
+
+[Timer]
+# 01:00 UTC ≈ after night-shift (19:15) + morning triage (00:30)
+# 12:00 UTC midday refresh for news ticks
+OnCalendar=*-*-* 01:00:00 UTC
+OnCalendar=*-*-* 12:00:00 UTC
+Persistent=true
+RandomizedDelaySec=90
+
+[Install]
+WantedBy=timers.target

@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.16 — 2026-08-06
+
+### Added
+- **`scripts/ops_dashboard.py`** — single Obsidian front door (`agent-tasks/OPS-DASHBOARD.md`): what went well / failing / todos with wikilinks
+- Aggregates night_shift, catalyxt news, vault health, kanban, portfolio lag, npm keyv seed security recheck
+- **`deploy/ops-dashboard.{service,timer}`** — refresh 01:00 + 12:00 UTC
+
 ## v1.4.15 — 2026-08-03
 
 ### Docs / CODER overlay (P2–P3)
