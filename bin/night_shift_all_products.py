@@ -46,7 +46,7 @@ DEFAULT_PRODUCTS = [
     ("email-detach", _HOME / "email-detach"),
     ("substack-push", _HOME / "substack-push"),
     ("second-brain", _HOME / "second-brain"),
-    ("catalyxt", _HOME / "catalyxt.ltd"),
+    ("catalyxt", _HOME / "catalyxt-website"),
     ("agent-harness", HARNESS_ROOT),
     ("ocr-ledger", _HOME / "ocr-ledger"),
 ]

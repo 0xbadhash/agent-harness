@@ -105,7 +105,9 @@ def _wiki_link(vault: Path, rel: str, label: str | None = None) -> str:
 
 
 def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[Item], list[Item]]:
-    well, att, fail = [], [], []
+    well: list[Item] = []
+    att: list[Item] = []
+    fail: list[Item] = []
     summary = (vault / "01-Projects/harness-night-shift/SUMMARY.md") if vault else None
     triage = harness / ".agents/artifacts/MORNING_TRIAGE.md"
     text = _read(summary) if summary else ""
@@ -182,8 +184,11 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
 
 
 def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item], list[Item]]:
-    well, att, fail, todos = [], [], [], []
-    cat = Path.home() / "catalyxt.ltd"
+    well: list[Item] = []
+    att: list[Item] = []
+    fail: list[Item] = []
+    todos: list[Item] = []
+    cat = Path.home() / "catalyxt-website"
     script = cat / "scripts" / "news_day_status.py"
     state = "unknown"
     detail = ""
@@ -204,7 +209,6 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
             if line.strip().startswith("Open") or "missing" in line.lower() or "Tick" in line:
                 detail = line.strip()
                 break
-    status_md = cat / "content" / "news" / "STATUS.md"
     link = ""
     if vault:
         # news-inbox day
@@ -232,7 +236,7 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
                 "news",
                 f"Publish news for {day}",
                 link=link,
-                action="python3 ~/catalyxt.ltd/scripts/publish_ready_news_inbox.py --deploy",
+                action="python3 ~/catalyxt-website/scripts/publish_ready_news_inbox.py --deploy",
             )
         )
     elif state == "ready_to_tick":
@@ -261,7 +265,7 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
                 "news",
                 f"News **missing candidates** for HKT {day}",
                 link=link,
-                action="python3 ~/catalyxt.ltd/scripts/run_news_candidates_timer.py",
+                action="python3 ~/catalyxt-website/scripts/run_news_candidates_timer.py",
             )
         )
         todos.append(
@@ -279,7 +283,9 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
 
 
 def collect_vault_health(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]]:
-    well, att, fail = [], [], []
+    well: list[Item] = []
+    att: list[Item] = []
+    fail: list[Item] = []
     if not vault:
         return well, att, fail
     health = vault / "agent-tasks" / "health-status.md"
@@ -331,7 +337,8 @@ def collect_vault_health(vault: Path | None) -> tuple[list[Item], list[Item], li
 
 
 def collect_kanban(vault: Path | None) -> tuple[list[Item], list[Item]]:
-    att, todos = [], []
+    att: list[Item] = []
+    todos: list[Item] = []
     if not vault:
         return att, todos
     kanban = vault / "agent-tasks" / "kanban.md"
@@ -389,10 +396,12 @@ def collect_kanban(vault: Path | None) -> tuple[list[Item], list[Item]]:
 
 
 def collect_security(quick: bool) -> tuple[list[Item], list[Item], list[Item]]:
-    well, att, fail = [], [], []
+    well: list[Item] = []
+    att: list[Item] = []
+    fail: list[Item] = []
     # Scan home product roots only by default (fast); optional deep
     roots = [
-        Path.home() / "catalyxt.ltd",
+        Path.home() / "catalyxt-website",
         Path.home() / "zk-business-card",
         Path.home() / "email-detach",
         Path.home() / "watchlist",
@@ -441,12 +450,12 @@ def collect_security(quick: bool) -> tuple[list[Item], list[Item], list[Item]]:
                 )
             )
     if payload_found:
-        for p in payload_found[:10]:
+        for path_s in payload_found[:10]:
             fail.append(
                 Item(
                     "fail",
                     "security",
-                    f"Payload IoC file: `{p}`",
+                    f"Payload IoC file: `{path_s}`",
                     action="Do not execute; quarantine; forensic review",
                 )
             )
@@ -463,10 +472,11 @@ def collect_security(quick: bool) -> tuple[list[Item], list[Item], list[Item]]:
 
 
 def collect_portfolio() -> tuple[list[Item], list[Item]]:
-    well, att = [], []
+    well: list[Item] = []
+    att: list[Item] = []
     sot = (HARNESS / "VERSION").read_text(encoding="utf-8").strip() if (HARNESS / "VERSION").is_file() else "?"
     products = HARNESS / "config" / "night_shift_products.yaml"
-    lag = []
+    lag: list[str] = []
     if products.is_file():
         for line in products.read_text(encoding="utf-8").splitlines():
             line = line.strip()

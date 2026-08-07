@@ -24,16 +24,22 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 SCRIPTS = Path(__file__).resolve().parent
 ROOT = SCRIPTS.parent
 sys.path.insert(0, str(SCRIPTS))
 
-from kanban_schema import (  # noqa: E402
-    KanbanCard,
-    parse_board,
-    render_board,
-)
+try:
+    from kanban_schema import (  # type: ignore[import-not-found]  # noqa: E402
+        KanbanCard,
+        parse_board,
+        render_board,
+    )
+except ImportError:  # pragma: no cover — schema lives in second-brain product
+    KanbanCard = Any  # type: ignore[misc,assignment]
+    parse_board = None  # type: ignore[assignment]
+    render_board = None  # type: ignore[assignment]
 
 PREFERRED_LANES = ["Backlog", "Spec", "Doing", "Blocked", "Done", "Archive"]
 SPEC_LANE = "Spec"
@@ -66,7 +72,7 @@ def _load_product_roots() -> dict[str, Path]:
         ("agent-harness", home / "agent-harness"),
         ("email-detach", home / "email-detach"),
         ("substack-push", home / "substack-push"),
-        ("catalyxt", home / "catalyxt.ltd"),
+        ("catalyxt", home / "catalyxt-website"),
         ("ocr-ledger", home / "ocr-ledger"),
     ):
         if pid not in roots and rel.is_dir():
