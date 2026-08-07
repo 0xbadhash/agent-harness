@@ -44,10 +44,11 @@ Docs (installed): `.agents/docs/llm-bootstrap.md`, `.agents/docs/ship-flow.md`.
 | Skills | `python3 scripts/verify_skills.py` |
 | Install health | `bash scripts/bootstrap_check.sh` |
 | Smoke | `python3 scripts/product_smoke.py --root .` |
-| Web E2E / Comet | `python3 scripts/check_web_e2e.py --root .` (when product has a website) |
+| Web E2E / Comet | `python3 scripts/check_web_e2e.py --root .` — **mandatory** when website/app detected |
 
-**Website products (default):** every UI ship must update **Playwright** (`e2e/`) **and** **Comet scenarios** (`docs/E2E_COMET_SCENARIOS.md`).  
-Deterministic IDs: declare `web_e2e.surfaces` in the plugin, then `python3 scripts/scaffold_web_e2e.py --root . --write`.  
+**Website / browser-app products (fail closed):** every UI ship must update **Playwright** (`e2e/` with `Sxx` test titles) **and** **Comet scenarios** (every S-id must appear in the doc), keep `web_e2e.surfaces` + `smoke[]` e2e.  
+Gate is hard in `/pr_review` and `/release_mgmt`. Opt out: `web_e2e.enabled: false`.  
+Scaffold: `python3 scripts/scaffold_web_e2e.py --root . --write`.  
 Guide: `docs/web-e2e-comet.md` (installed under `.agents/docs/` when present).
 
 Pipeline state: `.agents/state/pipeline.json`  

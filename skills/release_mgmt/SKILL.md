@@ -27,9 +27,9 @@ When invoked with `/release_mgmt`:
    - Loads `.agents/product_plugin.yaml` → `smoke[]` (argv + optional cwd).
    - All steps must exit 0. Empty smoke → warn (do not invent a stack).
    - Also run `python3 scripts/validate.py full` when the product vendors harness scripts.
-   - **Website products:** `check_web_e2e` must pass; smoke should include Playwright (`npm run test:e2e` or equivalent).
-     If UI shipped without Comet/Playwright updates → fail release until fixed.
-     Docs: `docs/web-e2e-comet.md` · scaffold: `scripts/scaffold_web_e2e.py --write`.
+   - **Website / browser-app products (mandatory):** `python3 scripts/check_web_e2e.py --root .` must pass
+     (Playwright + Comet S-id sync + surfaces + smoke e2e). Fail release until fixed.
+     Opt out only: `web_e2e.enabled: false`. Docs: `docs/web-e2e-comet.md`.
 6. **Generate `RELEASE_RUNBOOK.md`** with:
    - smoke table (commands + exit)
    - infra reference (if any)

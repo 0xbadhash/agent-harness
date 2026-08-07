@@ -74,6 +74,80 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
             smoke.append(entry)
     if smoke:
         out["smoke"] = smoke
+
+    # web_e2e: enabled/strict/require_s_ids + surfaces list (stdlib, no PyYAML)
+    we: dict[str, Any] = {}
+    wm = re.search(
+        r"^web_e2e:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if wm:
+        section = wm.group(1)
+        for key in ("enabled", "strict", "require_s_ids", "auto_detect"):
+            km = re.search(rf"^[ \t]+{key}:\s*(\S+)", section, re.MULTILINE)
+            if km:
+                raw = km.group(1).strip().strip("'\"")
+                if raw.lower() in ("true", "yes", "1"):
+                    we[key] = True
+                elif raw.lower() in ("false", "no", "0"):
+                    we[key] = False
+                else:
+                    we[key] = raw
+        # surfaces: remainder of web_e2e after "surfaces:" key (avoid mid-block keys)
+        surfaces: list[dict[str, Any]] = []
+        sm = re.search(r"^[ \t]+surfaces:\s*\n(.*)\Z", section, re.MULTILINE | re.DOTALL)
+        if sm:
+            body = sm.group(1)
+            # Surface list items: 4-space indent "- id:" (not 8-space nested scenarios)
+            parts = re.split(r"(?m)^( {4}-\s+id:\s*\S+[ \t]*\n)", body)
+            if len(parts) == 1:
+                # try 2-space list under surfaces
+                parts = re.split(r"(?m)^( {2}-\s+id:\s*\S+[ \t]*\n)", body)
+            i = 1
+            while i + 1 < len(parts):
+                head = parts[i]
+                block = parts[i + 1]
+                i += 2
+                sid_m = re.search(r"id:\s*(\S+)", head)
+                if not sid_m:
+                    continue
+                sid = sid_m.group(1).strip().strip("'\"")
+                entry: dict[str, Any] = {"id": sid}
+                pm = re.search(r"^[ \t]+playwright:\s*(\S+)", block, re.MULTILINE)
+                if pm:
+                    entry["playwright"] = pm.group(1).strip().strip("'\"")
+                om = re.search(r"^[ \t]+order:\s*(\d+)", block, re.MULTILINE)
+                if om:
+                    entry["order"] = int(om.group(1))
+                path_m = re.search(r"^[ \t]+path:\s*(\S+)", block, re.MULTILINE)
+                if path_m:
+                    entry["path"] = path_m.group(1).strip().strip("'\"")
+                scens: list[dict[str, Any]] = []
+                if re.search(r"scenarios:", block):
+                    for rid in re.findall(
+                        r"^[ \t]+-\s+id:\s*(\S+)",
+                        block,
+                        re.MULTILINE,
+                    ):
+                        rid = rid.strip().strip("'\"")
+                        scens.append({"id": rid, "name": rid, "steps": ["open"]})
+                    if not scens:
+                        scens = [{"id": "smoke", "name": "smoke", "steps": ["open"]}]
+                    entry["scenarios"] = scens
+                if "scenarios" not in entry:
+                    entry["scenarios"] = [
+                        {"id": "smoke", "name": "smoke", "steps": ["open"]}
+                    ]
+                if "playwright" not in entry:
+                    entry["playwright"] = f"e2e/{sid}.spec.ts"
+                surfaces.append(entry)
+        if surfaces:
+            we["surfaces"] = surfaces
+        elif re.search(r"^[ \t]+surfaces:\s*\[\s*\]", section, re.MULTILINE):
+            we["surfaces"] = []
+        if we:
+            out["web_e2e"] = we
     return out
 
 

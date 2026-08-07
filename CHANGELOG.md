@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4.18 — 2026-08-07
+
+### Changed — **mandatory** web/app E2E (fail closed)
+- `validate_web_e2e` now **requires** for any detected website or browser app:
+  - Playwright config **and** ≥1 `*spec.ts`
+  - Comet/E2E scenario doc with agent markers + Playwright reference
+  - S-ids in Playwright `test("S0 …")` titles
+  - **Every** Playwright S-id listed in the Comet doc (same-ship sync)
+  - `web_e2e.surfaces` in product_plugin
+  - `smoke[]` step with e2e / `test:e2e` / playwright
+- Detects SPA/SSR apps via `package.json` (react-dom, next, vite, …) and `app/page` / `src/App`
+- Opt out: `web_e2e.enabled: false` · migration: `web_e2e.strict: false` or `check_web_e2e.py --lenient`
+- Docs + example plugin + tests updated
+
+### Why
+Agents updated UI without systematically updating Playwright **and** Comet; soft warnings were ignored at score time.
+
 ## v1.4.17 — 2026-08-07
 
 ### Added

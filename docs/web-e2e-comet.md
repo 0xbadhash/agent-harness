@@ -74,14 +74,23 @@ python3 scripts/check_web_e2e.py --root .
 python3 scripts/check_web_e2e.py --root . --json
 ```
 
-**Fail** when website detected and:
+**Fail closed** when a website **or browser app** is detected and **any** of:
 
-- Comet doc missing, or  
-- No Playwright config **and** no `e2e/` specs, or  
-- Plugin lists a `playwright` path that does not exist, or  
-- Comet doc lacks `PROMPT FOR COMET` / report template markers  
+| Requirement | Why |
+|-------------|-----|
+| Comet/E2E scenario doc | Agents (Comet/Perplexity) need human-readable S-ids |
+| Playwright **config** | Deterministic local/CI runner |
+| At least one `*spec.ts` | Automated regression |
+| S-ids in `test("S0 …")` titles | Shared numbering with Comet |
+| Every Playwright S-id appears in Comet doc | Same ship must update both |
+| `web_e2e.surfaces` in product_plugin | Deterministic surface map |
+| `smoke[]` includes e2e / `test:e2e` / playwright | Release smoke cannot skip browser |
 
-**Warn** when smoke[] has no e2e step (recommend adding `npm run test:e2e`).
+**Opt out** only for non-UI products: `web_e2e.enabled: false`.
+
+**Temporary migration** (not for ship): `web_e2e.strict: false` or `check_web_e2e.py --lenient` turns surfaces/smoke into warnings; S-id/Comet/Playwright artifacts still required when present.
+
+Hard gates (`/pr_review --validate`) and `/release_mgmt` call this gate — a website product **cannot** score ≥95 or ship without it.
 
 ## Ship FSM duties (agents)
 

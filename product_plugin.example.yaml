@@ -52,17 +52,20 @@ night_shift:
   live_expect_code: "200"
   coverage_soft: "1"        # "0" = hard-fail if coverage tooling missing
 
-# Website E2E (Playwright + Comet/Perplexity) — REQUIRED when product has a browser UI.
-# Auto-detects web/, playwright.config, e2e/, docs/E2E_COMET_SCENARIOS.md if enabled unset.
-# Docs: docs/web-e2e-comet.md · gate: scripts/check_web_e2e.py · scaffold: scripts/scaffold_web_e2e.py
+# Website / app E2E (Playwright + Comet/Perplexity) — MANDATORY when UI detected.
+# Detection: web/, SPA/Next app, playwright.config, e2e specs, package.json browser deps, …
+# Fail closed via scripts/check_web_e2e.py (hard_gates + release). Opt out: enabled: false.
+# Docs: docs/web-e2e-comet.md · scaffold: scripts/scaffold_web_e2e.py --write
 web_e2e:
-  enabled: false          # set true for web products (or leave unset to auto-detect)
+  enabled: false          # true | false (opt out) | omit for auto-detect
   auto_detect: true
+  strict: true            # false = temporary migration only (surfaces/smoke soft)
+  require_s_ids: true     # test titles must include S0, S12, …
   base_url: ""            # e.g. https://app.example.com
   comet_doc: docs/E2E_COMET_SCENARIOS.md
   playwright_config: playwright.config.ts
   e2e_dir: e2e
-  surfaces: []            # declare for deterministic S0..Sn — see docs/web-e2e-comet.md
+  surfaces: []            # REQUIRED when enabled/detected — deterministic S0…Sn
   # surfaces:
   #   - id: home
   #     order: 0
@@ -73,6 +76,10 @@ web_e2e:
   #       - id: smoke
   #         name: Smoke load
   #         steps: ["Open /", "See heading"]
+# smoke[] MUST include e2e for web/app products, e.g.:
+#   - name: e2e
+#     cmd: [npm, run, test:e2e]
+
 
 # Skills that exist only in this product (not in agent-harness)
 product_skills: []
