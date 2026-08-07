@@ -1,6 +1,6 @@
 # NIGHT_FAIL_PROMOTIONS
 
-_Generated 2026-08-02 09:36 UTC by promote_night_fails.py_
+_Generated 2026-08-02 09:43 UTC by promote_night_fails.py_
 
 Repeated night FAIL gates promoted above one-off TODOs.
 

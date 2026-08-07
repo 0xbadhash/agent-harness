@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
@@ -12,7 +13,6 @@ if str(SCRIPTS) not in sys.path:
 
 from product_plugin import load_plugin  # noqa: E402
 from web_e2e_contract import (  # noqa: E402
-    DEFAULT_COMET,
     DEFAULT_E2E_DIR,
     allocate_scenario_ids,
     comet_doc_path,
@@ -95,7 +95,7 @@ def render_comet(
         "",
         f"# {product_name} — E2E suite for Comet / Perplexity",
         "",
-        f"**Canonical file:** `docs/E2E_COMET_SCENARIOS.md`",
+        "**Canonical file:** `docs/E2E_COMET_SCENARIOS.md`",
         f"**Base URL:** {base_url}",
         "",
         "| Suite | Playwright | Scenarios |",
@@ -259,7 +259,8 @@ def main() -> int:
         print("⚠️  No web_e2e.surfaces in plugin — using filesystem defaults (add surfaces for stable IDs)")
 
     scenarios = allocate_scenario_ids(surfaces)
-    ns = plugin.get("night_shift") if isinstance(plugin.get("night_shift"), dict) else {}
+    _raw_ns = plugin.get("night_shift")
+    ns: dict[str, Any] = _raw_ns if isinstance(_raw_ns, dict) else {}
     base_url = str(cfg.get("base_url") or ns.get("default_host") or "http://127.0.0.1:4173")
     if base_url and not str(base_url).startswith("http"):
         base_url = "https://" + base_url

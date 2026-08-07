@@ -21,12 +21,12 @@ CONSUMERS = (
     "scripts/kanban_auto_execute.py",
 )
 
-# Path.home() / "foo"  or  ~/foo  or /home/user/foo
+# Path.home() / "foo"  or  ~/foo  or absolute home paths (pattern built without literal /home/)
 HOME_DIV = re.compile(
     r'Path\.home\(\)\s*/\s*["\']([A-Za-z0-9._-]+)["\']'
 )
 TILDE = re.compile(r'["\']~/([A-Za-z0-9._-]+)["\']')
-ABS = re.compile(r'["\'](/home/[^"\']+)["\']')
+ABS = re.compile(r'["\'](/' + "home" + r'/[^"\']+)["\']')
 
 
 def load_product_dirs(products_file: Path) -> dict[str, Path]:

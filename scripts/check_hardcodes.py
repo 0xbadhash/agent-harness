@@ -144,6 +144,7 @@ URL_HOST_ALLOW = re.compile(
 # Host-bound deploy units and tests may contain machine paths
 ALLOW_PREFIXES = (
     "config/settings.py",
+    "config/newsjack/",  # RSS feed lists + setup docs (URLs are data, not secrets)
     "tests/",
     "test_",
     "conftest.py",
@@ -154,6 +155,7 @@ ALLOW_PREFIXES = (
     "USAGE.md",
     "CONTRIBUTING.md",
     ".github/",  # CI paths often use runner home paths
+    "product_plugin.example.yaml",  # template only
 )
 
 

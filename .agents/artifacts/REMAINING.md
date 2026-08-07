@@ -1,8 +1,8 @@
 # REMAINING
 
-_Updated 2026-08-02 09:37 UTC by remaining_board.py_
+_Updated 2026-08-03 08:25 UTC by remaining_board.py_
 
-**Pipeline phase:** `shipped`
+**Pipeline phase:** `init`
 **Roadmap file:** `CHANGELOG.md`
 
 ## Open roadmap items
