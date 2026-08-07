@@ -105,7 +105,7 @@ def main() -> int:
         "--vault",
         type=Path,
         default=None,
-        help="Vault root (or PRODUCT_VAULT_ROOT / WATCHLIST_VAULT_ROOT)",
+        help="Vault root (or PRODUCT_VAULT_ROOT)",
     )
     ap.add_argument("--label", default=None, help="project_label (default: product plugin)")
     ap.add_argument(
@@ -124,7 +124,7 @@ def main() -> int:
 
     vault = args.vault
     if vault is None:
-        env = os.environ.get("PRODUCT_VAULT_ROOT") or os.environ.get("WATCHLIST_VAULT_ROOT")
+        env = os.environ.get("PRODUCT_VAULT_ROOT")
         vault = Path(env) if env else None
     if vault is None or not vault.is_dir():
         print(

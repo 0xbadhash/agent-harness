@@ -202,9 +202,6 @@ def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
     for key in (
         "PRODUCT_VAULT_ROOT",
         vault.get("root_env") or "",
-        "WATCHLIST_VAULT_ROOT",
-        "SUBSTACK_PUSH_VAULT_ROOT",
-        "SECOND_BRAIN_VAULT",
     ):
         if key and os.environ.get(key):
             return Path(os.environ[key])

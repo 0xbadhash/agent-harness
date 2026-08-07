@@ -9,8 +9,8 @@ Config (first found wins):
   3. Built-in defaults under $HOME/*
 
 Writes multi-product summary:
-  - vault 01-Projects/harness-night-shift/SUMMARY.md (latest)
-  - vault 01-Projects/harness-night-shift/log.md (append)
+  - vault agent-tasks/night-shift/SUMMARY.md (latest)
+  - vault agent-tasks/night-shift/log.md (append)
   - <harness>/.agents/artifacts/NIGHT_SHIFT_ALL_REPORT.md
 """
 from __future__ import annotations
@@ -21,6 +21,17 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+def _vw(path: Path, text: str) -> None:
+    try:
+        scripts = Path(__file__).resolve().parent.parent / "scripts"
+        sys.path.insert(0, str(scripts))
+        from vault_fs import write_text as _w  # type: ignore
+        _w(path, text)
+    except Exception:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
 
 
 def format_when_dual(when: datetime | None = None) -> str:
@@ -40,7 +51,7 @@ def format_when_dual(when: datetime | None = None) -> str:
 HARNESS_ROOT = Path(__file__).resolve().parent.parent
 # Prefer env; fall back next to harness sibling dirs under $HOME (no /home/<user> literals).
 _HOME = Path.home()
-DEFAULT_VAULT = Path(os.environ.get("PRODUCT_VAULT_ROOT") or os.environ.get("WATCHLIST_VAULT_ROOT") or "/opt/second-brain/vault")
+DEFAULT_VAULT = Path(os.environ.get("PRODUCT_VAULT_ROOT") or "/opt/second-brain/vault")
 DEFAULT_PRODUCTS = [
     ("watchlist", _HOME / "watchlist"),
     ("email-detach", _HOME / "email-detach"),
@@ -270,10 +281,10 @@ def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) 
         notes.append(f"⚠️ VAULT SKIP: {vault}")
         return notes
 
-    proj = vault / "01-Projects" / "harness-night-shift"
+    proj = vault / "agent-tasks" / "night-shift"
     try:
         proj.mkdir(parents=True, exist_ok=True)
-        (proj / "SUMMARY.md").write_text(body, encoding="utf-8")
+        _vw(proj / "SUMMARY.md", body)
         notes.append(f"vault summary: {proj / 'SUMMARY.md'}")
         log = proj / "log.md"  # multi orchestrator log (newest first)
         header = (
@@ -282,13 +293,13 @@ def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) 
         )
         chunk = body.rstrip() + "\n\n---\n\n"
         if not log.is_file():
-            log.write_text(header + chunk, encoding="utf-8")
+            _vw(log, header + chunk)
         else:
             existing = log.read_text(encoding="utf-8", errors="replace")
             marker = "# Multi-product night shift —"
             idx = existing.find(marker)
             bodies = existing[idx:] if idx >= 0 else existing
-            log.write_text(header + chunk + bodies.lstrip(), encoding="utf-8")
+            _vw(log, header + chunk + bodies.lstrip())
         notes.append(f"vault log: {log}")
         # cross-product TODO
         todo_lines = [
@@ -319,7 +330,7 @@ def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) 
                 "- [ ] All green — pick next product work from each roadmap Shaping section"
             )
         todo_lines.append("")
-        (proj / "TODO.md").write_text("\n".join(todo_lines), encoding="utf-8")
+        _vw(proj / "TODO.md", "\n".join(todo_lines) + "\n")
         notes.append(f"vault TODO: {proj / 'TODO.md'}")
     except PermissionError as exc:
         notes.append(f"⚠️ VAULT SKIP: {exc}")

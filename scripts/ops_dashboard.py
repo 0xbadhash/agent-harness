@@ -74,7 +74,7 @@ class Dashboard:
 def _vault_root(explicit: Path | None) -> Path | None:
     if explicit:
         return explicit.expanduser().resolve()
-    for env in ("PRODUCT_VAULT_ROOT", "WATCHLIST_VAULT_ROOT"):
+    for env in ("PRODUCT_VAULT_ROOT",):
         v = os.environ.get(env)
         if v and Path(v).is_dir():
             return Path(v).resolve()
@@ -108,7 +108,7 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
     well: list[Item] = []
     att: list[Item] = []
     fail: list[Item] = []
-    summary = (vault / "01-Projects/harness-night-shift/SUMMARY.md") if vault else None
+    summary = (vault / "agent-tasks/night-shift/SUMMARY.md") if vault else None
     triage = harness / ".agents/artifacts/MORNING_TRIAGE.md"
     text = _read(summary) if summary else ""
     if not text:
@@ -178,7 +178,7 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
     if vault and summary and summary.is_file():
         for it in fail[:1]:
             it.link = it.link or _wiki_link(
-                vault, "01-Projects/harness-night-shift/SUMMARY.md", "night SUMMARY"
+                vault, "agent-tasks/night-shift/SUMMARY.md", "night SUMMARY"
             )
     return well, att, fail
 
@@ -644,7 +644,7 @@ def render(d: Dashboard, vault: Path | None) -> str:
     if vault:
         lines.extend(
             [
-                f"| Night shift multi-product | {_wiki_link(vault, '01-Projects/harness-night-shift/SUMMARY.md', 'harness-night-shift SUMMARY')} |",
+                f"| Night shift multi-product | {_wiki_link(vault, 'agent-tasks/night-shift/SUMMARY.md', 'night-shift SUMMARY')} |",
                 "| Per-product night TODO | `01-Projects/<product>/TODO.md` |",
                 "| Catalyxt news inbox | `01-Projects/catalyxt/news-inbox/YYYY-MM-DD` |",
                 f"| Vault health | {_wiki_link(vault, 'agent-tasks/health-status.md', 'health-status')} |",

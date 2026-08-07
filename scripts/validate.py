@@ -61,18 +61,41 @@ def _resolve_vault() -> Path | None:
                 return p
     except Exception:
         pass
-    for key in ("PRODUCT_VAULT_ROOT", "WATCHLIST_VAULT_ROOT", "SECOND_BRAIN_VAULT"):
-        raw = (os.environ.get(key) or "").strip()
-        if not raw:
-            continue
+    raw = (os.environ.get("PRODUCT_VAULT_ROOT") or "").strip()
+    if raw:
         p = Path(raw).expanduser().resolve()
         if p.is_dir() and (p / "01-Projects").is_dir():
             return p
     default = Path("/opt/second-brain/vault")
     if default.is_dir() and (default / "01-Projects").is_dir():
-        # Only use default if this product has a log there (or any projects exist)
         return default
     return None
+
+
+def _vault_schema_lint_gate() -> int:
+    """Ship gate: vault present → vault_schema_lint (strict-warn default on)."""
+    lint = ROOT / "infra" / "scripts" / "vault_schema_lint.py"
+    if not lint.is_file():
+        alt = SCRIPTS / "vault_schema_lint.py"
+        lint = alt if alt.is_file() else lint
+    if not lint.is_file():
+        print("\n── vault_schema_lint ──")
+        print("⏭️  skipped (vault_schema_lint.py not installed)")
+        return 0
+    vault = _resolve_vault()
+    if vault is None:
+        print("\n── vault_schema_lint ──")
+        print("⏭️  skipped (vault not present / not configured)")
+        return 0
+    cmd = [sys.executable, str(lint), "--vault", str(vault)]
+    # default strict; allow opt-out via env only (lint itself defaults on)
+    print(f"\n── vault_schema_lint (vault={vault}) ──")
+    r = subprocess.run(cmd, cwd=ROOT)
+    if r.returncode != 0:
+        print(f"❌ vault_schema_lint failed (exit {r.returncode})")
+    else:
+        print("✅ vault_schema_lint passed")
+    return r.returncode
 
 
 def _dev_log_contract_gate() -> int:
@@ -115,6 +138,11 @@ def main() -> int:
         action="store_true",
         help="Skip vault dev-log contract gate even when vault is present",
     )
+    ap.add_argument(
+        "--skip-vault-schema",
+        action="store_true",
+        help="Skip vault_schema_lint gate even when vault is present",
+    )
     args = ap.parse_args()
     py = sys.executable
     exits: list[int] = []
@@ -133,6 +161,8 @@ def main() -> int:
         exits.append(_run([py, str(SCRIPTS / "check_module_coverage.py")], "check_module_coverage"))
         if not args.skip_dev_log_contract:
             exits.append(_dev_log_contract_gate())
+        if not args.skip_vault_schema:
+            exits.append(_vault_schema_lint_gate())
 
     failed = sum(1 for e in exits if e != 0)
     print(f"\n{'='*40}\n{len(exits)-failed}/{len(exits)} gates passed")

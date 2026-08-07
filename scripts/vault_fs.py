@@ -57,9 +57,8 @@ PROJECT_FILE_ALLOW = frozenset(
 
 PROJECT_DIR_ALLOW = frozenset({"docs", "_archive"})
 
-SPECIAL_PROJECTS: dict[str, frozenset[str]] = {
-    "harness-night-shift": frozenset({"SUMMARY.md", "TODO.md", "log.md", ".gitkeep"}),
-}
+# Multi-product night-shift lives under agent-tasks/night-shift/ (ROOT_ALLOW free).
+SPECIAL_PROJECTS: dict[str, frozenset[str]] = {}
 
 # Built-in extras when product registry unavailable (mirrors common plugins)
 DEFAULT_EXTRA_DIRS: dict[str, frozenset[str]] = {

@@ -59,7 +59,7 @@
               └─ vault 01-Projects/<label>/{night-shift-log,TODO}.md
                                       │
                                       ▼
-                    vault 01-Projects/harness-night-shift/
+                    vault agent-tasks/night-shift/
                       SUMMARY.md · TODO.md · log.md
 ```
 
@@ -208,9 +208,9 @@ For each existing directory, the orchestrator prefers
 
 | Path | Content |
 |------|---------|
-| `01-Projects/harness-night-shift/SUMMARY.md` | Latest all-product table |
-| `01-Projects/harness-night-shift/TODO.md` | Cross-product checkboxes |
-| `01-Projects/harness-night-shift/log.md` | Append-only multi reports |
+| `agent-tasks/night-shift/SUMMARY.md` | Latest all-product table |
+| `agent-tasks/night-shift/TODO.md` | Cross-product checkboxes |
+| `agent-tasks/night-shift/log.md` | Append-only multi reports |
 | `.agents/artifacts/NIGHT_SHIFT_ALL_REPORT.md` | Repo-side multi summary (harness) |
 
 ---
@@ -463,7 +463,7 @@ Behavior:
 
 - **Latest PASS** + older FAIL chunks → archive full file under `_archive/`, rewrite with timeline + latest report
 - **Latest FAIL** → leave intact (still valid debt)
-- Rebuilds `01-Projects/harness-night-shift/SUMMARY.md`
+- Rebuilds `agent-tasks/night-shift/SUMMARY.md`
 
 ### Automate with the timer
 

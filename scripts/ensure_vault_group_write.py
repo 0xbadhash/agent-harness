@@ -34,8 +34,8 @@ def _iter_targets(vault: Path) -> list[Path]:
             if p.is_file() or name in ("night-shift-log.md", "SUMMARY.md", "log.md"):
                 # include missing night-shift / multi-summary logs for parent dir check
                 out.append(p)
-        # multi-product job writes under harness-night-shift/*
-        if proj.name == "harness-night-shift":
+        # multi-product job re-homed to agent-tasks/night-shift/*
+        if proj.name == "harness-night-shift":  # legacy
             for extra in proj.iterdir() if proj.is_dir() else []:
                 if extra.is_file() and extra not in out:
                     out.append(extra)
@@ -134,7 +134,7 @@ def apply_sudo(vault: Path) -> int:
             "chmod",
             "-R",
             "g+rwX",
-            str(projects / "harness-night-shift"),
+            str(vault / "agent-tasks" / "night-shift"),
         ],
     ]
     # Prefer group secondbrain if exists

@@ -33,7 +33,6 @@ from night_shift_log import render_rotated_log  # noqa: E402
 _HOME = Path.home()
 DEFAULT_VAULT = Path(
     os.environ.get("PRODUCT_VAULT_ROOT")
-    or os.environ.get("WATCHLIST_VAULT_ROOT")
     or "/opt/second-brain/vault"
 )
 
@@ -124,13 +123,13 @@ def rotate_project(
 
 
 def rebuild_multi_summary(vault: Path, *, dry_run: bool) -> str:
-    """Rebuild 01-Projects/harness-night-shift/SUMMARY.md from each project's TODO."""
+    """Rebuild agent-tasks/night-shift/SUMMARY.md from each project's TODO."""
     projects = vault / "01-Projects"
     if not projects.is_dir():
         return "skip multi: no 01-Projects"
     rows: list[str] = []
     for d in sorted(projects.iterdir()):
-        if not d.is_dir() or d.name in ("harness-night-shift",):
+        if not d.is_dir() or d.name in ("harness-night-shift",):  # legacy ignore
             continue
         todo = d / "TODO.md"
         log = d / "night-shift-log.md"
@@ -172,10 +171,10 @@ _Auto-rebuilt by `rotate_night_shift_logs.py` at {when_s}._
 ## Ops
 
 - Per-project detail: `01-Projects/<id>/TODO.md` + `night-shift-log.md`
-- Rotate PASS noise: `python3 scripts/rotate_night_shift_logs.py --vault $PRODUCT_VAULT_ROOT`
+- Multi ops: `agent-tasks/night-shift/` · rotate: `python3 scripts/rotate_night_shift_logs.py --vault $PRODUCT_VAULT_ROOT`
 - Full re-run: `python3 bin/night_shift_all_products.py`
 """
-    out_dir = projects / "harness-night-shift"
+    out_dir = vault / "agent-tasks" / "night-shift"
     out = out_dir / "SUMMARY.md"
     if dry_run:
         return f"dry-run multi: would write {out} ({len(rows)} projects)"
@@ -189,7 +188,7 @@ def main() -> int:
     ap.add_argument("--vault", type=Path, default=DEFAULT_VAULT)
     ap.add_argument("--only", action="append", default=[], help="Project folder name")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--no-multi", action="store_true", help="Skip harness-night-shift SUMMARY")
+    ap.add_argument("--no-multi", action="store_true", help="Skip agent-tasks/night-shift SUMMARY")
     args = ap.parse_args()
     vault = args.vault.expanduser().resolve()
     projects = vault / "01-Projects"
@@ -202,7 +201,7 @@ def main() -> int:
     for d in sorted(projects.iterdir()):
         if not d.is_dir():
             continue
-        if d.name in ("harness-night-shift",):
+        if d.name in ("harness-night-shift",):  # legacy folder if present
             continue
         if only and d.name not in only:
             continue
