@@ -291,6 +291,25 @@ def evaluate(
     else:
         skipped.append("secrets (clean or skip)")
 
+    # Web E2E + Comet contract when product has a website (fail closed)
+    if not prose_only:
+        try:
+            from web_e2e_contract import validate_web_e2e  # type: ignore
+
+            we = validate_web_e2e(root)
+            if we.get("has_website"):
+                if not we.get("pass"):
+                    for v in we.get("violations") or []:
+                        violations.append(f"hard_gates: web_e2e — {v}")
+                else:
+                    skipped.append("web_e2e (ok)")
+            else:
+                skipped.append("web_e2e (no website)")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: web_e2e check error: {e}")
+    else:
+        skipped.append("web_e2e (prose-only)")
+
     return HardGatesResult(
         ok=len(violations) == 0,
         violations=violations,

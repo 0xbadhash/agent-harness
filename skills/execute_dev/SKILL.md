@@ -44,6 +44,15 @@ When invoked with `/execute_dev`:
    3. **Green:** Implement the minimum to make those tests pass. One sub-task only.
    4. **Refactor:** Clean up with tests still green.
    5. **Regression:** Run targeted suite + product smoke (from `product_plugin.yaml`) when runtime surface changes.
+   6. **Website default (mandatory when product has a browser surface):**
+      - Detect: `python3 scripts/check_web_e2e.py --root .` (or `web_e2e` in `product_plugin.yaml`).
+      - If the ship changes UI/routes/copy that users see in a browser:
+        1. Update **Playwright** under `e2e/` (or path in plugin) — same change set as the feature.
+        2. Update **Comet/Perplexity** scenarios in `docs/E2E_COMET_SCENARIOS.md` (or `web_e2e.comet_doc`).
+        3. Prefer **deterministic IDs** from `web_e2e.surfaces` — regenerate with:
+           `python3 scripts/scaffold_web_e2e.py --root . --write`
+      - Do **not** invent free-form scenario numbers; allocate S0…Sn via the plugin (see `docs/web-e2e-comet.md`).
+      - Traceability must map UI ACs → Playwright test and/or Comet S-id.
 4. **Implement constraints + scope governor:**
    - **UI is allowed** when the product task is user-facing UI (use the product's own stack from `product_plugin.yaml`). Prefer progressive enhancement over unnecessary SPA rewrites unless the product already is an SPA.
    - Non-UI product work: APIs, services, CLIs, data paths as the product defines.

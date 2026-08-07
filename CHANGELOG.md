@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.4.17 — 2026-08-07
+
+### Added
+- **Web E2E + Comet default** for products with a website:
+  - `docs/web-e2e-comet.md` — contract, deterministic S0…Sn IDs
+  - `scripts/web_e2e_contract.py` — detect website, allocate IDs, validate
+  - `scripts/check_web_e2e.py` — gate (bootstrap + hard_gates + release)
+  - `scripts/scaffold_web_e2e.py` — regenerate Comet doc + Playwright stubs from `web_e2e.surfaces`
+- `product_plugin.example.yaml` → `web_e2e:` block
+- `hard_gates` / `execute_dev` / `release_mgmt` / `AGENTS.harness.md` require Playwright + Comet updates on UI ships
+- Tests: `tests/test_web_e2e_contract.py`
+
+### Why
+Agents were shipping web UI without updating Playwright or Comet/Perplexity scenarios. Website products now fail closed until both exist and stay in the FSM.
+
 ## v1.4.16 — 2026-08-06
 
 ### Added

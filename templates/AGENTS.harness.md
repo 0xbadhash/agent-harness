@@ -44,9 +44,14 @@ Docs (installed): `.agents/docs/llm-bootstrap.md`, `.agents/docs/ship-flow.md`.
 | Skills | `python3 scripts/verify_skills.py` |
 | Install health | `bash scripts/bootstrap_check.sh` |
 | Smoke | `python3 scripts/product_smoke.py --root .` |
+| Web E2E / Comet | `python3 scripts/check_web_e2e.py --root .` (when product has a website) |
+
+**Website products (default):** every UI ship must update **Playwright** (`e2e/`) **and** **Comet scenarios** (`docs/E2E_COMET_SCENARIOS.md`).  
+Deterministic IDs: declare `web_e2e.surfaces` in the plugin, then `python3 scripts/scaffold_web_e2e.py --root . --write`.  
+Guide: `docs/web-e2e-comet.md` (installed under `.agents/docs/` when present).
 
 Pipeline state: `.agents/state/pipeline.json`  
-Plugin: `.agents/product_plugin.yaml` (edit stack + smoke for *your* language)
+Plugin: `.agents/product_plugin.yaml` (edit stack + smoke + optional `web_e2e` for *your* language)
 
 ## One-shot user phrase
 

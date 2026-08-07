@@ -34,6 +34,9 @@ need "scripts/product_venv.py"
 need "scripts/review_scope.py"
 need "scripts/next_skill.py"
 need "scripts/verify_skills.py"
+need "scripts/check_web_e2e.py"
+need "scripts/scaffold_web_e2e.py"
+need "scripts/web_e2e_contract.py"
 
 if [[ -f scripts/pipeline_state.py ]]; then
   python3 scripts/pipeline_state.py get || fail=1
@@ -69,6 +72,20 @@ if [[ -f scripts/next_skill.py ]]; then
     echo "  ✅ next_skill OK"
   fi
   rm -f "$ns_err"
+fi
+
+if [[ -f scripts/check_web_e2e.py ]]; then
+  set +e
+  python3 scripts/check_web_e2e.py --root "$ROOT"
+  we_rc=$?
+  set -e
+  if [[ $we_rc -ne 0 ]]; then
+    echo "  ❌ check_web_e2e failed (website products need Playwright + Comet docs)"
+    echo "     scaffold: python3 scripts/scaffold_web_e2e.py --root . --write"
+    fail=1
+  else
+    echo "  ✅ check_web_e2e OK (or no website)"
+  fi
 fi
 
 if [[ $fail -ne 0 ]]; then
