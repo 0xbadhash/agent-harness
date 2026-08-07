@@ -352,6 +352,28 @@ def main() -> int:
 
     when = datetime.now(timezone.utc)
     print(f"night_shift_all: {len(products)} product(s) @ {when.isoformat()}")
+
+    # Path contract P0/P1: fleet paths + consumers (fail closed for multi-product run)
+    path_gate_failed = False
+    for gate_name, gate_rel in (
+        ("night_shift_product_paths", "scripts/check_night_shift_product_paths.py"),
+        ("product_path_consumers", "scripts/check_product_path_consumers.py"),
+    ):
+        gate = HARNESS_ROOT / gate_rel
+        if not gate.is_file():
+            continue
+        gcmd = [sys.executable, str(gate)]
+        if args.products_file:
+            gcmd.extend(["--products-file", str(args.products_file)])
+        print(f"--- harness gate: {gate_name} ---")
+        if args.dry_run:
+            print(f"   dry-run: would run {gate}")
+            continue
+        grc = subprocess.run(gcmd, cwd=str(HARNESS_ROOT), check=False).returncode
+        print(f"{'✅' if grc == 0 else '❌'} {gate_name} exit={grc}")
+        if grc != 0:
+            path_gate_failed = True
+
     rows: list[dict] = []
     for name, root in products:
         print(f"--- {name} ({root}) ---")
@@ -374,9 +396,11 @@ def main() -> int:
 
     passed = sum(1 for r in rows if r["ok"])
     total = len(rows)
-    overall = "PASS" if passed == total else "FAIL"
+    overall = "PASS" if passed == total and not path_gate_failed else "FAIL"
     print(f"{'✅' if overall == 'PASS' else '❌'} night_shift_all {overall} ({passed}/{total})")
-    
+    if path_gate_failed:
+        print("❌ harness path contract gate(s) failed (product paths / consumers)")
+
     vault_path = args.vault.expanduser().resolve()
 
     # Rotate vault FAIL spam when latest is PASS; rebuild SUMMARY
