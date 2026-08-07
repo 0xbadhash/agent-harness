@@ -113,16 +113,16 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
                 if not sid_m:
                     continue
                 sid = sid_m.group(1).strip().strip("'\"")
-                entry: dict[str, Any] = {"id": sid}
+                surf: dict[str, Any] = {"id": sid}
                 pm = re.search(r"^[ \t]+playwright:\s*(\S+)", block, re.MULTILINE)
                 if pm:
-                    entry["playwright"] = pm.group(1).strip().strip("'\"")
+                    surf["playwright"] = pm.group(1).strip().strip("'\"")
                 om = re.search(r"^[ \t]+order:\s*(\d+)", block, re.MULTILINE)
                 if om:
-                    entry["order"] = int(om.group(1))
+                    surf["order"] = int(om.group(1))
                 path_m = re.search(r"^[ \t]+path:\s*(\S+)", block, re.MULTILINE)
                 if path_m:
-                    entry["path"] = path_m.group(1).strip().strip("'\"")
+                    surf["path"] = path_m.group(1).strip().strip("'\"")
                 scens: list[dict[str, Any]] = []
                 if re.search(r"scenarios:", block):
                     for rid in re.findall(
@@ -134,14 +134,14 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
                         scens.append({"id": rid, "name": rid, "steps": ["open"]})
                     if not scens:
                         scens = [{"id": "smoke", "name": "smoke", "steps": ["open"]}]
-                    entry["scenarios"] = scens
-                if "scenarios" not in entry:
-                    entry["scenarios"] = [
+                    surf["scenarios"] = scens
+                if "scenarios" not in surf:
+                    surf["scenarios"] = [
                         {"id": "smoke", "name": "smoke", "steps": ["open"]}
                     ]
-                if "playwright" not in entry:
-                    entry["playwright"] = f"e2e/{sid}.spec.ts"
-                surfaces.append(entry)
+                if "playwright" not in surf:
+                    surf["playwright"] = f"e2e/{sid}.spec.ts"
+                surfaces.append(surf)
         if surfaces:
             we["surfaces"] = surfaces
         elif re.search(r"^[ \t]+surfaces:\s*\[\s*\]", section, re.MULTILINE):
