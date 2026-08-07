@@ -253,6 +253,17 @@ echo "   ship skills installed (manifest hits): $SHIP_N / $SHIP_EXPECT"
 echo "   FSM docs: .agents/docs/ship-flow.md · llm-bootstrap.md"
 echo "   Verify:  bash scripts/bootstrap_check.sh"
 echo "   Any LLM: read AGENTS.md + .agents/skills/*/SKILL.md; run ship chain in llm-bootstrap.md"
+# Website/app products: fail-closed E2E contract (Playwright + Comet) — see docs/web-e2e-comet.md
+if [[ -f "$PRODUCT_ROOT/scripts/check_web_e2e.py" ]]; then
+  echo "   Web E2E: python3 scripts/check_web_e2e.py --root .  (mandatory if website/app detected)"
+  if python3 "$PRODUCT_ROOT/scripts/check_web_e2e.py" --root "$PRODUCT_ROOT" >/tmp/web_e2e_install_check.txt 2>&1; then
+    echo "   Web E2E check: ok (or no website)"
+  else
+    echo "   ⚠️  Web E2E check FAILED — product has website/app but contract incomplete:"
+    sed 's/^/      /' /tmp/web_e2e_install_check.txt | tail -20
+    echo "      Fix before /pr_review or set web_e2e.enabled: false if CLI-only. Docs: .agents/docs/web-e2e-comet.md"
+  fi
+fi
 
 if [[ "$VERIFY" -eq 1 ]]; then
   echo "--- --verify ---"

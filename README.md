@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.4.17` (docs synced via `/sync_docs`)
+**Current release:** `v1.4.18` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -51,7 +51,49 @@ Then open the product in **any** coding LLM and ship:
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
 ```bash
-git clone --branch v1.4.6 --depth 1 https://github.com/0xbadhash/agent-harness.git
+git clone --branch v1.4.18 --depth 1 https://github.com/0xbadhash/agent-harness.git
+```
+
+---
+
+## Website / browser-app products (mandatory E2E)
+
+If the product has a **website or browser app**, Playwright + Comet/Perplexity scenarios are **fail-closed** (not optional). Detection is automatic unless you opt out.
+
+| Detected when any of… | Examples |
+|----------------------|----------|
+| `web/`, `index.html`, SPA (`src/App`, `app/page`) | Static lab, Vite/Next app |
+| `playwright.config.*` + `e2e/*spec.ts` | Already on Playwright |
+| `package.json` browser deps / `test:e2e` | react-dom, next, vite, … |
+| `web_e2e.enabled: true` | Explicit |
+
+**Required contract** (`python3 scripts/check_web_e2e.py --root .`):
+
+1. Playwright config **and** ≥1 `*spec.ts`  
+2. Comet/E2E doc (`docs/E2E_COMET_SCENARIOS.md`) with agent report markers  
+3. Test titles use **S-ids** (`test("S0 smoke …")`) and **every** S-id appears in the Comet doc  
+4. `web_e2e.surfaces` in `.agents/product_plugin.yaml`  
+5. `smoke[]` includes e2e (e.g. `cmd: [npm, run, test:e2e]`)
+
+This gate runs inside **`hard_gates` / `/pr_review --validate`** and **`/release_mgmt`**. UI ships that skip Playwright or Comet **cannot** score ≥95 or tag.
+
+| Action | Command |
+|--------|---------|
+| Check | `python3 scripts/check_web_e2e.py --root .` |
+| Scaffold stubs | `python3 scripts/scaffold_web_e2e.py --root . --write` |
+| Full contract doc | [docs/web-e2e-comet.md](docs/web-e2e-comet.md) |
+| **Opt out** (CLI-only product mis-detected) | `web_e2e.enabled: false` in product_plugin |
+| Temporary migration | `web_e2e.strict: false` or `check_web_e2e.py --lenient` |
+
+**Install into many products** (portfolio host):
+
+```bash
+export AGENTS_HARNESS_ROOT=~/agent-harness
+# reinstall lagging products (includes web_e2e scripts)
+python3 "$AGENTS_HARNESS_ROOT/scripts/portfolio_install_report.py" --install
+# or one product:
+"$AGENTS_HARNESS_ROOT/install_into_product.sh" /path/to/product --verify
+python3 /path/to/product/scripts/check_web_e2e.py --root /path/to/product
 ```
 
 ---
@@ -61,7 +103,7 @@ git clone --branch v1.4.6 --depth 1 https://github.com/0xbadhash/agent-harness.g
 | Piece | Role |
 |-------|------|
 | **Skills** (`skills/*/SKILL.md`) | On-demand workflows: spec, TDD implement, code/cross/behavior review, PR score, release, sync docs, night readiness, handoff/session tools |
-| **Scripts** (`scripts/`) | Deterministic gates: **pipeline FSM** ([ship-flow.md](docs/ship-flow.md)), validate, PR score, `next_skill`, hardcodes, vault writers, daytime readiness |
+| **Scripts** (`scripts/`) | Deterministic gates: **pipeline FSM** ([ship-flow.md](docs/ship-flow.md)), validate, PR score, `next_skill`, **web E2E/Comet** (`check_web_e2e`), hardcodes, vault writers, daytime readiness |
 | **Policy** (`policy/`) | Always-on engineering rules the skills inherit |
 | **Product plugin** | *Your* stack, smoke commands, vault path—never hard-coded in the harness |
 

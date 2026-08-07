@@ -19,6 +19,16 @@
 **Mutations:** `scripts/pipeline_state.py` only (atomic).  
 **Inspect:** `python3 scripts/pipeline_state.py get`
 
+### Website / browser-app hard gate (mandatory)
+
+When `scripts/check_web_e2e.py` detects a website or browser app (or `web_e2e.enabled: true`):
+
+- **`/execute_dev`** must update Playwright **and** Comet S-ids in the same ship  
+- **`/pr_review --validate`** → `hard_gates` **fails** if Comet/Playwright/surfaces/smoke e2e are missing or S-ids drift  
+- **`/release_mgmt`** must re-run `check_web_e2e` + smoke including e2e  
+
+Full contract: [web-e2e-comet.md](web-e2e-comet.md). Opt out: `web_e2e.enabled: false`.
+
 Related (product vaults / second-brain kanban): a **card-level ship FSM** may use stages like `spec` → `execute_dev` → `cross_review` → `pr_review` → `release` → `sync_docs` → `done`. Same idea; product install SoT remains `pipeline.json` below.
 
 ---
