@@ -1,20 +1,20 @@
 # NIGHT_FAIL_TICKETS
 
-_Generated 2026-08-02 11:01 UTC by night_fail_remediate.py_
+_Updated 2026-08-07 13:53 UTC after readiness recheck._
 
 Open after bounded autofix. Close when product readiness is green.
 
-## watchlist (FAIL → FAIL)
+## Closed this cycle (were FAIL → now PASS)
 
-- attempt: ensure_dev_env:would run /home/debian/watchlist/scripts/ensure_product_dev_env.py
-- attempt: ruff_fix:/home/debian/watchlist/.venv/bin/python -m ruff check --fix scripts tests
-- attempt: black_format:/home/debian/watchlist/.venv/bin/python -m black scripts tests
-- [ ] [watchlist] fix gate `unknown_gate` until daytime_readiness / product_smoke green
+- [x] agent-harness — validate_full + smoke green
+- [x] catalyxt — validate_full + e2e smoke green
+- [x] substack-push — hardcodes allowlist + validate green
+- [x] watchlist — product_plugin mypy + coverage threshold normalize + smoke green
 
-## substack-push (FAIL → FAIL)
+## Still open
 
-- attempt: ensure_dev_env:would run /home/debian/substack-push/scripts/ensure_product_dev_env.py
-- attempt: ruff_fix:/home/debian/substack-push/.venv/bin/python -m ruff check --fix scripts tests src
-- attempt: black_format:/home/debian/substack-push/.venv/bin/python -m black scripts tests
-- [ ] [substack-push] fix gate `unknown_gate` until daytime_readiness / product_smoke green
+## email-detach (FAIL)
 
+- [ ] [email-detach] clear `validate_full` until night readiness PASS
+  - evidence: morning_triage recheck still red (validate_full)
+  - vault: `01-Projects/email-detach/TODO.md`

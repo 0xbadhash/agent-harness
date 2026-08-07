@@ -108,11 +108,12 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
     well: list[Item] = []
     att: list[Item] = []
     fail: list[Item] = []
+    # Prefer morning triage (includes recheck) over multi-product SUMMARY
     summary = (vault / "agent-tasks/night-shift/SUMMARY.md") if vault else None
     triage = harness / ".agents/artifacts/MORNING_TRIAGE.md"
-    text = _read(summary) if summary else ""
-    if not text:
-        text = _read(triage)
+    text = _read(triage)
+    if not text and summary:
+        text = _read(summary)
     if not text:
         att.append(
             Item(
@@ -124,62 +125,77 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
         )
         return well, att, fail
 
-    # Parse FAIL/PASS from summary table
+    # Parse FAIL/PASS from SUMMARY and/or MORNING_TRIAGE tables
+    seen_pass: set[str] = set()
+    seen_fail: set[str] = set()
+
+    def _pid(line: str) -> str | None:
+        m = re.search(r"\|\s*`([a-zA-Z0-9_-]+)`\s*\|", line)
+        if m:
+            return m.group(1)
+        m = re.search(r"\|\s*([a-zA-Z0-9_-]+)\s*\|", line)
+        if m and m.group(1) not in ("Project", "Product", "path"):
+            return m.group(1)
+        return None
+
     for line in text.splitlines():
-        if "|" not in line or "Project" in line or "---" in line:
+        if "|" not in line or "---" in line:
+            continue
+        if "Project" in line or ("Product" in line and "Path" in line):
+            continue
+        pid = _pid(line)
+        if not pid:
+            continue
+        # Morning triage recheck wins
+        if "yes→ok" in line or "recheck green" in line.lower():
+            if pid not in seen_pass:
+                seen_pass.add(pid)
+                well.append(
+                    Item("green", "night_shift", f"Night readiness PASS: **{pid}**")
+                )
+            continue
+        if "yes→fail" in line or "recheck still red" in line.lower():
+            if pid not in seen_fail:
+                seen_fail.add(pid)
+                link = (
+                    _wiki_link(vault, f"01-Projects/{pid}/TODO.md", f"{pid} TODO")
+                    if vault
+                    else ""
+                )
+                fail.append(
+                    Item(
+                        "fail",
+                        "night_shift",
+                        f"Night readiness FAIL: **{pid}**",
+                        link=link,
+                        action=f"Open product TODO / re-run readiness for {pid}",
+                    )
+                )
             continue
         if "FAIL" in line or "❌" in line:
-            m = re.search(r"\|\s*`?([a-zA-Z0-9_-]+)`?\s*\|", line)
-            pid = m.group(1) if m else line.strip()[:40]
-            link = ""
-            if vault:
-                link = _wiki_link(
-                    vault,
-                    f"01-Projects/{pid}/TODO.md",
-                    f"{pid} TODO",
+            if pid not in seen_fail and pid not in seen_pass:
+                seen_fail.add(pid)
+                link = (
+                    _wiki_link(vault, f"01-Projects/{pid}/TODO.md", f"{pid} TODO")
+                    if vault
+                    else ""
                 )
-            fail.append(
-                Item(
-                    "fail",
-                    "night_shift",
-                    f"Night readiness FAIL: **{pid}**",
-                    link=link,
-                    action=f"Open product TODO / re-run readiness for {pid}",
-                )
-            )
-        elif "PASS" in line or "✅" in line:
-            m = re.search(r"\|\s*`?([a-zA-Z0-9_-]+)`?\s*\|", line)
-            if m and m.group(1) not in ("Project", "product"):
-                well.append(
-                    Item("green", "night_shift", f"Night readiness PASS: **{m.group(1)}**")
-                )
-
-    # triage product lines
-    ttext = _read(triage)
-    for line in ttext.splitlines():
-        if "**FAIL**" in line or "| **FAIL**" in line:
-            m = re.search(r"`([a-zA-Z0-9_-]+)`", line)
-            if m:
-                pid = m.group(1)
-                if not any(pid in x.summary for x in fail):
-                    link = ""
-                    if vault:
-                        link = _wiki_link(vault, f"01-Projects/{pid}/TODO.md", f"{pid} TODO")
-                    fail.append(
-                        Item(
-                            "fail",
-                            "night_shift",
-                            f"Morning triage FAIL: **{pid}**",
-                            link=link,
-                            action="night_fail_remediate or fix product gates",
-                        )
+                fail.append(
+                    Item(
+                        "fail",
+                        "night_shift",
+                        f"Night readiness FAIL: **{pid}**",
+                        link=link,
+                        action=f"Open product TODO / re-run readiness for {pid}",
                     )
+                )
+        elif "PASS" in line or "✅" in line:
+            if pid not in seen_pass and pid not in seen_fail:
+                seen_pass.add(pid)
+                well.append(
+                    Item("green", "night_shift", f"Night readiness PASS: **{pid}**")
+                )
 
-    if vault and summary and summary.is_file():
-        for it in fail[:1]:
-            it.link = it.link or _wiki_link(
-                vault, "agent-tasks/night-shift/SUMMARY.md", "night SUMMARY"
-            )
     return well, att, fail
 
 
@@ -395,7 +411,9 @@ def collect_kanban(vault: Path | None) -> tuple[list[Item], list[Item]]:
     return att, todos
 
 
-def collect_security(quick: bool) -> tuple[list[Item], list[Item], list[Item]]:
+def collect_security(
+    quick: bool, vault: Path | None = None
+) -> tuple[list[Item], list[Item], list[Item]]:
     well: list[Item] = []
     att: list[Item] = []
     fail: list[Item] = []
@@ -468,6 +486,68 @@ def collect_security(quick: bool) -> tuple[list[Item], list[Item], list[Item]]:
                 action="Last check embedded in this dashboard",
             )
         )
+
+    # Weekly deep root/containerd result (security_root_ioc_scan.py)
+    ioc_link = ""
+    if vault:
+        ioc_link = _wiki_link(vault, "agent-tasks/security-ioc-status.md", "security-ioc-status")
+        jpath = vault / "agent-tasks" / "security-ioc-last.json"
+        if jpath.is_file():
+            try:
+                deep = json.loads(jpath.read_text(encoding="utf-8", errors="replace"))
+            except (OSError, json.JSONDecodeError):
+                deep = {}
+            when = deep.get("when_utc") or "unknown"
+            if deep.get("status") == "fail":
+                n_pin = deep.get("pin_count") or len(deep.get("malicious_pins") or [])
+                n_pay = deep.get("payload_count") or len(deep.get("payload_paths") or [])
+                fail.append(
+                    Item(
+                        "fail",
+                        "security",
+                        f"Weekly root/containerd IoC **FAIL** ({n_pin} pins, {n_pay} payloads) @ {when}",
+                        link=ioc_link,
+                        action="Open security-ioc-status; isolate; re-scan with sudo --deep",
+                    )
+                )
+                for b in (deep.get("malicious_pins") or [])[:5]:
+                    fail.append(
+                        Item(
+                            "fail",
+                            "security",
+                            f"Deep IoC pin: {b}",
+                            link=ioc_link,
+                            action="Quarantine package; rotate credentials",
+                        )
+                    )
+            elif deep.get("status") == "ok":
+                well.append(
+                    Item(
+                        "green",
+                        "security",
+                        f"Weekly root/containerd IoC **clean** @ {when}",
+                        link=ioc_link,
+                        action="Timer: security-root-ioc.timer (Sun 04:30 UTC)",
+                    )
+                )
+            else:
+                att.append(
+                    Item(
+                        "attention",
+                        "security",
+                        f"Deep IoC scan status unknown ({deep.get('status')})",
+                        link=ioc_link,
+                    )
+                )
+        else:
+            att.append(
+                Item(
+                    "attention",
+                    "security",
+                    "No weekly root/containerd IoC scan yet",
+                    action="sudo python3 scripts/security_root_ioc_scan.py --deep --write-dashboard",
+                )
+            )
     return well, att, fail
 
 
@@ -536,7 +616,7 @@ def build(vault: Path | None, quick: bool) -> Dashboard:
     d.attention.extend(a)
     d.todos.extend(t)
 
-    w, a, f = collect_security(quick=quick)
+    w, a, f = collect_security(quick=quick, vault=vault)
     d.went_well.extend(w)
     d.attention.extend(a)
     d.failing.extend(f)
@@ -651,6 +731,7 @@ def render(d: Dashboard, vault: Path | None) -> str:
                 f"| Hygiene | {_wiki_link(vault, 'agent-tasks/hygiene-status.md', 'hygiene-status')} |",
                 f"| Pipeline | {_wiki_link(vault, 'agent-tasks/pipeline-status.md', 'pipeline-status')} |",
                 f"| Kanban | {_wiki_link(vault, 'agent-tasks/kanban.md', 'kanban')} |",
+                f"| Security IoC (weekly deep) | {_wiki_link(vault, 'agent-tasks/security-ioc-status.md', 'security-ioc-status')} |",
                 f"| This dashboard | {_wiki_link(vault, 'agent-tasks/OPS-DASHBOARD.md', 'OPS-DASHBOARD')} |",
             ]
         )
@@ -667,13 +748,17 @@ def render(d: Dashboard, vault: Path | None) -> str:
             "cd ~/agent-harness",
             "python3 scripts/night_shift_morning_triage.py",
             "python3 scripts/ops_dashboard.py --write",
-            "# security deep (optional): python3 scripts/ops_dashboard.py --write  # default includes seed scan",
+            "sudo python3 scripts/security_root_ioc_scan.py --deep --write-dashboard",
             "```",
             "",
             "## Regular security check",
             "",
-            "This dashboard re-scans home product lockfiles for **keyv/ChainDrop** seed malicious versions "
-            "and obvious payload filenames. For root/containerd, re-run occasionally with sudo forensic script.",
+            "- **Daily (this dashboard):** home product lockfiles for **keyv/ChainDrop** seed pins + payload filenames.",
+            "- **Weekly deep:** `security-root-ioc.timer` (Sun 04:30 UTC) runs "
+            "`security_root_ioc_scan.py --deep` over home, `/opt`, and containerd. "
+            "Findings → fail rows here + [[agent-tasks/security-ioc-status|security-ioc-status]]. "
+            "Clean → green line only.",
+            "- **Manual:** `sudo python3 scripts/security_root_ioc_scan.py --deep --write-dashboard`",
             "",
             "_Auto-generated — do not hand-edit the tables; fix sources and re-run generator._",
             "",

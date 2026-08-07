@@ -1,0 +1,21 @@
+[Unit]
+Description=Weekly root/containerd npm malware IoC scan → vault + OPS-DASHBOARD on findings
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Root required for /var/lib/containerd; script still works partially without it
+User=root
+Group=root
+WorkingDirectory=/home/debian/agent-harness
+Environment=PRODUCT_VAULT_ROOT=/opt/second-brain/vault
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# --deep includes containerd; --write-dashboard refreshes front door when needed
+# Exit 1 = findings (still success for timer bookkeeping via SuccessExitStatus)
+ExecStart=/usr/bin/python3 /home/debian/agent-harness/scripts/security_root_ioc_scan.py --deep --write-dashboard
+SuccessExitStatus=0 1
+# Vault is group-writable by secondbrain; ensure root-created files are readable
+UMask=0022
+
+[Install]
+WantedBy=multi-user.target

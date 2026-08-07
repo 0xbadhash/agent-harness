@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly root/containerd IoC scan (Sunday 04:30 UTC)
+
+[Timer]
+# After weekend; avoids colliding with nightly product readiness (19:15 UTC)
+OnCalendar=Sun *-*-* 04:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,18 @@
 # Changelog
 
-## v1.4.18 — 2026-08-07
+## v1.4.19 — 2026-08-07
+
+### Added
+- **OPS weekly deep IoC scan:** `scripts/security_root_ioc_scan.py` + `deploy/security-root-ioc.{service,timer}`
+  (Sun 04:30 UTC, root + `/opt` + containerd). Writes `agent-tasks/security-ioc-status.md`;
+  findings refresh OPS-DASHBOARD fail rows; clean → green line only.
+- `ops_dashboard` reads weekly IoC JSON; prefers morning triage recheck for night status.
+
+### Fixed
+- Night readiness reds on agent-harness / catalyxt / substack-push / watchlist (type/lint, hardcode
+  newsjack allowlist, e2e `test:e2e` + Playwright webServer, coverage baseline).
+
+v1.4.18 — 2026-08-07
 
 ### Changed — **mandatory** web/app E2E (fail closed)
 - `validate_web_e2e` now **requires** for any detected website or browser app:
