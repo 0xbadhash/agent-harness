@@ -163,6 +163,6 @@ def path_matches_product_prefixes(path: str, prefixes: list[str]) -> bool:
     path = path.lstrip("./")
     for pref in prefixes:
         p = pref.rstrip("/")
-        if path == p or path.startswith(p + "/") or path.startswith(pref):
+        if path == p or path.startswith((p + "/", pref)):
             return True
     return False

@@ -15,7 +15,7 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from web_e2e_contract import validate_web_e2e  # noqa: E402
+from web_e2e_contract import validate_web_e2e
 
 
 def main() -> int:

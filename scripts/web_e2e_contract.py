@@ -129,13 +129,16 @@ def detect_website(root: Path, plugin: dict[str, Any] | None = None) -> dict[str
             reasons.append(cand)
             break
     docs = root / "docs"
-    if docs.is_dir() and (
-        list(docs.glob("*COMET*"))
-        or list(docs.glob("*E2E*SCENARIO*"))
-        or list(docs.glob("E2E*.md"))
+    if (
+        docs.is_dir()
+        and (
+            list(docs.glob("*COMET*"))
+            or list(docs.glob("*E2E*SCENARIO*"))
+            or list(docs.glob("E2E*.md"))
+        )
+        and not any(str(r).startswith("docs/") for r in reasons)
     ):
-        if not any(str(r).startswith("docs/") for r in reasons):
-            reasons.append("docs/E2E*")
+        reasons.append("docs/E2E*")
 
     reasons.extend(_detect_package_web_app(root))
 
@@ -211,8 +214,7 @@ def allocate_scenario_ids(surfaces: list[dict[str, Any]]) -> list[dict[str, Any]
 
 def comet_doc_path(root: Path, cfg: dict[str, Any]) -> Path:
     if cfg.get("comet_doc"):
-        p = root / str(cfg["comet_doc"])
-        return p if p.is_file() else p  # may be missing
+        return root / str(cfg["comet_doc"])  # may be missing
     for cand in DEFAULT_COMET_CANDIDATES:
         p = root / cand
         if p.is_file():
@@ -341,15 +343,13 @@ def validate_web_e2e(root: Path, *, strict: bool | None = None) -> dict[str, Any
 
     pw_ids = extract_playwright_scenario_ids(specs) if specs else set()
     result["playwright_s_ids"] = sorted(pw_ids)
-    if specs and not pw_ids:
-        # Allow non-S-id tests only with explicit waiver
-        if cfg.get("require_s_ids", True) is not False:
-            result["pass"] = False
-            result["violations"].append(
-                "Playwright specs found but no S-ids in test() titles "
-                "(name tests like test('S0 smoke …') for Comet alignment; "
-                "or set web_e2e.require_s_ids: false during migration)"
-            )
+    if specs and not pw_ids and cfg.get("require_s_ids", True) is not False:
+        result["pass"] = False
+        result["violations"].append(
+            "Playwright specs found but no S-ids in test() titles "
+            "(name tests like test('S0 smoke …') for Comet alignment; "
+            "or set web_e2e.require_s_ids: false during migration)"
+        )
     if pw_ids and comet_text:
         comet_ids = set(result["comet_s_ids"])
         missing = sorted(pw_ids - comet_ids)
