@@ -33,7 +33,7 @@ from night_shift_log import render_rotated_log  # noqa: E402
 _HOME = Path.home()
 DEFAULT_VAULT = Path(
     os.environ.get("PRODUCT_VAULT_ROOT")
-    or "/opt/second-brain/vault"
+    or ""
 )
 
 

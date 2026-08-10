@@ -1,16 +1,16 @@
 # BEHAVIOR-REPORT
 
 **Marker:** BEHAVIOR-REPORT  
-**When:** 2026-08-10 03:19 UTC  
+**When:** 2026-08-10  
 
-## Behaviors exercised
-1. `is_large_baseline` with default + kwargs override + plugin thresholds
-2. `spec_gate` waiver → WAIVER_LOG.jsonl line
-3. `portfolio_install_report --protect-drift` reports diverged protect scripts
-4. Daytime workflow YAML includes skill-conformance job
+## Behaviors
+1. Illegal FSM transition raises ValueError; force path logs JSONL.
+2. CODE-REVIEW quality floor rejects thin auto stubs.
+3. skip-hard-gates logs SKIP_HARD_GATES_LOG.jsonl.
+4. ops_dashboard collects waiver 30d and appends OPS_SNAPSHOTS.jsonl.
 
 ## Runtime surface
-Scripts + CI only; no production HTTP surface change.
+Scripts/CI only; no new public HTTP surface.
 
 ## Result
-PASS under unit tests (151) + ruff on touched modules.
+PASS under unit tests.

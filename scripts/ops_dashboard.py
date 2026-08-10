@@ -78,11 +78,17 @@ def _vault_root(explicit: Path | None) -> Path | None:
         v = os.environ.get(env)
         if v and Path(v).is_dir():
             return Path(v).resolve()
+    # HSQ-2: last-resort discovery only (prefer PRODUCT_VAULT_ROOT)
     for cand in (
-        Path("/opt/second-brain/vault"),
         Path.home() / "second-brain" / "vault",
+        Path("/opt/second-brain/vault"),
     ):
         if cand.is_dir():
+            import sys as _sys
+            print(
+                f"⚠️  ops_dashboard: vault via fallback {cand} — set PRODUCT_VAULT_ROOT",
+                file=_sys.stderr,
+            )
             return cand.resolve()
     return None
 
@@ -588,6 +594,86 @@ def collect_portfolio() -> tuple[list[Item], list[Item]]:
     return well, att
 
 
+def collect_waivers(harness: Path) -> tuple[list[Item], list[Item]]:
+    """HSQ-2: surface 30d waiver counts from WAIVER_LOG.jsonl."""
+    well: list[Item] = []
+    att: list[Item] = []
+    log = harness / ".agents" / "artifacts" / "WAIVER_LOG.jsonl"
+    if not log.is_file():
+        return well, att
+    from collections import Counter
+    from datetime import datetime, timedelta, timezone
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    by_type: Counter[str] = Counter()
+    n = 0
+    try:
+        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            ts = row.get("ts") or ""
+            try:
+                when = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            except ValueError:
+                when = cutoff
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            if when < cutoff:
+                continue
+            n += 1
+            by_type[str(row.get("waiver_type") or "?")] += 1
+    except OSError:
+        return well, att
+    if n == 0:
+        well.append(Item("green", "waiver", "Spec waivers (30d): **0**"))
+    elif n < 10:
+        att.append(
+            Item(
+                "attention",
+                "waiver",
+                f"Spec waivers (30d): **{n}** ({dict(by_type)})",
+                action="python3 scripts/waiver_report.py --days 30",
+            )
+        )
+    else:
+        att.append(
+            Item(
+                "attention",
+                "waiver",
+                f"Spec waivers (30d): **{n}** HIGH — review policy",
+                action="python3 scripts/waiver_report.py --days 30",
+            )
+        )
+    return well, att
+
+
+def append_ops_snapshot(d: Dashboard, vault: Path | None) -> None:
+    """HSQ-2: append one JSONL snapshot for trend mining."""
+    row = {
+        "ts": d.when_utc,
+        "overall": d.overall,
+        "went_well": len(d.went_well),
+        "attention": len(d.attention),
+        "failing": len(d.failing),
+        "todos": len(d.todos),
+    }
+    paths = [HARNESS / ".agents" / "artifacts" / "OPS_SNAPSHOTS.jsonl"]
+    if vault:
+        paths.append(vault / "agent-tasks" / "ops-snapshots.jsonl")
+    for path in paths:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        except OSError:
+            continue
+
+
+
 def build(vault: Path | None, quick: bool) -> Dashboard:
     now = datetime.now(timezone.utc)
     hkt = datetime.now(HKT)
@@ -625,6 +711,10 @@ def build(vault: Path | None, quick: bool) -> Dashboard:
     d.went_well.extend(w)
     d.attention.extend(a)
 
+    w, a = collect_waivers(HARNESS)
+    d.went_well.extend(w)
+    d.attention.extend(a)
+
     # Night fail tickets as todos
     tickets = HARNESS / ".agents/artifacts/NIGHT_FAIL_TICKETS.md"
     ttext = _read(tickets)
@@ -645,6 +735,7 @@ def build(vault: Path | None, quick: bool) -> Dashboard:
         d.overall = "ATTENTION"
     else:
         d.overall = "GREEN"
+    append_ops_snapshot(d, vault)
     return d
 
 

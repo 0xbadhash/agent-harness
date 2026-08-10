@@ -171,6 +171,49 @@ def _has_marker(path: Path, *needles: str) -> bool:
     return any(n in text for n in needles)
 
 
+# HSQ-2: minimum substance for CODE-REVIEW (auto-marker stubs fail this floor)
+CODE_REVIEW_MIN_CHARS = 180
+CODE_REVIEW_AUTO_MARKER = "Auto-written by run_ship_chain"
+
+
+def _code_review_quality(path: Path) -> tuple[bool, str]:
+    """Return (ok, detail). Marker required; thin/auto stubs fail quality floor."""
+    if not path.is_file():
+        return False, "missing"
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if not any(n in text for n in ("CODE-REVIEW", "CODE_REVIEW", "**Marker:** CODE-REVIEW")):
+        return False, "no marker"
+    body = text.strip()
+    if CODE_REVIEW_AUTO_MARKER in text and len(body) < 400:
+        return False, "auto-marker stub too thin (expand /code_review or pass quality floor)"
+    if len(body) < CODE_REVIEW_MIN_CHARS:
+        return False, f"body < {CODE_REVIEW_MIN_CHARS} chars"
+    # require a verdict-ish word
+    low = body.lower()
+    if not any(w in low for w in ("verdict", "approve", "reject", "finding", "p0", "pass", "fail")):
+        return False, "missing verdict/findings language"
+    return True, "ok"
+
+
+def _log_skip_hard_gates(root: Path) -> None:
+    import os
+    from datetime import datetime, timezone
+    art = Path(root) / ".agents" / "artifacts"
+    try:
+        art.mkdir(parents=True, exist_ok=True)
+        log = art / "SKIP_HARD_GATES_LOG.jsonl"
+        row = {
+            "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "actor": os.environ.get("USER") or os.environ.get("LOGNAME") or "unknown",
+            "cwd": str(Path(root).resolve()),
+        }
+        with log.open("a", encoding="utf-8") as f:
+            import json
+            f.write(json.dumps(row) + "\n")
+    except OSError:
+        pass
+
+
 def evaluate(
     root: Path,
     pr_draft: Path,
@@ -182,6 +225,7 @@ def evaluate(
     root = Path(root).resolve()
     pr_draft = Path(pr_draft)
     if skip:
+        _log_skip_hard_gates(root)
         return HardGatesResult(ok=True, skipped=["all (--skip-hard-gates)"])
 
     violations: list[str] = []
@@ -207,10 +251,14 @@ def evaluate(
         skipped.extend(["CODE-REVIEW", "Red-proof", "BEHAVIOR-REPORT (prose-only)"])
     else:
         code_art = root / ".agents" / "artifacts" / "CODE_REVIEW.md"
-        if not _has_marker(code_art, "CODE-REVIEW", "CODE_REVIEW", "**Marker:** CODE-REVIEW"):
+        ok_cr, detail_cr = _code_review_quality(code_art)
+        if not ok_cr:
             violations.append(
-                "hard_gates: CODE-REVIEW missing — write .agents/artifacts/CODE_REVIEW.md "
-                "with marker CODE-REVIEW"
+                "hard_gates: CODE-REVIEW "
+                + detail_cr
+                + " — write .agents/artifacts/CODE_REVIEW.md with marker CODE-REVIEW "
+                + f"and ≥{CODE_REVIEW_MIN_CHARS} chars + verdict/findings "
+                + "(auto-marker stubs from run_ship_chain fail this floor)"
             )
         if not RED_PROOF_RE.search(draft_text):
             violations.append(

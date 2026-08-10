@@ -61,9 +61,16 @@ def check_file(path: Path) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--vault", type=Path, default=Path("/opt/second-brain/vault"))
+    ap.add_argument("--vault", type=Path, default=None, help="Vault root (or PRODUCT_VAULT_ROOT)")
     ap.add_argument("--project", action="append", dest="projects")
     args = ap.parse_args(argv)
+    if args.vault is None:
+        import os
+        env = (os.environ.get("PRODUCT_VAULT_ROOT") or "").strip()
+        args.vault = Path(env) if env else None
+    if args.vault is None:
+        print("⏭️  vault not set (PRODUCT_VAULT_ROOT / --vault); skip or pass --vault", flush=True)
+        raise SystemExit(0)
     root = args.vault.expanduser().resolve() / "01-Projects"
     paths = sorted(root.glob("*/dev-log.md"))
     if args.projects:

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Atomic FSM state manager. Never hand-edit .agents/state/pipeline.json."""
+"""Atomic FSM state manager. Never hand-edit .agents/state/pipeline.json.
+
+HSQ-2: legal transitions enforced (ship-flow edges). Escape hatch:
+``set_phase(..., force_transition=True)`` or CLI ``--force-transition``
+(logs to .agents/artifacts/FORCE_TRANSITION_LOG.jsonl).
+"""
 from __future__ import annotations
 
 import argparse
@@ -7,6 +12,7 @@ import json
 import sys
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +24,18 @@ except ImportError:  # pragma: no cover — non-POSIX
 # Five ship phases only (see docs/ship-flow.md). Do not invent others.
 VALID_PHASES = {"init", "ready_for_review", "approved", "blocked", "shipped"}
 
+# Legal edges from docs/ship-flow.md + self (idempotent) + score re-entry paths.
+# Explicitly forbids e.g. init→shipped without --force-transition.
+ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
+    # init→approved/blocked: allow score without prior set-phase ready_for_review
+    # (execute_dev often leaves phase at init until pr_validator stamps).
+    "init": frozenset({"init", "ready_for_review", "blocked", "approved"}),
+    "ready_for_review": frozenset({"ready_for_review", "approved", "blocked", "init"}),
+    "approved": frozenset({"approved", "shipped", "blocked", "ready_for_review"}),
+    "blocked": frozenset({"blocked", "ready_for_review", "init", "approved"}),
+    "shipped": frozenset({"shipped", "init"}),
+}
+
 
 def _state_path() -> Path:
     root = Path(__file__).resolve().parent.parent
@@ -26,6 +44,10 @@ def _state_path() -> Path:
 
 def _lock_path() -> Path:
     return _state_path().parent / ".pipeline.json.lock"
+
+
+def _root() -> Path:
+    return Path(__file__).resolve().parent.parent
 
 
 def _atomic_write(path: Path, data: dict[str, Any]) -> None:
@@ -43,6 +65,24 @@ def _atomic_write(path: Path, data: dict[str, Any]) -> None:
         except OSError:
             pass
         raise
+
+
+def _log_force_transition(from_phase: str, to_phase: str, reason: str) -> None:
+    art = _root() / ".agents" / "artifacts"
+    try:
+        art.mkdir(parents=True, exist_ok=True)
+        log = art / "FORCE_TRANSITION_LOG.jsonl"
+        row = {
+            "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "from": from_phase,
+            "to": to_phase,
+            "reason": reason or "unspecified",
+            "actor": os.environ.get("USER") or os.environ.get("LOGNAME") or "unknown",
+        }
+        with log.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 # Optional ADSLC identity fields (A5) — preserved across set-phase
@@ -82,6 +122,28 @@ def get() -> dict[str, Any]:
     return data
 
 
+def assert_transition_allowed(
+    from_phase: str,
+    to_phase: str,
+    *,
+    force: bool = False,
+) -> None:
+    """Raise ValueError if transition is illegal and force is False."""
+    if to_phase not in VALID_PHASES:
+        raise ValueError(f"Invalid phase: {to_phase}. Valid: {sorted(VALID_PHASES)}")
+    if from_phase not in VALID_PHASES:
+        from_phase = "init"
+    if force:
+        return
+    allowed = ALLOWED_TRANSITIONS.get(from_phase, frozenset())
+    if to_phase not in allowed:
+        raise ValueError(
+            f"Illegal FSM transition {from_phase!r} → {to_phase!r}. "
+            f"Allowed from {from_phase!r}: {sorted(allowed)}. "
+            f"Use --force-transition only with a logged reason."
+        )
+
+
 def set_phase(
     phase: str,
     score: float | None = None,
@@ -90,6 +152,8 @@ def set_phase(
     spec_id: str | None = None,
     card_id: str | None = None,
     waiver: str | None = None,
+    force_transition: bool = False,
+    force_reason: str = "",
 ) -> None:
     if phase not in VALID_PHASES:
         raise ValueError(f"Invalid phase: {phase}. Valid: {sorted(VALID_PHASES)}")
@@ -102,6 +166,10 @@ def set_phase(
             lock_f = open(_lock_path(), "a+", encoding="utf-8")
             fcntl.flock(lock_f.fileno(), fcntl.LOCK_EX)
         state = get()
+        prev = str(state.get("phase") or "init")
+        assert_transition_allowed(prev, phase, force=force_transition)
+        if force_transition and prev != phase:
+            _log_force_transition(prev, phase, force_reason)
         state["phase"] = phase
         if score is not None:
             state["score"] = score
@@ -134,18 +202,34 @@ def main() -> int:
     sp.add_argument("--spec-id", type=str, dest="spec_id")
     sp.add_argument("--card-id", type=str, dest="card_id")
     sp.add_argument("--waiver", type=str, help="hotfix|chore|docs-only|prose-only")
+    sp.add_argument(
+        "--force-transition",
+        action="store_true",
+        help="Allow illegal phase jumps (logged to FORCE_TRANSITION_LOG.jsonl)",
+    )
+    sp.add_argument(
+        "--force-reason",
+        default="",
+        help="Required in spirit when forcing; stored in force log",
+    )
     args = ap.parse_args()
     if args.cmd == "get":
         print(json.dumps(get(), indent=2))
     else:
-        set_phase(
-            args.phase,
-            args.score,
-            args.task,
-            spec_id=args.spec_id,
-            card_id=args.card_id,
-            waiver=args.waiver,
-        )
+        try:
+            set_phase(
+                args.phase,
+                args.score,
+                args.task,
+                spec_id=args.spec_id,
+                card_id=args.card_id,
+                waiver=args.waiver,
+                force_transition=bool(args.force_transition),
+                force_reason=str(args.force_reason or ""),
+            )
+        except ValueError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            return 1
         print(f"✅ phase → {args.phase}")
     return 0
 

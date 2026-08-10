@@ -387,6 +387,16 @@ python3 scripts/pr_validator.py --diff HEAD~1...HEAD --update-pipeline
 
 ## Soft gates
 
+### FSM enforcement (HSQ-2)
+
+`pipeline_state.set_phase` enforces **legal transitions** (see `ALLOWED_TRANSITIONS` in
+`scripts/pipeline_state.py`). Illegal jumps raise `ValueError`. Escape:
+`set-phase … --force-transition --force-reason "…"`.
+
+`run_ship_chain` does **not** auto-write CODE-REVIEW stubs unless
+`--allow-auto-markers`. Even then, hard_gates quality floor may reject thin stubs.
+
+
 - **Cross-review:** large diffs warn without evidence; optional `--strict-cross-review`  
   - Product paths come from `product_plugin.product_path_prefixes` (not hard-coded stack paths)
   - Large-diff thresholds default to files≥8, churn≥200, non_test_loc≥150 (see `review_scope.py`); override via plugin `review_scope:` (HSQ-1)

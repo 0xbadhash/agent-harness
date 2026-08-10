@@ -1,13 +1,13 @@
 # CROSS-REVIEW
 
 **Marker:** CROSS-REVIEW  
-**When:** 2026-08-10 03:19 UTC  
-**Persona:** second-pass process integrity
+**When:** 2026-08-10  
+**Persona:** integrity / ops
 
 ## Notes
-- Large-diff soft gate still soft; only thresholds become product-configurable
-- Waiver tracking is visibility-only (no monthly hard stop) — intentional HSQ-1 non-goal
-- Daytime vs night remain separate (no merge)
+- Transition matrix matches ship-flow edges with score re-entry from blocked→approved.
+- Auto-marker escape is explicit flag, not silent default.
+- Protect playbook is process, not auto-merge (correct blast radius).
 
 ## Verdict
-No cross-persona blockers.
+Accept — no cross-persona blockers.

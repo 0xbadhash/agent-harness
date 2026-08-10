@@ -314,9 +314,16 @@ def run_ensure(vault: Path, *, dry_run: bool = False) -> tuple[str, list[dict]]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--vault", type=Path, default=Path("/opt/second-brain/vault"))
+    ap.add_argument("--vault", type=Path, default=None, help="Vault root (or PRODUCT_VAULT_ROOT)")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
+    if args.vault is None:
+        import os
+        env = (os.environ.get("PRODUCT_VAULT_ROOT") or "").strip()
+        if not env:
+            print("Set --vault or PRODUCT_VAULT_ROOT", file=sys.stderr)
+            return 2
+        args.vault = Path(env)
     vault = args.vault.expanduser().resolve()
     board = vault / "agent-tasks" / "kanban.md"
     if not board.is_file():

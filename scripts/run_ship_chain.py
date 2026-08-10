@@ -107,6 +107,7 @@ def run_chain(
     push: bool,
     portfolio: bool,
     stop_at: str | None,
+    allow_auto_markers: bool = False,
 ) -> int:
     root = root.resolve()
     py = sys.executable
@@ -122,12 +123,20 @@ def run_chain(
 
     # Ensure review artifacts
     _ensure_pr_draft(root)
-    _ensure_artifact(
-        root / ".agents" / "artifacts" / "CODE_REVIEW.md",
-        "CODE-REVIEW",
-        "CODE-REVIEW",
-        "p0=0\nDeterministic closeout; re-run /code_review for deep pass if needed.",
-    )
+    if not allow_auto_markers:
+        print(
+            "⚠️  run_ship_chain: auto CODE-REVIEW/BEHAVIOR stubs disabled "
+            "(pass --allow-auto-markers to enable; HSQ-2 honor-system escape)."
+        )
+    if allow_auto_markers:
+        _ensure_artifact(
+            root / ".agents" / "artifacts" / "CODE_REVIEW.md",
+            "CODE-REVIEW",
+            "CODE-REVIEW",
+            "p0=0\nDeterministic closeout; re-run /code_review for deep pass if needed.\n"
+            "Verdict: provisional pass under auto-marker (expand before real ship).\n"
+            "Findings: none expanded — auto chain stub.\n",
+        )
     # scope for cross/behavior
     try:
         from next_skill import decide  # type: ignore
@@ -136,19 +145,20 @@ def run_chain(
     except Exception:  # noqa: BLE001
         nxt, meta = "/pr_review --validate", {}
 
-    if "cross_review" in nxt or meta.get("large") == "True":
+    if allow_auto_markers and ("cross_review" in nxt or meta.get("large") == "True"):
         _ensure_artifact(
             root / ".agents" / "artifacts" / "CROSS_REVIEW.md",
             "CROSS-REVIEW",
             "CROSS-REVIEW",
-            "ACCEPT — auto chain; personas not expanded.",
+            "ACCEPT — auto chain; personas not expanded.\nVerdict: provisional.",
         )
-    if meta.get("runtime") == "True" or "behavior" in nxt:
+    if allow_auto_markers and (meta.get("runtime") == "True" or "behavior" in nxt):
         _ensure_artifact(
             root / ".agents" / "artifacts" / "BEHAVIOR_REPORT.md",
             "BEHAVIOR-REPORT",
             "BEHAVIOR-REPORT",
-            "Runtime surface present; smoke/validate used as behavior proxy in auto chain.",
+            "Runtime surface present; smoke/validate used as behavior proxy in auto chain.\n"
+            "Verdict: provisional auto-marker.",
         )
         # Threat notes often required
         prt = (root / "PR_DRAFT.md").read_text(encoding="utf-8", errors="replace")
@@ -257,6 +267,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--head", default="HEAD")
     ap.add_argument("--push", action="store_true")
     ap.add_argument("--portfolio", action="store_true", help="Force portfolio install step")
+    ap.add_argument(
+        "--allow-auto-markers",
+        action="store_true",
+        help="Write minimal CODE-REVIEW/BEHAVIOR stubs (honor system; quality floor may still fail)",
+    )
     ap.add_argument("--stop-at", choices=["approved", "shipped"], default=None)
     ap.add_argument("--no-portfolio", action="store_true")
     args = ap.parse_args(argv)
@@ -267,6 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         push=args.push,
         portfolio=args.portfolio and not args.no_portfolio,
         stop_at=args.stop_at,
+        allow_auto_markers=bool(args.allow_auto_markers),
     )
 
 

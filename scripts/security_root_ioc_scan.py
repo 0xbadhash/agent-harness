@@ -72,8 +72,8 @@ def _vault() -> Path | None:
         if p.is_dir():
             return p
     for cand in (
-        Path("/opt/second-brain/vault"),
         Path.home() / "second-brain" / "vault",
+        Path("/opt/second-brain/vault"),  # last-resort host path
     ):
         if cand.is_dir():
             return cand

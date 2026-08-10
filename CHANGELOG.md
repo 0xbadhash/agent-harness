@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.4.21 — 2026-08-10
+
+### HSQ-2 Integrity & Ops (items 1–9)
+1. FSM `ALLOWED_TRANSITIONS` + `--force-transition` log
+2. `run_ship_chain --allow-auto-markers` (default off)
+3. Real CI skill-conformance path filter
+4. Vault `/opt` defaults demoted to last-resort warn
+5. `docs/protect-list-merge.md` playbook
+6. OPS-DASHBOARD 30d waiver summary
+7. `OPS_SNAPSHOTS.jsonl` daily append
+8. CODE-REVIEW quality floor (min chars + verdict; auto-stubs fail)
+9. `SKIP_HARD_GATES_LOG.jsonl` on `--skip-hard-gates`
+
 ## v1.4.20 — 2026-08-10
 
 ### HSQ-1 Ship Quality SoT

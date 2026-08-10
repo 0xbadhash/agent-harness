@@ -63,7 +63,11 @@ class TestHardGates(unittest.TestCase):
             )
             _write(
                 root / ".agents" / "artifacts" / "CODE_REVIEW.md",
-                "# CODE-REVIEW\n**Marker:** CODE-REVIEW\np0=0\n",
+                "# CODE-REVIEW\n**Marker:** CODE-REVIEW\n\n"
+                "## Findings\n- No P0 issues in test fixture scope.\n"
+                "- Gate checks exercised via unit tests.\n\n"
+                "## Verdict\nApprove fixture pass for hard_gates unit test.\n"
+                + ("x" * 80),
             )
             with mock.patch.object(hg, "_scope_flags", return_value=(False, False)):
                 with mock.patch.object(hg, "_secrets_ok", return_value=True):

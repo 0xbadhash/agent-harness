@@ -236,7 +236,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--vault",
         type=Path,
-        default=Path("/opt/second-brain/vault"),
+        default=None,
         help="Vault root",
     )
     ap.add_argument(
@@ -247,6 +247,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
+    if getattr(args, "vault", None) is None:
+        import os
+        env = (os.environ.get("PRODUCT_VAULT_ROOT") or "").strip()
+        if not env:
+            print("Set --vault or PRODUCT_VAULT_ROOT", file=sys.stderr)
+            raise SystemExit(2)
+        args.vault = Path(env)
     vault = args.vault.expanduser().resolve()
     root = vault / "01-Projects"
     if not root.is_dir():

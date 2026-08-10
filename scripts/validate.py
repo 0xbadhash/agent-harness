@@ -66,9 +66,16 @@ def _resolve_vault() -> Path | None:
         p = Path(raw).expanduser().resolve()
         if p.is_dir() and (p / "01-Projects").is_dir():
             return p
-    default = Path("/opt/second-brain/vault")
-    if default.is_dir() and (default / "01-Projects").is_dir():
-        return default
+    # HSQ-2: no hardcoded host path as primary; optional last-resort if env unset
+    # and directory exists (warn). Prefer PRODUCT_VAULT_ROOT / vault_resolve only.
+    import sys as _sys
+    legacy = Path("/opt/second-brain/vault")
+    if legacy.is_dir() and (legacy / "01-Projects").is_dir():
+        print(
+            "⚠️  vault: using legacy /opt/second-brain/vault — set PRODUCT_VAULT_ROOT",
+            file=_sys.stderr,
+        )
+        return legacy
     return None
 
 

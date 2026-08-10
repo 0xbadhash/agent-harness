@@ -51,7 +51,7 @@ def format_when_dual(when: datetime | None = None) -> str:
 HARNESS_ROOT = Path(__file__).resolve().parent.parent
 # Prefer env; fall back next to harness sibling dirs under $HOME (no /home/<user> literals).
 _HOME = Path.home()
-DEFAULT_VAULT = Path(os.environ.get("PRODUCT_VAULT_ROOT") or "/opt/second-brain/vault")
+DEFAULT_VAULT = Path(os.environ["PRODUCT_VAULT_ROOT"]) if os.environ.get("PRODUCT_VAULT_ROOT") else Path("")
 DEFAULT_PRODUCTS = [
     ("watchlist", _HOME / "watchlist"),
     ("email-detach", _HOME / "email-detach"),
