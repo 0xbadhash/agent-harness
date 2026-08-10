@@ -1,20 +1,18 @@
-# PR Draft — HSQ-3 P2 (G2/G10/G7/G8)
+# PR Draft — HSQ-3 P3 G15 protect SoT pin
 
-**Spec:** `.agents/specs/HSQ-3-p2-quality-gates.md`
-**spec_sha256:** 313c8151c26a1081ee710c2e0a76248996c227a619e5306e491a6a418b912a7e
-**Version:** 1.4.24
+**Spec:** `.agents/specs/HSQ-3-p3-protect-sot-pin.md`
+**spec_sha256:** 4a75fc6b1ab5ddf97d484eb2503900868696202db91f92b8826b4e9febe6915f
+**Version:** 1.4.25
 
 ## What Problem This Solves
-Specs can drift mid-ship; waivers can be abused; threat notes theater; auth paths untested.
+Products keep forked FSM scripts after protect-list installs; silent drift from HSQ-2 floors.
 
 ## Why This Change Was Made
-P2 gates from quality plan.
+P3 warn-only SoT pin — no install overwrite.
 
 ## User Impact
-- Spec hash optional pin
-- Waiver budget on waiver ships
-- Threat tags for runtime
-- security_paths plugin hook
+- portfolio report notes SoT pin drift
+- CLI check_protect_sot_pin --strict optional
 
 ## Red-proof
 - red_cmd: `false`
@@ -23,26 +21,23 @@ P2 gates from quality plan.
 ## Traceability
 | AC | Test |
 |----|------|
-| AC-1 | tests/test_hsq3_p2_gates.py::TestSpecHash::test_ac_1_missing_spec |
-| AC-2 | tests/test_hsq3_p2_gates.py::TestSpecHash::test_ac_2_wrong_hash |
-| AC-3 | tests/test_hsq3_p2_gates.py::TestSpecHash::test_ac_3_match |
-| AC-4 | tests/test_hsq3_p2_gates.py::TestThreatTags::test_ac_4_needs_tags |
-| AC-5 | tests/test_hsq3_p2_gates.py (security paths unit) |
-| AC-6 | tests/test_hsq3_p2_gates.py::TestSecurityPaths::test_ac_6_no_config |
+| AC-1 | tests/test_hsq3_p3_protect_pin.py::TestProtectPin::test_ac_1_identical |
+| AC-2 | tests/test_hsq3_p3_protect_pin.py::TestProtectPin::test_ac_2_drift |
+| AC-3 | tests/test_hsq3_p3_protect_pin.py::TestProtectPin::test_ac_3_strict_cli |
+| AC-4 | portfolio_install_report evaluate notes (manual) |
 
 ## Threat notes
-- authz: gate scripts do not expand privileges
-- secrets: no new credential storage
-- injection: shlex-bound cmds from P1 only
+- authz: N/A for pin checker
+- secrets: N/A
 
 ## Evidence pack
-- hard_gates spec_hash threat_tags security_paths waiver_budget
-- pytest tests/test_hsq3_p2_gates.py
+- pytest tests/test_hsq3_p3_protect_pin.py
+- hard_gates suite
 - validate compliance
 
 ## Things that look bad but are actually fine
-1. Threat tags only when runtime surface true.
-2. Waiver budget only when PR is a waiver ship.
-3. security_paths empty = skip.
-4. spec_sha256 optional unless provided.
-5. Path matching for security_paths is prefix-based.
+1. Warn-only default — intentional anti-break for product forks.
+2. Only pipeline_state + hard_gates pinned (not all protect list).
+3. --strict is opt-in for CI products that want fail-closed.
+4. mypy fix for P2 security_paths is drive-by.
+5. No auto-merge of forks.

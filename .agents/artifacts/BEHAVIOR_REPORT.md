@@ -1,7 +1,6 @@
 # BEHAVIOR-REPORT
 **Marker:** BEHAVIOR-REPORT
-**Runtime:** CLI gate scripts P2
 ## Scenarios
-Spec missing fails; wrong hash fails; threat tags enforced on runtime.
+Drift lists path; strict exits 1.
 ## Verdict
 OK

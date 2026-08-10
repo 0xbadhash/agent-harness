@@ -32,9 +32,9 @@ def _load_security_paths(root: Path) -> list[str]:
         if in_block:
             if re.match(r"^\S", line) and not line.strip().startswith("-"):
                 break
-            m = re.match(r"^\s*-\s*['\"]?([^'\"#]+)", line)
-            if m:
-                paths.append(m.group(1).strip())
+            m2 = re.match(r"^\s*-\s*['\"]?([^'\"#]+)", line)
+            if m2:
+                paths.append(m2.group(1).strip())
             elif line.strip() and not line.strip().startswith("#"):
                 if not line.strip().startswith("-"):
                     break

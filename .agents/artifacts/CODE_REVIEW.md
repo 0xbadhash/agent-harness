@@ -1,9 +1,7 @@
 # CODE-REVIEW
 **Marker:** CODE-REVIEW
-**Scope:** HSQ-3 P2 G2/G7/G8/G10
+**Scope:** HSQ-3 P3 G15
 ## Findings
-- Spec hash optional pin is fail-closed when present.
-- Threat tags fixed vocabulary avoids free-prose theater.
-- Waiver budget only on waiver PRs.
+Warn-only SoT pin for FSM scripts; portfolio notes only.
 ## Verdict
-Approve P2 after tests green.
+Approve.

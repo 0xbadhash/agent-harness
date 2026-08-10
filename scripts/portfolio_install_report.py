@@ -69,6 +69,16 @@ def evaluate(products: list[tuple[str, Path]], sot: str) -> list[ProductRow]:
             ver = hv.read_text(encoding="utf-8").lstrip("\ufeff").strip()
         lag = ver != sot
         notes = "" if not lag else f"product {ver!r} != SoT {sot!r}"
+        # G15: pin critical FSM scripts (warn-only in notes)
+        try:
+            from check_protect_sot_pin import check_product  # type: ignore
+
+            pin = check_product(HARNESS, root)
+            if pin:
+                pin_note = "SoT pin drift: " + ", ".join(pin)
+                notes = f"{notes}; {pin_note}" if notes else pin_note
+        except Exception:
+            pass
         rows.append(ProductRow(pid, root, ver, sot, lag, notes))
     return rows
 
