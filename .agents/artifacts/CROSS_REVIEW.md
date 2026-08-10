@@ -2,12 +2,14 @@
 
 **Marker:** CROSS-REVIEW  
 **When:** 2026-08-10  
-**Persona:** integrity / ops
+**Persona:** security + quality
 
 ## Notes
-- Transition matrix matches ship-flow edges with score re-entry from blocked→approved.
-- Auto-marker escape is explicit flag, not silent default.
-- Protect playbook is process, not auto-merge (correct blast radius).
+
+- No session-duration gates (anti-drift).
+- Secret false positives: patterns conservative; monitor only.
+- AC map encourages real tests, not essay Traceability.
 
 ## Verdict
+
 Accept — no cross-persona blockers.

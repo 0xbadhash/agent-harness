@@ -2,16 +2,16 @@
 
 **Marker:** CODE-REVIEW  
 **When:** 2026-08-10  
-**Scope:** HSQ-2 items 1–9 (FSM transitions, auto-markers, CI filter, vault defaults, protect playbook, OPS waiver+JSONL, CODE-REVIEW floor, skip-hard-gates log)
+**Scope:** HSQ-3 P0 — G1 AC map, G5 secrets, G14 diff compile
 
 ## Findings
-- FSM ALLOWED_TRANSITIONS forbids init→shipped without force; force logs FORCE_TRANSITION_LOG.
-- run_ship_chain auto markers require --allow-auto-markers; quality floor rejects thin auto stubs.
-- CI skill-conformance skips when no skill-relevant paths on PR (main/dispatch still run).
-- Vault hardcoded /opt is last-resort with warn; PRODUCT_VAULT_ROOT preferred.
-- Protect-list merge playbook documented.
-- OPS-DASHBOARD shows 30d waiver summary; OPS_SNAPSHOTS.jsonl appended.
-- skip-hard-gates writes SKIP_HARD_GATES_LOG.jsonl.
+
+- AC map fails closed only when Spec lists AC-n; waivers skip (correct).
+- Path confinement on spec path under product root.
+- Secrets patterns high-signal; JWT/sk-/npm_/AIza/stripe/bearer added.
+- py_compile uses temp cfile — no .pyc pollution.
+- hard_gates wiring matches secrets placement; prose-only skips G1/G14.
 
 ## Verdict
-Approve for merge after unit tests and validate full green.
+
+Approve P0 for merge after unit tests green.

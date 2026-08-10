@@ -26,15 +26,28 @@ import sys
 from pathlib import Path
 
 
-# High-signal only (avoid password-like false positives)
+# High-signal only (avoid password-like false positives). HSQ-3 P0 G5: expand.
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),
     ("github_pat", re.compile(r"ghp_[A-Za-z0-9]{36,}")),
     ("github_fine_grained", re.compile(r"github_pat_[A-Za-z0-9_]{20,}")),
+    ("github_oauth", re.compile(r"gho_[A-Za-z0-9]{36,}")),
     ("slack_token", re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}")),
-    ("private_key_header", re.compile(r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----")),
+    ("private_key_header", re.compile(r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----")),
     ("generic_api_key_assign", re.compile(
         r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token)\s*[:=]\s*['\"][A-Za-z0-9_\-]{20,}['\"]"
+    )),
+    # G5 tighten
+    ("jwt_compact", re.compile(
+        r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"
+    )),
+    ("openai_sk", re.compile(r"\bsk-[A-Za-z0-9]{20,}\b")),
+    ("openai_sk_proj", re.compile(r"\bsk-proj-[A-Za-z0-9_-]{20,}\b")),
+    ("npm_token", re.compile(r"\bnpm_[A-Za-z0-9]{20,}\b")),
+    ("google_api_key", re.compile(r"\bAIza[0-9A-Za-z\-_]{20,}\b")),
+    ("stripe_live", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
+    ("bearer_long", re.compile(
+        r"(?i)authorization\s*[:=]\s*['\"]?bearer\s+[A-Za-z0-9\-._~+/]{32,}={0,2}"
     )),
 ]
 
