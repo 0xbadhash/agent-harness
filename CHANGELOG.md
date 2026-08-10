@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.25 — 2026-08-10
+
+### HSQ-3 P3 protect SoT pin (warn)
+- **G15** `check_protect_sot_pin.py` — warn when pipeline_state/hard_gates diverge from SoT
+- portfolio_install_report notes SoT pin drift
+- mypy fix for check_security_paths
+
 ## v1.4.24 — 2026-08-10
 
 ### HSQ-3 P2 quality gates
