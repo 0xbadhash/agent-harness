@@ -15,7 +15,7 @@ import argparse
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -42,7 +42,7 @@ def _ensure_artifact(path: Path, marker: str, title: str, body: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_file() and marker in path.read_text(encoding="utf-8", errors="replace"):
         return
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     path.write_text(
         f"# {title}\n\n**Marker:** {marker}\n\n"
         f"_Auto-written by run_ship_chain.py at {now} (deterministic; expand if needed)._\n\n"
@@ -142,7 +142,7 @@ def run_chain(
         from next_skill import decide  # type: ignore
 
         nxt, meta = decide("code_review", base=base, head=head, repo=root)
-    except Exception:  # noqa: BLE001
+    except Exception:
         nxt, meta = "/pr_review --validate", {}
 
     if allow_auto_markers and ("cross_review" in nxt or meta.get("large") == "True"):
@@ -251,7 +251,7 @@ def run_chain(
 def _write_log(root: Path, log: list[str], phase: str) -> None:
     out = root / ".agents" / "artifacts" / "SHIP_CHAIN_LOG.md"
     out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     out.write_text(
         f"# SHIP_CHAIN_LOG\n\n_{now}_\n\n**phase:** `{phase}`\n\n"
         + "\n".join(f"- {x}" for x in log)

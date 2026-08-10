@@ -10,7 +10,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import hard_gates as hg  # noqa: E402
+import hard_gates as hg
 
 
 def _write(p: Path, text: str) -> None:

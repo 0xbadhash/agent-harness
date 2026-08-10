@@ -20,15 +20,15 @@ import argparse
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from night_shift_log import parse_reports as _parse_reports  # noqa: E402
-from night_shift_log import render_rotated_log  # noqa: E402
+from night_shift_log import parse_reports as _parse_reports
+from night_shift_log import render_rotated_log
 
 _HOME = Path.home()
 DEFAULT_VAULT = Path(
@@ -77,7 +77,7 @@ def rotate_project(
         return f"ok {project_dir.name}: already lean (latest PASS, little history)"
 
     # No colons: Windows/Android clients reject ":" in filenames (Syncthing out-of-sync forever)
-    when = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
+    when = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
     archive_dir = project_dir / "_archive"
     archive_path = archive_dir / f"night-shift-log-through-{when}.md"
 
@@ -152,7 +152,7 @@ def rebuild_multi_summary(vault: Path, *, dry_run: bool) -> str:
         tag = "✅" if overall == "PASS" else ("❌" if overall == "FAIL" else "·")
         rows.append(f"| {d.name} | {tag} {overall} | {when} |")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     try:
         from zoneinfo import ZoneInfo
         hkt = now.astimezone(ZoneInfo("Asia/Hong_Kong")).strftime("%Y-%m-%d %H:%M HKT")

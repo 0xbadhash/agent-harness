@@ -42,7 +42,7 @@ def _project_label() -> str | None:
     if plugin.is_file():
         text = plugin.read_text(encoding="utf-8")
         for key in ("project_label", "product_id"):
-            m = re.search(rf"^\s*{key}:\s*(.+)$", text, re.M)
+            m = re.search(rf"^\s*{key}:\s*(.+)$", text, re.MULTILINE)
             if m:
                 return m.group(1).strip().strip("\"'")
     return ROOT.name if ROOT.name else None

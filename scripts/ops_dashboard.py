@@ -29,7 +29,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -105,7 +105,7 @@ def _read(path: Path, limit: int = 200_000) -> str:
 def _wiki_link(vault: Path, rel: str, label: str | None = None) -> str:
     """Obsidian wikilink from agent-tasks/OPS-DASHBOARD.md to another vault note."""
     # Prefer path without .md for Obsidian
-    p = rel[:-3] if rel.endswith(".md") else rel
+    p = rel.removesuffix(".md")
     lab = label or Path(p).name
     return f"[[{p}|{lab}]]"
 
@@ -404,7 +404,7 @@ def collect_kanban(vault: Path | None) -> tuple[list[Item], list[Item]]:
         # still backlog
         if counts.get("Backlog", 0) == 0 and "## Backlog" in text:
             pass
-    bl = len(re.findall(r"^- \[ \] ", text, re.M))
+    bl = len(re.findall(r"^- \[ \] ", text, re.MULTILINE))
     if bl and not todos:
         todos.append(
             Item(
@@ -602,8 +602,8 @@ def collect_waivers(harness: Path) -> tuple[list[Item], list[Item]]:
     if not log.is_file():
         return well, att
     from collections import Counter
-    from datetime import datetime, timedelta, timezone
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    from datetime import datetime, timedelta
+    cutoff = datetime.now(UTC) - timedelta(days=30)
     by_type: Counter[str] = Counter()
     n = 0
     try:
@@ -621,7 +621,7 @@ def collect_waivers(harness: Path) -> tuple[list[Item], list[Item]]:
             except ValueError:
                 when = cutoff
             if when.tzinfo is None:
-                when = when.replace(tzinfo=timezone.utc)
+                when = when.replace(tzinfo=UTC)
             if when < cutoff:
                 continue
             n += 1
@@ -675,7 +675,7 @@ def append_ops_snapshot(d: Dashboard, vault: Path | None) -> None:
 
 
 def build(vault: Path | None, quick: bool) -> Dashboard:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     hkt = datetime.now(HKT)
     d = Dashboard(
         when_utc=now.strftime("%Y-%m-%d %H:%M UTC"),

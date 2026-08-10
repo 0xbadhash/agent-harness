@@ -1,0 +1,14 @@
+# agent-harness SoT — compliance_engine runs `ruff check` without per-product config.
+# Keep rules to classic correctness (E/F/W); style churn is out of scope for ship gates.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W"]
+ignore = [
+  "E501",  # long lines common in CLI/docs strings
+  "E402",  # import after sys.path bootstrap (tests + scripts)
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402"]

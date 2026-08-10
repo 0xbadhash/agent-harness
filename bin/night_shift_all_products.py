@@ -19,8 +19,9 @@ import argparse
 import os
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+
 
 def _vw(path: Path, text: str) -> None:
     try:
@@ -35,11 +36,11 @@ def _vw(path: Path, text: str) -> None:
 
 
 def format_when_dual(when: datetime | None = None) -> str:
-    when = when or datetime.now(timezone.utc)
+    when = when or datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
     else:
-        when = when.astimezone(timezone.utc)
+        when = when.astimezone(UTC)
     utc_s = when.strftime("%Y-%m-%d %H:%M UTC")
     try:
         from zoneinfo import ZoneInfo
@@ -214,7 +215,7 @@ def run_one(
             "tail": "timeout 3600s",
             "preflight": pre,
         }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {
             "name": name,
             "root": str(root),
@@ -361,7 +362,7 @@ def main() -> int:
         allow = set(args.only)
         products = [(n, p) for n, p in products if n in allow]
 
-    when = datetime.now(timezone.utc)
+    when = datetime.now(UTC)
     print(f"night_shift_all: {len(products)} product(s) @ {when.isoformat()}")
 
     # Path contract P0/P1: fleet paths + consumers (fail closed for multi-product run)
@@ -423,7 +424,7 @@ def main() -> int:
                 cwd=str(HARNESS_ROOT),
                 check=False,
             )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"⚠️ rotate_night_shift_logs: {exc}")
 
     # --- Dev-log anti-drift (all 01-Projects/*/dev-log.md, no product exceptions) ---

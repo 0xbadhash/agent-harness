@@ -22,7 +22,7 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +31,7 @@ ROOT = SCRIPTS.parent
 sys.path.insert(0, str(SCRIPTS))
 
 try:
-    from kanban_schema import (  # type: ignore[import-not-found]  # noqa: E402
+    from kanban_schema import (  # type: ignore[import-not-found]
         KanbanCard,
         parse_board,
         render_board,
@@ -118,7 +118,7 @@ def _stub_body(
     git_rel: str,
     vault_rel: str,
 ) -> str:
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = datetime.now(UTC).strftime("%Y-%m-%d")
     return f"""---
 tags:
   - type/meta
@@ -159,7 +159,7 @@ Run full `/spec` to replace this stub with a real product-scoped spec, then re-s
 
 
 def _git_spec_rel(product: str, slug: str) -> str:
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = datetime.now(UTC).strftime("%Y-%m-%d")
     return f".agents/specs/{day}-{slug}.md"
 
 
@@ -280,7 +280,7 @@ def ensure_card(
 
 
 def run_ensure(vault: Path, *, dry_run: bool = False) -> tuple[str, list[dict]]:
-    from kanban_fs import board_lock  # noqa: WPS433
+    from kanban_fs import board_lock
 
     board = vault / "agent-tasks" / "kanban.md"
     with board_lock(board):

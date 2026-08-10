@@ -11,7 +11,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import pipeline_state as ps  # noqa: E402
+import pipeline_state as ps
 
 
 class TestTransitions(unittest.TestCase):

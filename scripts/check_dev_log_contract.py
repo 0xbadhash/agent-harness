@@ -17,8 +17,8 @@ import sys
 from pathlib import Path
 
 H2 = re.compile(r"^##\s+(20\d{2}-\d{2}-\d{2})")
-WHEN = re.compile(r"\*\*When:\*\*.*UTC.*HKT", re.I)
-KIND = re.compile(r"\*\*Kind:\*\*\s*(release|note)", re.I)
+WHEN = re.compile(r"\*\*When:\*\*.*UTC.*HKT", re.IGNORECASE)
+KIND = re.compile(r"\*\*Kind:\*\*\s*(release|note)", re.IGNORECASE)
 
 
 def check_file(path: Path) -> list[str]:
@@ -34,7 +34,7 @@ def check_file(path: Path) -> list[str]:
     if "HKT" not in header_probe:
         errs.append(f"{pid}: header missing HKT contract blurb")
     # split entries
-    chunks = re.split(r"(?=^## )", text, flags=re.M)
+    chunks = re.split(r"(?=^## )", text, flags=re.MULTILINE)
     entries = [c for c in chunks if c.lstrip().startswith("## ")]
     days: list[str] = []
     for i, ch in enumerate(entries):

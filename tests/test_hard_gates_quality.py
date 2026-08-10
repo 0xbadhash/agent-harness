@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from hard_gates import _code_review_quality, evaluate  # noqa: E402
+from hard_gates import _code_review_quality
 
 
 class TestCodeReviewQuality(unittest.TestCase):

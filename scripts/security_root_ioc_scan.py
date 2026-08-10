@@ -32,7 +32,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -81,7 +81,7 @@ def _vault() -> Path | None:
 
 
 def _now_labels() -> tuple[str, str]:
-    utc = datetime.now(timezone.utc)
+    utc = datetime.now(UTC)
     hkt = utc.astimezone(HKT)
     return (
         utc.strftime("%Y-%m-%d %H:%M UTC"),

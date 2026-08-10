@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import os
+import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -73,7 +73,7 @@ def _log_force_transition(from_phase: str, to_phase: str, reason: str) -> None:
         art.mkdir(parents=True, exist_ok=True)
         log = art / "FORCE_TRANSITION_LOG.jsonl"
         row = {
-            "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "from": from_phase,
             "to": to_phase,
             "reason": reason or "unspecified",

@@ -14,7 +14,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Import dual-zone helper from sibling module
@@ -22,9 +22,9 @@ SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 try:
     from sync_vault_devlog import (  # type: ignore
+        _write_full,
         format_when_line,
         split_header_and_rest,
-        _write_full,
     )
 except Exception:  # pragma: no cover
     format_when_line = None  # type: ignore
@@ -45,7 +45,7 @@ BARE_RE = re.compile(
 )
 WHEN_RE = re.compile(
     r"\*\*When:\*\*\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})\s*UTC",
-    re.I,
+    re.IGNORECASE,
 )
 
 
@@ -87,7 +87,7 @@ class Entry:
         if not has_when and format_when_line is not None and self.sort_key.year >= 2000:
             prefix.append(format_when_line(self.sort_key))
         if not has_kind:
-            kind = "release" if re.search(r"\bsynced\b", self.heading, re.I) else "note"
+            kind = "release" if re.search(r"\bsynced\b", self.heading, re.IGNORECASE) else "note"
             prefix.append(f"- **Kind:** {kind}")
         if prefix:
             body = prefix + body
@@ -109,7 +109,7 @@ def _heading_datetime(heading: str) -> datetime | None:
         hh = int(hm.group(2) or 12) if hm.lastindex and hm.lastindex >= 2 else 12
         mm = int(hm.group(3) or 0) if hm.lastindex and hm.lastindex >= 3 else 0
         ss = int(hm.group(4) or 0) if hm.lastindex and hm.lastindex >= 4 else 0
-        return datetime(int(y), int(mo), int(d), hh, mm, ss, tzinfo=timezone.utc)
+        return datetime(int(y), int(mo), int(d), hh, mm, ss, tzinfo=UTC)
     return None
 
 
@@ -125,13 +125,13 @@ def _parse_sort_key(heading: str, body: str) -> datetime:
                 int(m.group(1)[8:10]),
                 int(m.group(2)),
                 int(m.group(3)),
-                tzinfo=timezone.utc,
+                tzinfo=UTC,
             )
     hd = _heading_datetime(heading)
     if hd is not None:
         return hd
     # fallback epoch-ish stable
-    return datetime(1970, 1, 1, tzinfo=timezone.utc)
+    return datetime(1970, 1, 1, tzinfo=UTC)
 
 
 def _coerce_bare_lines(text: str) -> str:
@@ -151,7 +151,7 @@ def parse_entries(rest: str) -> tuple[list[Entry], list[str]]:
         return [], []
     rest = _coerce_bare_lines(rest)
     # split on ## starts
-    chunks = re.split(r"(?=^## )", rest, flags=re.M)
+    chunks = re.split(r"(?=^## )", rest, flags=re.MULTILINE)
     entries: list[Entry] = []
     unparsed: list[str] = []
     idx = 0
@@ -170,7 +170,7 @@ def parse_entries(rest: str) -> tuple[list[Entry], list[str]]:
                 Entry(
                     heading=heading,
                     body_lines=body,
-                    sort_key=datetime(1970, 1, 1, tzinfo=timezone.utc),
+                    sort_key=datetime(1970, 1, 1, tzinfo=UTC),
                     raw=raw,
                     orig_idx=idx,
                 )
@@ -277,10 +277,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{'✅' if changed or args.dry_run else '·'} {path.parent.name}: {status} ({len(new)} bytes)")
             if args.dry_run and changed:
                 # show first entry heading
-                m = re.search(r"^## .+$", new, re.M)
+                m = re.search(r"^## .+$", new, re.MULTILINE)
                 if m:
                     print(f"    top → {m.group(0)[:80]}")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"❌ {path.parent.name}: {exc}", file=sys.stderr)
             return 1
     return 0
