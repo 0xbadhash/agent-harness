@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.4.20` (docs synced via `/sync_docs`)
+**Current release:** `v1.4.21` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -51,7 +51,7 @@ Then open the product in **any** coding LLM and ship:
 **Pinned bootstrap:** use a release tag so every product gets a known-good harness:
 
 ```bash
-git clone --branch v1.4.20 --depth 1 https://github.com/0xbadhash/agent-harness.git
+git clone --branch v1.4.21 --depth 1 https://github.com/0xbadhash/agent-harness.git
 ```
 
 ---
