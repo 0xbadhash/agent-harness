@@ -1,11 +1,9 @@
 # CODE-REVIEW
 **Marker:** CODE-REVIEW
-**Scope:** HSQ-3 P1 G3/G4/G6
-
+**Scope:** HSQ-3 P2 G2/G7/G8/G10
 ## Findings
-- Path tests use stem tokens + Untested paths escape hatch.
-- red_cmd uses shlex + timeout; no shell=True.
-- Lockfile audit fail-closed only when auditor installed.
-
+- Spec hash optional pin is fail-closed when present.
+- Threat tags fixed vocabulary avoids free-prose theater.
+- Waiver budget only on waiver PRs.
 ## Verdict
-Approve after unit tests green.
+Approve P2 after tests green.
