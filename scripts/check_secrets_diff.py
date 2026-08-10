@@ -104,6 +104,18 @@ def run_trufflehog(repo: Path, base: str, head: str) -> tuple[int, str]:
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
 
+def _skip_secret_path(path: str) -> bool:
+    """Tests/fixtures may embed synthetic tokens for pattern unit tests."""
+    p = path.replace("\\", "/").lower()
+    if "/tests/" in f"/{p}" or p.startswith("tests/"):
+        return True
+    if p.endswith((".md", ".rst", ".txt")) and "changelog" in p:
+        return True
+    if "fixture" in p or "testdata" in p or "test_data" in p:
+        return True
+    return False
+
+
 def scan_added_lines_regex(repo: Path, base: str, head: str) -> list[str]:
     r = _git(repo, "diff", "-U0", _range_spec(base, head))
     if r.returncode != 0:
@@ -115,6 +127,8 @@ def scan_added_lines_regex(repo: Path, base: str, head: str) -> list[str]:
             path = line[6:]
             continue
         if not line.startswith("+") or line.startswith("+++"):
+            continue
+        if path and _skip_secret_path(path):
             continue
         content = line[1:]
         for name, pat in _PATTERNS:
