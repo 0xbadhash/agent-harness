@@ -1,15 +1,9 @@
 # BEHAVIOR-REPORT
-
-**Marker:** BEHAVIOR-REPORT  
-**When:** 2026-08-10  
-**Runtime:** CLI scripts (check_ac_traceability, check_diff_compile, check_secrets_diff)
-
+**Marker:** BEHAVIOR-REPORT
+**Runtime:** CLI gate scripts G3/G4/G6
 ## Scenarios
-
-1. Feature PR with unmapped AC → hard_gates fail AC map.
-2. Added sk- / JWT line → secrets fail closed.
-3. Syntax-invalid changed .py → diff_compile fail.
-
+1. New module without test → path_tests fail
+2. red_cmd true → fail
+3. No lockfile → skip ok
 ## Verdict
-
-Behavior matches HSQ-3 P0 AC-1..AC-6 intent.
+Matches AC-1..AC-6.

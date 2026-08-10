@@ -1,15 +1,7 @@
 # CROSS-REVIEW
-
-**Marker:** CROSS-REVIEW  
-**When:** 2026-08-10  
+**Marker:** CROSS-REVIEW
 **Persona:** security + quality
-
 ## Notes
-
-- No session-duration gates (anti-drift).
-- Secret false positives: patterns conservative; monitor only.
-- AC map encourages real tests, not essay Traceability.
-
+G6 supply chain only on lockfile diffs. G4 command execution is bounded.
 ## Verdict
-
-Accept — no cross-persona blockers.
+Accept.

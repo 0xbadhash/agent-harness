@@ -380,6 +380,56 @@ def evaluate(
     else:
         skipped.append("diff_compile (prose-only)")
 
+    # HSQ-3 P1 G3/G4/G6 — path tests, red/green cmds, lockfile audit
+    base_g, head_g = "HEAD~1", "HEAD"
+    if diff:
+        for sep in ("...", ".."):
+            if sep in diff:
+                parts = diff.split(sep, 1)
+                if len(parts) == 2 and parts[0] and parts[1]:
+                    base_g, head_g = parts[0], parts[1]
+                break
+
+    if not prose_only:
+        try:
+            from check_changed_path_tests import check as _path_tests  # type: ignore
+
+            p_ok, p_msgs = _path_tests(root, base_g, head_g, pr_draft)
+            if not p_ok:
+                for msg in p_msgs:
+                    violations.append(f"hard_gates: path_tests — {msg}")
+            else:
+                skipped.append("path_tests (" + (p_msgs[0] if p_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: path_tests error: {e}")
+
+        try:
+            from check_red_green_cmds import check as _rg  # type: ignore
+
+            rg_ok, rg_msgs = _rg(root, pr_draft)
+            if not rg_ok:
+                for msg in rg_msgs:
+                    violations.append(f"hard_gates: red_green — {msg}")
+            else:
+                skipped.append("red_green (" + (rg_msgs[0] if rg_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: red_green error: {e}")
+    else:
+        skipped.append("path_tests (prose-only)")
+        skipped.append("red_green (prose-only)")
+
+    try:
+        from check_lockfile_audit import check as _lock_audit  # type: ignore
+
+        l_ok, l_msgs = _lock_audit(root, base_g, head_g)
+        if not l_ok:
+            for msg in l_msgs:
+                violations.append(f"hard_gates: lockfile_audit — {msg}")
+        else:
+            skipped.append("lockfile_audit (" + (l_msgs[0] if l_msgs else "ok") + ")")
+    except Exception as e:  # pragma: no cover
+        violations.append(f"hard_gates: lockfile_audit error: {e}")
+
     # Web E2E + Comet contract when product has a website (fail closed)
     if not prose_only:
         try:

@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.23 — 2026-08-10
+
+### HSQ-3 P1 quality gates
+- **G3** `check_changed_path_tests.py` — changed src needs test ref or ## Untested paths
+- **G4** `check_red_green_cmds.py` — execute red_cmd/green_cmd from PR_DRAFT
+- **G6** `check_lockfile_audit.py` — npm audit / pip-audit when lockfiles change
+- hard_gates wires G3/G4/G6
+
 ## v1.4.22 — 2026-08-10
 
 ### HSQ-3 P0 quality gates
