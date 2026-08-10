@@ -347,8 +347,8 @@ def evaluate(
 
             ac_ok, ac_msgs = _ac_check(root, pr_draft)
             if not ac_ok:
-                for m in ac_msgs:
-                    violations.append(f"hard_gates: AC map — {m}")
+                for msg in ac_msgs:
+                    violations.append(f"hard_gates: AC map — {msg}")
             else:
                 skipped.append("ac_map (" + (ac_msgs[0] if ac_msgs else "ok") + ")")
         except Exception as e:  # pragma: no cover
@@ -371,8 +371,8 @@ def evaluate(
                         break
             c_ok, c_msgs = _compile_check(root, base, head)
             if not c_ok:
-                for m in c_msgs:
-                    violations.append(f"hard_gates: diff_compile — {m}")
+                for msg in c_msgs:
+                    violations.append(f"hard_gates: diff_compile — {msg}")
             else:
                 skipped.append("diff_compile (" + (c_msgs[0] if c_msgs else "ok") + ")")
         except Exception as e:  # pragma: no cover

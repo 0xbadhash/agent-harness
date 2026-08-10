@@ -54,7 +54,6 @@ def _tests_corpus(root: Path) -> str:
 
 def check(root: Path, pr_draft: Path) -> tuple[bool, list[str]]:
     root = root.resolve()
-    msgs: list[str] = []
     if not pr_draft.is_file():
         return False, ["PR_DRAFT.md missing"]
 
@@ -83,8 +82,6 @@ def check(root: Path, pr_draft: Path) -> tuple[bool, list[str]]:
 
     trace = _trace_body(draft)
     tests = _tests_corpus(root)
-    # include draft traceability + PR for N/A rows
-    corpus = tests + "\n" + draft
 
     missing: list[str] = []
     for n in sorted(acs):
