@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.20 — 2026-08-10
+
+### HSQ-1 Ship Quality SoT
+- **PR1:** `review_scope` thresholds configurable via `product_plugin.yaml` `review_scope:`
+- **PR2:** Spec waiver append-only log `WAIVER_LOG.jsonl` + `waiver_report.py`
+- **PR3:** Daytime CI documents skill conformance as `agent_eval_checklist` job
+- **PR4:** `portfolio_install_report.py --force` and `--protect-drift`
+- **PR5:** Ship-flow docs for Security IOC (ops, not PR hard gate)
+
 ## v1.4.19 — 2026-08-07
 
 ### Added

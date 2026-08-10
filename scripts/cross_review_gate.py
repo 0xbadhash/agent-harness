@@ -118,6 +118,7 @@ def is_large_diff(diff: str | None) -> tuple[bool, str]:
         baseline,
         product_path_count=len(product),
         product_prefixes_configured=bool(prefixes),
+        product_root=ROOT,
     )
     if large:
         return True, detail

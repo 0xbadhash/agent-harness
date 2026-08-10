@@ -1,14 +1,16 @@
 # BEHAVIOR-REPORT
 
 **Marker:** BEHAVIOR-REPORT  
+**When:** 2026-08-10 03:19 UTC  
 
-| Clause | Result |
-|--------|--------|
-| check_web_e2e fails bare website | pass (unit) |
-| full contract pass | pass (unit) |
-| install prints Web E2E | pass (manual install log) |
-| bip39lab still green | pass |
+## Behaviors exercised
+1. `is_large_baseline` with default + kwargs override + plugin thresholds
+2. `spec_gate` waiver → WAIVER_LOG.jsonl line
+3. `portfolio_install_report --protect-drift` reports diverged protect scripts
+4. Daytime workflow YAML includes skill-conformance job
 
-```text
-NEXT_SKILL=/pr_review --validate
-```
+## Runtime surface
+Scripts + CI only; no production HTTP surface change.
+
+## Result
+PASS under unit tests (151) + ruff on touched modules.

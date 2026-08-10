@@ -389,9 +389,42 @@ python3 scripts/pr_validator.py --diff HEAD~1...HEAD --update-pipeline
 
 - **Cross-review:** large diffs warn without evidence; optional `--strict-cross-review`  
   - Product paths come from `product_plugin.product_path_prefixes` (not hard-coded stack paths)
+  - Large-diff thresholds default to files≥8, churn≥200, non_test_loc≥150 (see `review_scope.py`); override via plugin `review_scope:` (HSQ-1)
 - **TDD process** in execute_dev (red before green) — **red-proof hard gate** records it for score
 - **Smoke:** `python3 scripts/product_smoke.py` reads plugin smoke[] at release
 - **PR score `suite_green`:** green type/lint/test suite only — **not** red-first proof (see hard Red-proof)
+
+### Spec waiver ledger (HSQ-1)
+
+When `spec_gate.py` accepts a **Spec waiver**, it appends one JSON line to
+`.agents/artifacts/WAIVER_LOG.jsonl`. Summarize with:
+
+```bash
+python3 scripts/waiver_report.py --days 30
+```
+
+No hard monthly cap in HSQ-1 — visibility only.
+
+### CI (daytime-gates)
+
+GitHub Actions workflow `.github/workflows/daytime-gates.yml` runs unit tests, daytime readiness,
+and **Skill conformance** via `scripts/agent_eval_checklist.py` (C5). That *is* the skill-conformance
+gate; there is no separate workflow name required.
+
+### Ops: Security IOC (not a PR hard gate)
+
+Weekly root/containerd seed-malware scan: `scripts/security_root_ioc_scan.py` +
+`deploy/security-root-ioc.timer`. Surfaces on OPS-DASHBOARD / `agent-tasks/security-ioc-status`.
+Does **not** block `/pr_review --validate`. Green IOC ≠ full 0-day coverage.
+
+### Portfolio install (HSQ-1)
+
+```bash
+python3 scripts/portfolio_install_report.py --protect-drift
+python3 scripts/portfolio_install_report.py --install --force   # reinstall even if VERSION matches
+```
+
+Protect-list forks are never overwritten; drift is reported only.
 
 ## Off-pipeline: night readiness (`/night_shift`)
 

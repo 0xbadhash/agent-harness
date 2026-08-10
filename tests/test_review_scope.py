@@ -100,6 +100,37 @@ class TestSkipAndGrowth(unittest.TestCase):
         )
         self.assertFalse(large2)
 
+    def test_large_thresholds_override_kwargs(self):
+        b = ScopeBaseline("a", "b", ["a.py"], 1, 50, 0, 50, False)
+        # default non_test_loc threshold 150 → not large
+        large, _ = is_large_baseline(b)
+        self.assertFalse(large)
+        large2, detail = is_large_baseline(b, large_non_test_loc=40)
+        self.assertTrue(large2)
+        self.assertIn("non_test_loc", detail)
+
+    def test_load_thresholds_from_plugin(self):
+        import tempfile
+        from pathlib import Path
+
+        from review_scope import load_large_thresholds
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            agents = root / ".agents"
+            agents.mkdir()
+            (agents / "product_plugin.yaml").write_text(
+                "product_id: t\n"
+                "review_scope:\n"
+                "  large_files: 20\n"
+                "  large_lines: 500\n"
+                "  large_non_test_loc: 300\n"
+                "  large_product_paths: 5\n",
+                encoding="utf-8",
+            )
+            files_t, lines_t, ntl_t, pp_t = load_large_thresholds(root)
+            self.assertEqual((files_t, lines_t, ntl_t, pp_t), (20, 500, 300, 5))
+
 
 if __name__ == "__main__":
     unittest.main()

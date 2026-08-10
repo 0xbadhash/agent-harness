@@ -43,6 +43,14 @@ domain_review_hints:
   - domain correctness
   - no secret leakage
 
+# Large-diff heuristics for next_skill / cross_review (scripts/review_scope.py).
+# Omit to use harness defaults (files≥8, churn≥200, non_test_loc≥150, product_paths≥3).
+# review_scope:
+#   large_files: 8
+#   large_lines: 200
+#   large_non_test_loc: 150
+#   large_product_paths: 3
+
 # Optional overnight readiness (scripts/night_shift_readiness.py — harness SoT)
 # Full ops: docs/night-shift.md  ·  multi-product timer: deploy/night-shift-all.*
 night_shift:

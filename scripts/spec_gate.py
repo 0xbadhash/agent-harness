@@ -3,12 +3,18 @@
 
 Exit 0 = ok; 1 = blocked.
 Reads PR_DRAFT.md and optional pipeline.json fields (spec_id, waiver).
+
+HSQ-1: successful waivers append one JSON line to
+``.agents/artifacts/WAIVER_LOG.jsonl`` (append-only ledger).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.I)
@@ -30,7 +36,68 @@ def _pipeline(root: Path) -> dict:
         return {}
 
 
-def check(root: Path, *, pr_draft: Path | None = None, allow_missing_draft: bool = False) -> tuple[bool, list[str]]:
+def _git_sha(root: Path) -> str:
+    r = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if r.returncode == 0 and r.stdout.strip():
+        return r.stdout.strip()
+    return ""
+
+
+def append_waiver_log(
+    root: Path,
+    *,
+    waiver_type: str,
+    spec_id: str = "",
+    reason: str = "",
+) -> Path | None:
+    """Append one waiver record. Returns log path or None on failure."""
+    root = Path(root).resolve()
+    art = root / ".agents" / "artifacts"
+    try:
+        art.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    log = art / "WAIVER_LOG.jsonl"
+    pipe = _pipeline(root)
+    product_id = ""
+    try:
+        from product_plugin import load_plugin  # noqa: E402
+
+        plugin = load_plugin(root)
+        product_id = str(plugin.get("product_id") or root.name)
+    except Exception:  # noqa: BLE001
+        product_id = root.name
+    row = {
+        "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "product_id": product_id,
+        "waiver_type": waiver_type,
+        "spec_id": spec_id or None,
+        "pipeline_phase": pipe.get("phase"),
+        "actor": os.environ.get("USER") or os.environ.get("LOGNAME") or "unknown",
+        "git_sha": _git_sha(root),
+        "reason": reason or None,
+    }
+    try:
+        with log.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except OSError:
+        return None
+    return log
+
+
+def check(
+    root: Path,
+    *,
+    pr_draft: Path | None = None,
+    allow_missing_draft: bool = False,
+    log_waiver: bool = True,
+) -> tuple[bool, list[str]]:
     """Return (ok, messages)."""
     root = Path(root).resolve()
     draft_path = pr_draft or (root / "PR_DRAFT.md")
@@ -55,6 +122,10 @@ def check(root: Path, *, pr_draft: Path | None = None, allow_missing_draft: bool
 
     if waiver in WAIVERS:
         msgs.append(f"ok: Spec waiver={waiver}")
+        if log_waiver:
+            path = append_waiver_log(root, waiver_type=waiver, spec_id=spec_id)
+            if path:
+                msgs.append(f"ok: waiver logged → {path.relative_to(root)}")
         return True, msgs
 
     if spec_id:

@@ -30,7 +30,7 @@ def load_plugin(product_root: Path) -> dict[str, Any]:
 
 
 def _parse_minimal_plugin(text: str) -> dict[str, Any]:
-    """Tiny subset: product_path_prefixes + smoke name/cmd/cwd."""
+    """Tiny subset: product_path_prefixes + smoke name/cmd/cwd + review_scope ints."""
     out: dict[str, Any] = {}
     m = re.search(
         r"^product_path_prefixes:\s*\n((?:[ \t]+-[ \t]+.+\n?)+)",
@@ -40,6 +40,23 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
     if m:
         prefs = re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", m.group(1), re.MULTILINE)
         out["product_path_prefixes"] = prefs
+
+    # review_scope: large_* integers (HSQ-1; stdlib when PyYAML absent)
+    rsm = re.search(
+        r"^review_scope:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if rsm:
+        rs: dict[str, Any] = {}
+        for km in re.finditer(
+            r"^[ \t]+(large_files|large_lines|large_non_test_loc|large_product_paths):\s*(\d+)\s*$",
+            rsm.group(1),
+            re.MULTILINE,
+        ):
+            rs[km.group(1)] = int(km.group(2))
+        if rs:
+            out["review_scope"] = rs
 
     # smoke: section — each list item starts with "- name:" (stdlib, no PyYAML)
     # Prefer section-scoped split so multi-entry smoke lists all parse (not only first).
@@ -85,9 +102,9 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
     if wm:
         section = wm.group(1)
         for key in ("enabled", "strict", "require_s_ids", "auto_detect"):
-            km = re.search(rf"^[ \t]+{key}:\s*(\S+)", section, re.MULTILINE)
-            if km:
-                raw = km.group(1).strip().strip("'\"")
+            key_m = re.search(rf"^[ \t]+{key}:\s*(\S+)", section, re.MULTILINE)
+            if key_m:
+                raw = key_m.group(1).strip().strip("'\"")
                 if raw.lower() in ("true", "yes", "1"):
                     we[key] = True
                 elif raw.lower() in ("false", "no", "0"):

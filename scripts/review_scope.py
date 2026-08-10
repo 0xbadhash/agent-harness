@@ -128,11 +128,56 @@ def should_skip_heavy_review(baseline: ScopeBaseline) -> bool:
     return baseline.prose_only
 
 
-# Shared large-diff thresholds (next_skill router + cross_review_gate soft gate)
+# Shared large-diff thresholds (next_skill router + cross_review_gate soft gate).
+# Defaults preserved for backward compatibility; override via product_plugin.yaml:
+#   review_scope:
+#     large_files: 8
+#     large_lines: 200
+#     large_non_test_loc: 150
+#     large_product_paths: 3
 LARGE_FILES = 8
 LARGE_LINES = 200
 LARGE_NON_TEST_LOC = 150
 LARGE_PRODUCT_PATHS = 3
+
+
+def load_large_thresholds(
+    product_root: Path | None = None,
+) -> tuple[int, int, int, int]:
+    """Return (files, lines, non_test_loc, product_paths) from plugin or defaults."""
+    files, lines, ntl, ppaths = (
+        LARGE_FILES,
+        LARGE_LINES,
+        LARGE_NON_TEST_LOC,
+        LARGE_PRODUCT_PATHS,
+    )
+    if product_root is None:
+        return files, lines, ntl, ppaths
+    try:
+        from product_plugin import load_plugin  # noqa: E402
+    except ImportError:  # pragma: no cover
+        return files, lines, ntl, ppaths
+    plugin = load_plugin(Path(product_root))
+    rs = plugin.get("review_scope") if isinstance(plugin, dict) else None
+    if not isinstance(rs, dict):
+        return files, lines, ntl, ppaths
+
+    def _int(key: str, default: int) -> int:
+        raw = rs.get(key)
+        if raw is None:
+            return default
+        try:
+            v = int(raw)
+        except (TypeError, ValueError):
+            return default
+        return v if v > 0 else default
+
+    return (
+        _int("large_files", files),
+        _int("large_lines", lines),
+        _int("large_non_test_loc", ntl),
+        _int("large_product_paths", ppaths),
+    )
 
 
 def is_large_baseline(
@@ -140,18 +185,32 @@ def is_large_baseline(
     *,
     product_path_count: int = 0,
     product_prefixes_configured: bool = False,
+    product_root: Path | None = None,
+    large_files: int | None = None,
+    large_lines: int | None = None,
+    large_non_test_loc: int | None = None,
+    large_product_paths: int | None = None,
 ) -> tuple[bool, str]:
-    """Return (is_large, reason_detail) using the same heuristics as ship-flow.md."""
+    """Return (is_large, reason_detail) using the same heuristics as ship-flow.md.
+
+    Thresholds: explicit kwargs > product_plugin ``review_scope`` > module defaults.
+    """
+    df, dl, dntl, dpp = load_large_thresholds(product_root)
+    thr_files = large_files if large_files is not None else df
+    thr_lines = large_lines if large_lines is not None else dl
+    thr_ntl = large_non_test_loc if large_non_test_loc is not None else dntl
+    thr_pp = large_product_paths if large_product_paths is not None else dpp
+
     churn = baseline.n_insertions + baseline.n_deletions
     reasons: list[str] = []
-    if baseline.n_files >= LARGE_FILES:
-        reasons.append(f"files={baseline.n_files}>={LARGE_FILES}")
-    if churn >= LARGE_LINES:
-        reasons.append(f"churn={churn}>={LARGE_LINES}")
-    if baseline.non_test_loc >= LARGE_NON_TEST_LOC:
-        reasons.append(f"non_test_loc={baseline.non_test_loc}>={LARGE_NON_TEST_LOC}")
-    if product_prefixes_configured and product_path_count >= LARGE_PRODUCT_PATHS:
-        reasons.append(f"product_paths={product_path_count}>={LARGE_PRODUCT_PATHS}")
+    if baseline.n_files >= thr_files:
+        reasons.append(f"files={baseline.n_files}>={thr_files}")
+    if churn >= thr_lines:
+        reasons.append(f"churn={churn}>={thr_lines}")
+    if baseline.non_test_loc >= thr_ntl:
+        reasons.append(f"non_test_loc={baseline.non_test_loc}>={thr_ntl}")
+    if product_prefixes_configured and product_path_count >= thr_pp:
+        reasons.append(f"product_paths={product_path_count}>={thr_pp}")
     if reasons:
         return True, ", ".join(reasons)
     return (

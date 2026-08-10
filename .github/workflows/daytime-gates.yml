@@ -1,5 +1,8 @@
 # A3 — Daytime readiness subset (same hard gates family as night_shift).
 # Copy or enable in product repos; here it validates the harness itself.
+#
+# HSQ-1 AC-3: skill conformance = scripts/agent_eval_checklist.py (not a separate
+# workflow). Path-filtered job on skills/docs; full suite still runs on main/PR.
 name: daytime-gates
 
 on:
@@ -27,5 +30,40 @@ jobs:
         run: python scripts/daytime_readiness_subset.py --root .
       - name: Hard gates dry structure
         run: python scripts/hard_gates.py --help
-      - name: C5 agent eval checklist
+
+  skill-conformance:
+    name: Skill conformance (agent_eval_checklist)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Detect skill-relevant paths
+        id: paths
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            CHANGED=$(git diff --name-only "$BASE...$HEAD" || true)
+          else
+            CHANGED=$(git diff --name-only HEAD~1...HEAD 2>/dev/null || git ls-files)
+          fi
+          echo "changed<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          if echo "$CHANGED" | grep -E '^(skills/|scripts/.*gate|scripts/agent_eval|AGENTS|docs/ship-flow|docs/web-e2e)' >/dev/null; then
+            echo "run_checklist=true" >> "$GITHUB_OUTPUT"
+          else
+            # Always run on main / workflow_dispatch for residual safety
+            if [ "${{ github.ref }}" = "refs/heads/main" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "run_checklist=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_checklist=true" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+      - name: C5 agent eval checklist (skill conformance)
         run: python scripts/agent_eval_checklist.py --root . --skip-tests

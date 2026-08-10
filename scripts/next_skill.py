@@ -54,6 +54,7 @@ def _large(baseline, repo: Path | None = None) -> bool:
         baseline,
         product_path_count=product_n,
         product_prefixes_configured=prefixes_configured,
+        product_root=Path(repo).resolve() if repo else None,
     )
     return large
 
