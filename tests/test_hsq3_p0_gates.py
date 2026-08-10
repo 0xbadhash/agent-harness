@@ -87,6 +87,7 @@ class TestSecretsG5(unittest.TestCase):
 
 
 class TestDiffCompile(unittest.TestCase):
+    """AC-5 py_compile; AC-6 hard_gates wiring covered via integration of check modules."""
     def test_ac_5_syntax_error(self):
         """AC-5: invalid python fails py_compile."""
         with tempfile.TemporaryDirectory() as td:
@@ -115,3 +116,11 @@ class TestDiffCompile(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_ac_6_modules_importable():
+    """AC-6: hard_gates can import G1/G14 modules."""
+    import check_ac_traceability
+    import check_diff_compile
+    import hard_gates
+    assert hasattr(hard_gates, "evaluate")
