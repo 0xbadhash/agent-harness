@@ -1,17 +1,11 @@
 # CODE-REVIEW
-
-**Marker:** CODE-REVIEW  
-**When:** 2026-08-10  
-**Scope:** HSQ-3 P0 — G1 AC map, G5 secrets, G14 diff compile
+**Marker:** CODE-REVIEW
+**Scope:** HSQ-3 P1 G3/G4/G6
 
 ## Findings
-
-- AC map fails closed only when Spec lists AC-n; waivers skip (correct).
-- Path confinement on spec path under product root.
-- Secrets patterns high-signal; JWT/sk-/npm_/AIza/stripe/bearer added.
-- py_compile uses temp cfile — no .pyc pollution.
-- hard_gates wiring matches secrets placement; prose-only skips G1/G14.
+- Path tests use stem tokens + Untested paths escape hatch.
+- red_cmd uses shlex + timeout; no shell=True.
+- Lockfile audit fail-closed only when auditor installed.
 
 ## Verdict
-
-Approve P0 for merge after unit tests green.
+Approve after unit tests green.
