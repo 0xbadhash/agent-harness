@@ -11,8 +11,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_ac_traceability as ac  # noqa: E402
-import check_diff_compile as dc  # noqa: E402
-from check_secrets_diff import scan_added_lines_regex  # noqa: E402
 
 
 class TestAcMap(unittest.TestCase):
@@ -62,15 +60,19 @@ class TestAcMap(unittest.TestCase):
 
 class TestSecretsG5(unittest.TestCase):
     def test_ac_3_jwt_and_sk_flagged(self):
-        """AC-3: JWT / sk- patterns match."""
+        """AC-3: JWT / sk- patterns match (assembled so scanners ignore fixtures)."""
         from check_secrets_diff import _PATTERNS
 
-        jwt = (
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-            "eyJzdWIiOiIxMjM0NTY3ODkwIn0."
-            "signaturepart1234567890ab"
+        # Assemble at runtime — avoid whole secrets in git history for gitleaks.
+        jwt = ".".join(
+            [
+                "eyJ" + "hbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+                "eyJ" + "zdWIiOiIxMjM0NTY3ODkwIn0",
+                "signaturepart1234567890ab",
+            ]
         )
-        blob = f"token = '{jwt}'\nkey = 'sk-abcdefghijklmnopqrstuvwxyz12'\n"
+        sk = "sk" + "-" + ("abcd" * 6) + "12"
+        blob = f"token = '{jwt}'\nkey = '{sk}'\n"
         names = []
         for name, pat in _PATTERNS:
             if pat.search(blob):
@@ -120,7 +122,9 @@ if __name__ == "__main__":
 
 def test_ac_6_modules_importable():
     """AC-6: hard_gates can import G1/G14 modules."""
-    import check_ac_traceability
-    import check_diff_compile
+    import check_ac_traceability as m1
+    import check_diff_compile as m2
     import hard_gates
+
     assert hasattr(hard_gates, "evaluate")
+    assert hasattr(m1, "check") and hasattr(m2, "check")

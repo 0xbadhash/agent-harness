@@ -72,8 +72,12 @@ def run_gitleaks(repo: Path, base: str, head: str) -> tuple[int, str]:
     if not bin_path:
         return -1, ""
     # Align with regex path: three-dot (merge-base) range, not two-dot base..head
+    cfg = repo / ".gitleaks.toml"
+    cmd = [bin_path, "git", f"--log-opts={_range_spec(base, head)}", "--no-banner", "-v"]
+    if cfg.is_file():
+        cmd.extend(["--config", str(cfg)])
     r = subprocess.run(
-        [bin_path, "git", f"--log-opts={_range_spec(base, head)}", "--no-banner", "-v"],
+        cmd,
         cwd=str(repo),
         capture_output=True,
         text=True,
