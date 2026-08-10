@@ -451,3 +451,21 @@ Full ops doc: **[night-shift.md](night-shift.md)**.
 - [TDD](tdd.md)  
 - [Night shift](night-shift.md)  
 - [Skills catalog](skills-catalog.md)  
+
+## HSQ-3 quality gates (1.4.22–1.4.25)
+
+Wired into `hard_gates` / portfolio (fail closed unless noted):
+
+| Gate | Script | Ver |
+|------|--------|-----|
+| G1 AC map | `check_ac_traceability.py` | 1.4.22 |
+| G5 secrets | `check_secrets_diff.py` | 1.4.22 |
+| G14 diff compile | `check_diff_compile.py` | 1.4.22 |
+| G3 path tests | `check_changed_path_tests.py` | 1.4.23 |
+| G4 red/green | `check_red_green_cmds.py` | 1.4.23 |
+| G6 lockfile audit | `check_lockfile_audit.py` | 1.4.23 |
+| G2 spec hash | `check_spec_hash.py` | 1.4.24 |
+| G10 waiver budget | `check_waiver_budget.py` | 1.4.24 |
+| G7 threat tags | `check_threat_tags.py` | 1.4.24 |
+| G8 security_paths | `check_security_paths.py` | 1.4.24 |
+| G15 protect SoT pin | `check_protect_sot_pin.py` (warn) | 1.4.25 |
