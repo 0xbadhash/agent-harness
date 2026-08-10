@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.24 — 2026-08-10
+
+### HSQ-3 P2 quality gates
+- **G2** `check_spec_hash.py` — Spec path exists; optional spec_sha256 pin
+- **G10** `check_waiver_budget.py` — rolling waiver budget on waiver ships
+- **G7** `check_threat_tags.py` — runtime Threat notes ≥2 known tags
+- **G8** `check_security_paths.py` — plugin security_paths → security tests
+
 ## v1.4.23 — 2026-08-10
 
 ### HSQ-3 P1 quality gates

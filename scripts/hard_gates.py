@@ -380,6 +380,49 @@ def evaluate(
     else:
         skipped.append("diff_compile (prose-only)")
 
+    # HSQ-3 P2 G2/G10/G7/G8 — spec hash, waiver budget, threat tags, security paths
+    if not prose_only:
+        try:
+            from check_spec_hash import check as _spec_hash  # type: ignore
+
+            sh_ok, sh_msgs = _spec_hash(root, pr_draft)
+            if not sh_ok:
+                for msg in sh_msgs:
+                    violations.append(f"hard_gates: spec_hash — {msg}")
+            else:
+                skipped.append("spec_hash (" + (sh_msgs[0] if sh_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: spec_hash error: {e}")
+        try:
+            from check_waiver_budget import check as _wbudget  # type: ignore
+
+            wb_ok, wb_msgs = _wbudget(root, pr_draft)
+            if not wb_ok:
+                for msg in wb_msgs:
+                    violations.append(f"hard_gates: waiver_budget — {msg}")
+            else:
+                skipped.append("waiver_budget (" + (wb_msgs[0] if wb_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: waiver_budget error: {e}")
+        if runtime:
+            try:
+                from check_threat_tags import check as _threat  # type: ignore
+
+                th_ok, th_msgs = _threat(draft_text, runtime=True)
+                if not th_ok:
+                    for msg in th_msgs:
+                        violations.append(f"hard_gates: threat_tags — {msg}")
+                else:
+                    skipped.append("threat_tags (" + (th_msgs[0] if th_msgs else "ok") + ")")
+            except Exception as e:  # pragma: no cover
+                violations.append(f"hard_gates: threat_tags error: {e}")
+        else:
+            skipped.append("threat_tags (no runtime)")
+    else:
+        skipped.append("spec_hash (prose-only)")
+        skipped.append("waiver_budget (prose-only)")
+        skipped.append("threat_tags (prose-only)")
+
     # HSQ-3 P1 G3/G4/G6 — path tests, red/green cmds, lockfile audit
     base_g, head_g = "HEAD~1", "HEAD"
     if diff:
@@ -429,6 +472,21 @@ def evaluate(
             skipped.append("lockfile_audit (" + (l_msgs[0] if l_msgs else "ok") + ")")
     except Exception as e:  # pragma: no cover
         violations.append(f"hard_gates: lockfile_audit error: {e}")
+
+    if not prose_only:
+        try:
+            from check_security_paths import check as _sec_paths  # type: ignore
+
+            sp_ok, sp_msgs = _sec_paths(root, base_g, head_g)
+            if not sp_ok:
+                for msg in sp_msgs:
+                    violations.append(f"hard_gates: security_paths — {msg}")
+            else:
+                skipped.append("security_paths (" + (sp_msgs[0] if sp_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: security_paths error: {e}")
+    else:
+        skipped.append("security_paths (prose-only)")
 
     # Web E2E + Comet contract when product has a website (fail closed)
     if not prose_only:

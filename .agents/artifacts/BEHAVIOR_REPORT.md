@@ -1,9 +1,7 @@
 # BEHAVIOR-REPORT
 **Marker:** BEHAVIOR-REPORT
-**Runtime:** CLI gate scripts G3/G4/G6
+**Runtime:** CLI gate scripts P2
 ## Scenarios
-1. New module without test → path_tests fail
-2. red_cmd true → fail
-3. No lockfile → skip ok
+Spec missing fails; wrong hash fails; threat tags enforced on runtime.
 ## Verdict
-Matches AC-1..AC-6.
+OK
