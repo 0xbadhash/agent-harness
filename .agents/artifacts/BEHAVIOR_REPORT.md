@@ -2,15 +2,14 @@
 
 **Marker:** BEHAVIOR-REPORT  
 **When:** 2026-08-10  
+**Runtime:** CLI scripts (check_ac_traceability, check_diff_compile, check_secrets_diff)
 
-## Behaviors
-1. Illegal FSM transition raises ValueError; force path logs JSONL.
-2. CODE-REVIEW quality floor rejects thin auto stubs.
-3. skip-hard-gates logs SKIP_HARD_GATES_LOG.jsonl.
-4. ops_dashboard collects waiver 30d and appends OPS_SNAPSHOTS.jsonl.
+## Scenarios
 
-## Runtime surface
-Scripts/CI only; no new public HTTP surface.
+1. Feature PR with unmapped AC → hard_gates fail AC map.
+2. Added sk- / JWT line → secrets fail closed.
+3. Syntax-invalid changed .py → diff_compile fail.
 
-## Result
-PASS under unit tests.
+## Verdict
+
+Behavior matches HSQ-3 P0 AC-1..AC-6 intent.

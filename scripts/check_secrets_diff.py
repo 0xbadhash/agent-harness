@@ -26,15 +26,28 @@ import sys
 from pathlib import Path
 
 
-# High-signal only (avoid password-like false positives)
+# High-signal only (avoid password-like false positives). HSQ-3 P0 G5: expand.
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),
     ("github_pat", re.compile(r"ghp_[A-Za-z0-9]{36,}")),
     ("github_fine_grained", re.compile(r"github_pat_[A-Za-z0-9_]{20,}")),
+    ("github_oauth", re.compile(r"gho_[A-Za-z0-9]{36,}")),
     ("slack_token", re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}")),
-    ("private_key_header", re.compile(r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----")),
+    ("private_key_header", re.compile(r"-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----")),
     ("generic_api_key_assign", re.compile(
         r"(?i)(api[_-]?key|secret[_-]?key|access[_-]?token)\s*[:=]\s*['\"][A-Za-z0-9_\-]{20,}['\"]"
+    )),
+    # G5 tighten
+    ("jwt_compact", re.compile(
+        r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"
+    )),
+    ("openai_sk", re.compile(r"\bsk-[A-Za-z0-9]{20,}\b")),
+    ("openai_sk_proj", re.compile(r"\bsk-proj-[A-Za-z0-9_-]{20,}\b")),
+    ("npm_token", re.compile(r"\bnpm_[A-Za-z0-9]{20,}\b")),
+    ("google_api_key", re.compile(r"\bAIza[0-9A-Za-z\-_]{20,}\b")),
+    ("stripe_live", re.compile(r"\bsk_live_[A-Za-z0-9]{16,}\b")),
+    ("bearer_long", re.compile(
+        r"(?i)authorization\s*[:=]\s*['\"]?bearer\s+[A-Za-z0-9\-._~+/]{32,}={0,2}"
     )),
 ]
 
@@ -59,8 +72,12 @@ def run_gitleaks(repo: Path, base: str, head: str) -> tuple[int, str]:
     if not bin_path:
         return -1, ""
     # Align with regex path: three-dot (merge-base) range, not two-dot base..head
+    cfg = repo / ".gitleaks.toml"
+    cmd = [bin_path, "git", f"--log-opts={_range_spec(base, head)}", "--no-banner", "-v"]
+    if cfg.is_file():
+        cmd.extend(["--config", str(cfg)])
     r = subprocess.run(
-        [bin_path, "git", f"--log-opts={_range_spec(base, head)}", "--no-banner", "-v"],
+        cmd,
         cwd=str(repo),
         capture_output=True,
         text=True,
@@ -91,6 +108,18 @@ def run_trufflehog(repo: Path, base: str, head: str) -> tuple[int, str]:
     return r.returncode, (r.stdout or "") + (r.stderr or "")
 
 
+def _skip_secret_path(path: str) -> bool:
+    """Tests/fixtures may embed synthetic tokens for pattern unit tests."""
+    p = path.replace("\\", "/").lower()
+    if "/tests/" in f"/{p}" or p.startswith("tests/"):
+        return True
+    if p.endswith((".md", ".rst", ".txt")) and "changelog" in p:
+        return True
+    if "fixture" in p or "testdata" in p or "test_data" in p:
+        return True
+    return False
+
+
 def scan_added_lines_regex(repo: Path, base: str, head: str) -> list[str]:
     r = _git(repo, "diff", "-U0", _range_spec(base, head))
     if r.returncode != 0:
@@ -102,6 +131,8 @@ def scan_added_lines_regex(repo: Path, base: str, head: str) -> list[str]:
             path = line[6:]
             continue
         if not line.startswith("+") or line.startswith("+++"):
+            continue
+        if path and _skip_secret_path(path):
             continue
         content = line[1:]
         for name, pat in _PATTERNS:

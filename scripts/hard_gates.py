@@ -332,13 +332,53 @@ def evaluate(
                     "hard_gates, smoke, pytest/unittest, validate, coverage, SBOM"
                 )
 
-    # Secrets on diff (fail closed when check fails)
+    # Secrets on diff (fail closed when check fails) — G5 patterns in check_secrets_diff
     if not _secrets_ok(root, diff):
         violations.append(
             "hard_gates: secrets scan failed on diff — fix or narrow before approve"
         )
     else:
         skipped.append("secrets (clean or skip)")
+
+    # HSQ-3 P0 G1: AC → test map (non-prose feature ships)
+    if not prose_only:
+        try:
+            from check_ac_traceability import check as _ac_check  # type: ignore
+
+            ac_ok, ac_msgs = _ac_check(root, pr_draft)
+            if not ac_ok:
+                for msg in ac_msgs:
+                    violations.append(f"hard_gates: AC map — {msg}")
+            else:
+                skipped.append("ac_map (" + (ac_msgs[0] if ac_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: AC map check error: {e}")
+    else:
+        skipped.append("ac_map (prose-only)")
+
+    # HSQ-3 P0 G14: py_compile changed .py (disk is truth)
+    if not prose_only:
+        try:
+            from check_diff_compile import check as _compile_check  # type: ignore
+
+            base, head = "HEAD~1", "HEAD"
+            if diff:
+                for sep in ("...", ".."):
+                    if sep in diff:
+                        parts = diff.split(sep, 1)
+                        if len(parts) == 2 and parts[0] and parts[1]:
+                            base, head = parts[0], parts[1]
+                        break
+            c_ok, c_msgs = _compile_check(root, base, head)
+            if not c_ok:
+                for msg in c_msgs:
+                    violations.append(f"hard_gates: diff_compile — {msg}")
+            else:
+                skipped.append("diff_compile (" + (c_msgs[0] if c_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: diff_compile error: {e}")
+    else:
+        skipped.append("diff_compile (prose-only)")
 
     # Web E2E + Comet contract when product has a website (fail closed)
     if not prose_only:

@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.22 — 2026-08-10
+
+### HSQ-3 P0 quality gates
+- **G1** `check_ac_traceability.py` — AC-n in spec → Traceability + tests (or N/A)
+- **G5** expanded `check_secrets_diff` patterns (JWT, sk-, npm_, AIza, stripe, bearer)
+- **G14** `check_diff_compile.py` — py_compile changed `.py` on ship diff
+- hard_gates wires G1 + G14 for non-prose ships
+
 ## v1.4.21 — 2026-08-10
 
 ### HSQ-2 Integrity & Ops (items 1–9)

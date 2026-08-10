@@ -1,0 +1,6 @@
+# agent-harness — allow synthetic tokens in unit tests
+[allowlist]
+paths = [
+  '''tests/.*''',
+  '''.*/test_.*\.py''',
+]
