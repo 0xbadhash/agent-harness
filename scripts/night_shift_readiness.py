@@ -548,14 +548,40 @@ def build_report_md(
         "**Hard-stops:** no release/tag/force-push; autofix is mechanical only (deps/format)",
         "**SoT:** agent-harness `scripts/night_shift_readiness.py`",
         "",
-        "## Gates",
+        "**This report is the NIGHT bar only** (~19:15 UTC). "
+        "Ship-time gates (`/pr_review --validate`) and GitHub `daytime-gates` run at other times — see schedule below.",
         "",
-        "| Gate | Result | Exit |",
-        "|------|--------|------|",
     ]
+    try:
+        from test_trigger_schedule import schedule_markdown  # type: ignore
+
+        lines.append(schedule_markdown(compact=True).rstrip())
+        lines.append("")
+    except Exception:  # noqa: BLE001
+        pass
+    lines.extend(
+        [
+            "## Gates (this night run)",
+            "",
+            "| Gate | Result | Exit | When else |",
+            "|------|--------|------|-----------|",
+        ]
+    )
+    # Map readiness gate names → when they also run
+    when_else = {
+        "repo_hygiene": "Ship validate / CI optional",
+        "hardcodes": "Every GitHub daytime + ship",
+        "verify_skills": "Harness skill CI path filter",
+        "validate_full": "Ship score path; not full GH smoke_ci",
+        "validate_hygiene": "Ship/hygiene mode",
+        "product_smoke": "GitHub uses smoke_ci; night uses full smoke",
+        "coverage": "Ship/module coverage config",
+        "web_e2e": "Ship hard_gates if website",
+    }
     for r in results:
         tag = "✅" if r["ok"] else "❌"
-        lines.append(f"| {r['name']} | {tag} | {r.get('exit')} |")
+        extra = when_else.get(str(r["name"]), "See act map")
+        lines.append(f"| {r['name']} | {tag} | {r.get('exit')} | {extra} |")
     lines.extend(["", "## Failures (tails)", ""])
     fails = [r for r in results if not r["ok"]]
     if not fails:

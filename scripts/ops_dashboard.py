@@ -804,6 +804,29 @@ def render(d: Dashboard, vault: Path | None) -> str:
     )
     lines.extend(section("☐ To-do", d.todos, "_No open action items from this aggregator._"))
 
+    # When tests run — same map as night-shift-log (SoT test_trigger_schedule.py)
+    try:
+        sys.path.insert(0, str(HARNESS / "scripts"))
+        from test_trigger_schedule import schedule_markdown  # type: ignore
+
+        lines.append(schedule_markdown(compact=False).rstrip())
+        lines.append("")
+        lines.append(
+            "> **Act rule:** GitHub daytime red → fix on GitHub. "
+            "Night FAIL on this dashboard → open product TODO / night-shift-log. "
+            "News/kanban → Attention links only."
+        )
+        lines.append("")
+    except Exception:  # noqa: BLE001
+        lines.extend(
+            [
+                "## When tests run",
+                "",
+                "_Install `scripts/test_trigger_schedule.py` (agent-harness SoT)._",
+                "",
+            ]
+        )
+
     lines.extend(
         [
             "## Source map (do not hunt 10 pages — start here)",
@@ -823,6 +846,9 @@ def render(d: Dashboard, vault: Path | None) -> str:
                 f"| Pipeline | {_wiki_link(vault, 'agent-tasks/pipeline-status.md', 'pipeline-status')} |",
                 f"| Kanban | {_wiki_link(vault, 'agent-tasks/kanban.md', 'kanban')} |",
                 f"| Security IoC (weekly deep) | {_wiki_link(vault, 'agent-tasks/security-ioc-status.md', 'security-ioc-status')} |",
+                "| Test schedule SoT | `agent-harness/scripts/test_trigger_schedule.py` + section above |",
+                "| Per-product night detail | `01-Projects/<id>/night-shift-log.md` (includes same schedule) |",
+                "| GitHub daytime CI | Each repo → Actions → `daytime-gates` |",
                 f"| This dashboard | {_wiki_link(vault, 'agent-tasks/OPS-DASHBOARD.md', 'OPS-DASHBOARD')} |",
             ]
         )
