@@ -1,0 +1,22 @@
+# J13 — weekly ZAP baseline against config/zap_targets.yaml (warn-only default)
+name: zap-baseline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ZAP baseline
+        run: bash scripts/zap_baseline.sh
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: .agents/artifacts/zap/
+          if-no-files-found: ignore

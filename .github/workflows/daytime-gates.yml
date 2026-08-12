@@ -1,4 +1,4 @@
-# A3 — Daytime readiness + skill conformance (HSQ-2 real path filter).
+# A3 + CI matrix J1–J8 + J12 — harness SoT daytime gates.
 name: daytime-gates
 
 on:
@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -20,12 +22,24 @@ jobs:
           python -m pip install -U pip
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           pip install pytest ruff mypy || true
-      - name: Unit tests
+      - name: J1 unit tests
         run: python -m pytest tests/ -q
-      - name: Daytime readiness (this repo)
+      - name: J2 lint
+        run: python -m ruff check scripts tests bin 2>/dev/null || python -m ruff check scripts tests
+      - name: J3 hardcodes
+        run: python scripts/check_hardcodes.py
+      - name: J4 validate
+        run: python scripts/validate.py full --skip-vault-schema || python scripts/validate.py full
+      - name: J5 daytime readiness
         run: python scripts/daytime_readiness_subset.py --root .
-      - name: Hard gates dry structure
+      - name: J7 secrets
+        run: python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD || python scripts/check_secrets_diff.py
+      - name: J6 hard_gates CLI present
         run: python scripts/hard_gates.py --help
+      - name: J12 Semgrep
+        run: |
+          python -m pip install -q semgrep
+          semgrep --config .semgrep.yml --error --quiet .
 
   skill-conformance:
     name: Skill conformance (agent_eval_checklist)
@@ -50,12 +64,11 @@ jobs:
             BASE="${{ github.event.pull_request.base.sha }}"
             HEAD="${{ github.event.pull_request.head.sha }}"
             CHANGED=$(git diff --name-only "$BASE...$HEAD" || true)
-            if echo "$CHANGED" | grep -E '^(skills/|scripts/.*gate|scripts/agent_eval|scripts/pipeline_state|scripts/hard_gates|AGENTS|docs/ship-flow|docs/web-e2e|config/ship_skills)' >/dev/null; then
+            if echo "$CHANGED" | grep -E '^(skills/|scripts/.*gate|scripts/agent_eval|scripts/pipeline_state|scripts/hard_gates|AGENTS|docs/ship-flow|docs/web-e2e|docs/ci-matrix|config/ship_skills)' >/dev/null; then
               RUN=true
             fi
           fi
           echo "run_checklist=$RUN" >> "$GITHUB_OUTPUT"
-          echo "skill_conformance_run=$RUN"
       - name: C5 agent eval checklist (skill conformance)
         if: steps.paths.outputs.run_checklist == 'true'
         run: python scripts/agent_eval_checklist.py --root . --skip-tests

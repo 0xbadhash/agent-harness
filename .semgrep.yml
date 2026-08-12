@@ -1,0 +1,27 @@
+# J12 — portfolio default Semgrep rules (error = fail-closed in CI)
+rules:
+  - id: py-subprocess-shell-true
+    languages: [python]
+    severity: ERROR
+    message: "subprocess with shell=True is dangerous"
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+  - id: py-eval-use
+    languages: [python]
+    severity: ERROR
+    message: "avoid eval()"
+    pattern: eval(...)
+  - id: py-exec-use
+    languages: [python]
+    severity: ERROR
+    message: "avoid exec()"
+    pattern: exec(...)
+  - id: py-pickle-loads
+    languages: [python]
+    severity: WARNING
+    message: "pickle.loads on untrusted data is unsafe"
+    pattern: pickle.loads(...)
+  - id: generic-hardcoded-password
+    languages: [python, typescript, javascript]
+    severity: ERROR
+    message: "possible hardcoded password/secret assignment"
+    pattern-regex: (?i)(password|secret|api_key)\s*=\s*['\"][^'\"]{8,}['\"]

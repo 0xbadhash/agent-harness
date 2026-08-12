@@ -469,3 +469,8 @@ Wired into `hard_gates` / portfolio (fail closed unless noted):
 | G7 threat tags | `check_threat_tags.py` | 1.4.24 |
 | G8 security_paths | `check_security_paths.py` | 1.4.24 |
 | G15 protect SoT pin | `check_protect_sot_pin.py` (warn) | 1.4.25 |
+
+## CI matrix
+
+See [ci-matrix.md](ci-matrix.md) for jobs × repos × fail-closed (J1–J16).
+

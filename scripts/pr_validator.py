@@ -181,14 +181,30 @@ def main() -> int:
     ap.add_argument(
         "--skip-hard-gates",
         action="store_true",
-        help="Emergency: do not enforce hard gates pack (still reported in warnings)",
+        help="Emergency only: requires ALLOW_SKIP_HARD_GATES=1; always logs skip",
     )
     args = ap.parse_args()
+
+    skip_hg = bool(args.skip_hard_gates)
+    if skip_hg:
+        import os
+
+        if os.environ.get("ALLOW_SKIP_HARD_GATES", "").strip() not in ("1", "true", "yes"):
+            print(
+                "❌ --skip-hard-gates requires env ALLOW_SKIP_HARD_GATES=1 "
+                "(J6 ship bar — silent skip forbidden)",
+                file=sys.stderr,
+            )
+            return 1
+        print(
+            "⚠️  ALLOW_SKIP_HARD_GATES=1 — hard gates skipped (audit log written)",
+            file=sys.stderr,
+        )
 
     result = score(
         args.diff,
         Path(args.pr_draft),
-        skip_hard_gates=args.skip_hard_gates,
+        skip_hard_gates=skip_hg,
     )
     print(json.dumps(result, indent=2))
     for w in result.get("warnings") or []:

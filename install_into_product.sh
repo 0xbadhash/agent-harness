@@ -160,6 +160,41 @@ if [[ -d "$HARNESS_ROOT/docs/diagrams" ]]; then
     cp -a "$HARNESS_ROOT/docs/diagrams/." "$PRODUCT_ROOT/.agents/docs/diagrams/" 2>/dev/null || true
 fi
 echo "  ~ .agents/docs/ (ship-flow, ship-flow-detailed, skills-catalog, llm-bootstrap, start-a-feature)"
+# CI matrix docs (optional mirror)
+if [[ -f "$HARNESS_ROOT/docs/ci-matrix.md" ]]; then
+  cp -a "$HARNESS_ROOT/docs/ci-matrix.md" "$PRODUCT_ROOT/.agents/docs/ci-matrix.md"
+fi
+
+# J1–J5+J7(+J12) product daytime workflow + Semgrep config + ZAP helpers (step 1/3/4)
+mkdir -p "$PRODUCT_ROOT/.github/workflows"
+if [[ -f "$HARNESS_ROOT/templates/daytime-gates.yml" ]]; then
+  # Always refresh template so portfolio force-install picks up fail-closed matrix
+  cp -a "$HARNESS_ROOT/templates/daytime-gates.yml" \
+    "$PRODUCT_ROOT/.github/workflows/daytime-gates.yml"
+  echo "  ~ .github/workflows/daytime-gates.yml (J1–J5+J7+J12)"
+fi
+if [[ -f "$HARNESS_ROOT/templates/zap-baseline.yml" ]]; then
+  if [[ ! -f "$PRODUCT_ROOT/.github/workflows/zap-baseline.yml" ]]; then
+    cp -a "$HARNESS_ROOT/templates/zap-baseline.yml" \
+      "$PRODUCT_ROOT/.github/workflows/zap-baseline.yml"
+    echo "  + .github/workflows/zap-baseline.yml (J13 optional)"
+  fi
+fi
+if [[ -f "$HARNESS_ROOT/.semgrep.yml" ]]; then
+  if [[ ! -f "$PRODUCT_ROOT/.semgrep.yml" ]]; then
+    cp -a "$HARNESS_ROOT/.semgrep.yml" "$PRODUCT_ROOT/.semgrep.yml"
+    echo "  + .semgrep.yml (J12)"
+  fi
+fi
+if [[ -f "$HARNESS_ROOT/scripts/zap_baseline.sh" ]]; then
+  cp -a "$HARNESS_ROOT/scripts/zap_baseline.sh" "$PRODUCT_ROOT/scripts/zap_baseline.sh"
+  chmod +x "$PRODUCT_ROOT/scripts/zap_baseline.sh" 2>/dev/null || true
+fi
+if [[ -f "$HARNESS_ROOT/config/zap_targets.yaml" && ! -f "$PRODUCT_ROOT/config/zap_targets.yaml" ]]; then
+  mkdir -p "$PRODUCT_ROOT/config"
+  cp -a "$HARNESS_ROOT/config/zap_targets.yaml" "$PRODUCT_ROOT/config/zap_targets.yaml"
+  echo "  + config/zap_targets.yaml (J13 targets — edit URLs)"
+fi
 
 if [[ -d "$HARNESS_ROOT/tools" ]]; then
   rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/tools/" "$PRODUCT_ROOT/tools/"
