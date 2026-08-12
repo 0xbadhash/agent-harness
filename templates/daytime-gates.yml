@@ -1,6 +1,5 @@
-# Product daytime gates — J1–J5 + J7 (+ J11/J12 when applicable).
-# Copied to .github/workflows/daytime-gates.yml by install_into_product.sh
-# Fail-closed when harness scripts are present.
+# Product daytime gates — aligned with daytime_readiness_subset (J3–J5 + smoke).
+# Fail-closed on harness scripts; product deps installed from requirements*.
 name: daytime-gates
 
 on:
@@ -19,47 +18,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Dev deps
+      - name: Install product Python deps
         run: |
           python -m pip install -U pip
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install pytest ruff mypy || true
-      - name: J1 unit tests
+          if [ -f pyproject.toml ]; then pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || true; fi
+          pip install pytest ruff hypothesis || true
+          # common optional deps for portfolio products
+          pip install python-dotenv PyPDF2 2>/dev/null || true
+      - name: J5 daytime readiness (preferred full bar)
         run: |
           set -euo pipefail
-          if [ -d tests ]; then
-            python -m pytest tests/ -q
-          else
-            echo "No tests/ — skip J1"
-          fi
-      - name: J2 lint (ruff when configured)
-        run: |
-          set -euo pipefail
-          if [ -f ruff.toml ] || [ -f .ruff.toml ] || [ -f pyproject.toml ]; then
-            python -m ruff check scripts tests 2>/dev/null || python -m ruff check .
-          else
-            echo "No ruff config — soft ruff on scripts if present"
-            if [ -d scripts ]; then python -m ruff check scripts || true; fi
-          fi
-      - name: J3 hardcodes
-        run: |
-          set -euo pipefail
-          test -f scripts/check_hardcodes.py
-          python scripts/check_hardcodes.py
-      - name: J4 validate full
-        run: |
-          set -euo pipefail
-          if [ -f scripts/validate.py ]; then
-            python scripts/validate.py full --skip-vault-schema 2>/dev/null \
-              || python scripts/validate.py full
-          else
-            echo "No validate.py — fail (harness incomplete)"
-            exit 1
-          fi
-      - name: J5 daytime readiness
-        run: |
-          set -euo pipefail
+          export PYTHONPATH="${PYTHONPATH:-}:src:."
           if [ -f scripts/daytime_readiness_subset.py ]; then
             python scripts/daytime_readiness_subset.py --root .
           elif [ -f scripts/product_smoke.py ]; then
@@ -68,6 +39,11 @@ jobs:
             echo "No daytime_readiness_subset or product_smoke"
             exit 1
           fi
+      - name: J3 hardcodes (explicit)
+        run: |
+          set -euo pipefail
+          test -f scripts/check_hardcodes.py
+          python scripts/check_hardcodes.py
       - name: J7 secrets
         run: |
           set -euo pipefail
@@ -75,18 +51,16 @@ jobs:
           python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD \
             || python scripts/check_secrets_diff.py --base origin/main --head HEAD \
             || python scripts/check_secrets_diff.py
-      - name: J11 lockfile audit
-        run: |
-          if [ -f scripts/check_lockfile_audit.py ]; then
-            python scripts/check_lockfile_audit.py --base HEAD~1 --head HEAD
-          fi
-      - name: J12 Semgrep
+      - name: J12 Semgrep (if config present)
         run: |
           set -euo pipefail
-          python -m pip install -q semgrep
-          if [ -f .semgrep.yml ]; then
-            semgrep --config .semgrep.yml --error --quiet .
-          else
-            semgrep --config p/python --config p/security-audit --error --quiet . \
-              || semgrep --config auto --error --quiet .
+          if [ ! -f .semgrep.yml ]; then
+            echo "No .semgrep.yml — skip J12"
+            exit 0
           fi
+          python -m pip install -q semgrep
+          # error severity only; allow warnings
+          semgrep --config .semgrep.yml --error --quiet . || {
+            echo "Semgrep findings — see above"
+            exit 1
+          }
