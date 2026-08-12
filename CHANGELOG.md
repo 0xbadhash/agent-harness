@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4.28 — 2026-08-12
+
+### Tier A/B/C Best-of-Agent-Harnesses
+
+- **A1** `harness.manifest.yaml` + `check_harness_manifest.py`
+- **A2** `docs/compatibility.md` + `check_compatibility.py`
+- **A3** `protect_sot_merge.py` + `config/critical_sot_scripts.txt`
+- **A4** `SCANNER_STRICT` in secrets + lockfile audit; `docs/scanner-policy.md`
+- **B1** MCP contract doc + `check_mcp_contract.py`
+- **B2** recovery demo + `docs/recovery-demo.md`
+- **B3** `evidence_hash.py`
+- **B4** prompt-injection fixtures + `check_pi_fixtures.py`
+- **B5** `github_daytime_status.py` + OPS embed
+- **C1–C5** benchmark, SBOM/signing, sandbox policy, opt-in telemetry
+- **C15** multi-agent runtime documented **NON_GOAL**
+- Tests: `tests/test_tier_abc_1_4_28.py`
+
 ## v1.4.27 — 2026-08-12
 
 ### Ops: when tests run

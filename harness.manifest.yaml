@@ -1,0 +1,66 @@
+# Machine-readable public harness record (Best-of-Agent-Harnesses style).
+# Validate: python3 scripts/check_harness_manifest.py
+schema_version: 1
+
+project:
+  name: agent-harness
+  license: MIT
+  repository: https://github.com/0xbadhash/agent-harness
+  version_file: VERSION
+
+classification:
+  primary_category: coding-harness-configs
+  secondary_categories:
+    - progressive-disclosure
+  complexity: slightly-complex
+  autonomy: bounded
+  recovery: resumable   # not proven-durable (see docs/recovery-demo.md)
+  owns_agent_loop: false
+
+capabilities:
+  - skill-routing
+  - deterministic-gates
+  - workflow-state
+  - tdd-evidence
+  - review-governance
+  - behavior-validation
+  - browser-e2e
+  - security-gates
+  - release-management
+  - portfolio-operations
+  - operational-readiness
+  - test-trigger-schedule
+  - smoke-ci-split
+  - harness-manifest
+  - compatibility-matrix
+  - protect-sot-merge
+  - scanner-strict-policy
+  - mcp-contract
+  - recovery-demo
+  - evidence-hash
+  - prompt-injection-fixtures
+  - github-daytime-ops
+  - harness-benchmark-scaffold
+  - sbom-signing-checklist
+  - sandbox-policy-doc
+  - opt-in-telemetry
+
+non_goals:
+  - multi-agent-runtime
+  - owning-inference-loop
+  - full-coding-agent-product
+
+compatibility:
+  matrix_doc: docs/compatibility.md
+  claimed:
+    agents: [grok-build, cursor, claude-code, generic-llm-cli]
+    languages: [python, typescript, javascript, php, go, rust]
+  tested:
+    agents: [grok-build]
+    languages: [python, typescript]
+    platforms: [linux-vps]
+
+scanner_policy:
+  secrets: fail_closed_when_findings
+  secrets_missing_scanner: warn_unless_SCANNER_STRICT
+  lockfile_audit_missing_tool: warn_unless_SCANNER_STRICT

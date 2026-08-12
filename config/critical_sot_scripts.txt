@@ -1,0 +1,11 @@
+# Critical FSM / gate scripts — prefer SoT on portfolio merge (Tier A-3).
+# protect_sot_merge.py can copy these into products when --apply (with backup).
+scripts/pipeline_state.py
+scripts/pr_validator.py
+scripts/hard_gates.py
+scripts/night_shift_readiness.py
+scripts/product_smoke.py
+scripts/product_plugin.py
+scripts/check_secrets_diff.py
+scripts/test_trigger_schedule.py
+scripts/ops_dashboard.py

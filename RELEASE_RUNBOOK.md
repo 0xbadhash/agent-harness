@@ -1,32 +1,33 @@
-# RELEASE_RUNBOOK — v1.4.27
+# RELEASE_RUNBOOK — agent-harness v1.4.28
 
-**When:** 2026-08-12  
-**Score:** 100 (pr_validator)  
-**Phase:** approved → shipped
+**Date:** 2026-08-12  
+**Score:** 100  
+**Phase:** shipped
 
 ## Smoke
 
 | Step | Result |
 |------|--------|
-| product_smoke | see release session log |
-| validate full --skip-vault-schema | gates as run in session |
-| pytest | 188 passed |
+| hardcodes | pass |
+| smoke_unit | pass (208 tests incl. tier_abc) |
 
-## Infra
-N/A — agent-harness has no VPS install root gate for this release (docs/ops scripts only).
+## Evidence
 
-## Contents
-- Test trigger schedule in OPS-DASHBOARD + night-shift-log
-- SoT: scripts/test_trigger_schedule.py
+- hard_gates: ok, 10 AC mapped
+- pr_validator score 100
+- Spec: docs/specs/2026-08-12-tier-abc-best-of-harness.md
 
 ## Rollback
+
 ```bash
-git checkout v1.4.26
+git checkout v1.4.27
+# portfolio: reinstall from previous tag if needed
 ```
 
-## Things that look bad but are actually fine
-1. Spec waiver chore on closeout PR_DRAFT.
-2. GitHub daytime still not scraped into OPS fail rows.
-3. Vault schema lint may fail on unrelated catalyxt dirs — skipped with --skip-vault-schema for harness SoT.
-4. Portfolio products may still show protect drift.
-5. Night logs rewritten once; next night run refreshes with new report format.
+## §9 things that look bad but are fine
+
+1. C15 multi-agent not built — NON_GOAL  
+2. SBOM warn-only  
+3. protect_sot_merge report-only  
+4. GitHub daytime best-effort  
+5. recovery resumable not proven-durable  
