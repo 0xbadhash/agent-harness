@@ -1,6 +1,5 @@
-# Product daytime gates — green path for portfolio CI.
-# Fail-closed: hardcodes + secrets + product_smoke (plugin smoke / unit).
-# Full validate (mypy/ruff suite) stays on night_shift / ship; not GH smoke.
+# Product daytime gates — CI-friendly smoke bar.
+# Creates .venv so product_smoke cmds that pin .venv/bin/python work.
 name: daytime-gates
 
 on:
@@ -19,50 +18,50 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install product Python deps
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+        if: hashFiles('package.json') != ''
+      - name: Python venv + deps
         run: |
-          python -m pip install -U pip
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ]; then
-            pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || true
+          set -euo pipefail
+          python -m venv .venv
+          .venv/bin/pip install -U pip
+          if [ -f requirements-dev.txt ]; then .venv/bin/pip install -r requirements-dev.txt; fi
+          if [ -f requirements.txt ]; then .venv/bin/pip install -r requirements.txt; fi
+          .venv/bin/pip install pytest hypothesis python-dotenv PyPDF2 ruff 2>/dev/null || true
+          .venv/bin/pip install shamir-mnemonic 2>/dev/null || true
+          # editable install only if pyproject exists and is simple
+          if [ -f pyproject.toml ] && ! grep -q 'git\+http' requirements.txt 2>/dev/null; then
+            .venv/bin/pip install -e . 2>/dev/null || true
           fi
-          pip install pytest hypothesis python-dotenv PyPDF2 ruff 2>/dev/null || true
-          # bip39lab optional
-          pip install shamir-mnemonic 2>/dev/null || true
+      - name: npm ci (if Node project)
+        if: hashFiles('package.json') != ''
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
       - name: J3 hardcodes
         run: |
           set -euo pipefail
           test -f scripts/check_hardcodes.py
-          python scripts/check_hardcodes.py
+          .venv/bin/python scripts/check_hardcodes.py
       - name: J10 product smoke
         run: |
           set -euo pipefail
           export PYTHONPATH="${PYTHONPATH:-}:src:."
           if [ -f scripts/product_smoke.py ]; then
-            python scripts/product_smoke.py --root .
-          elif [ -d tests ]; then
-            python -m pytest tests/ -q --tb=line -x --ignore=tests/e2e 2>/dev/null \
-              || python -m pytest tests/ -q --tb=line -k "not e2e and not live"
+            .venv/bin/python scripts/product_smoke.py --root .
           else
-            echo "No product_smoke or tests"
-            exit 1
+            .venv/bin/python -m pytest tests/ -q --tb=line -k "not e2e and not live" || \
+              .venv/bin/python -m pytest tests/ -q --tb=line
           fi
       - name: J7 secrets
         run: |
           set -euo pipefail
           test -f scripts/check_secrets_diff.py
-          python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD \
-            || python scripts/check_secrets_diff.py --base origin/main --head HEAD \
-            || python scripts/check_secrets_diff.py
-      - name: J12 Semgrep (optional config)
+          .venv/bin/python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD \
+            || .venv/bin/python scripts/check_secrets_diff.py
+      - name: J12 Semgrep (warn-only)
         run: |
-          set -euo pipefail
-          if [ ! -f .semgrep.yml ]; then
-            echo "No .semgrep.yml — skip"
-            exit 0
-          fi
-          python -m pip install -q semgrep
-          # Soften: do not fail CI on first portfolio wave (report only)
-          semgrep --config .semgrep.yml --quiet . || true
-          echo "Semgrep completed (warn-only until baselined per product)"
+          if [ ! -f .semgrep.yml ]; then echo skip; exit 0; fi
+          .venv/bin/pip install -q semgrep
+          .venv/bin/semgrep --config .semgrep.yml --quiet . || true
