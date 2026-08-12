@@ -485,8 +485,22 @@ def evaluate(
                 skipped.append("security_paths (" + (sp_msgs[0] if sp_msgs else "ok") + ")")
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: security_paths error: {e}")
+
+        # J14 property_tests modules from product_plugin
+        try:
+            from check_property_tests import check as _prop  # type: ignore
+
+            pr_ok, pr_msgs = _prop(root)
+            if not pr_ok:
+                for msg in pr_msgs:
+                    violations.append(f"hard_gates: property_tests — {msg}")
+            else:
+                skipped.append("property_tests (" + (pr_msgs[0] if pr_msgs else "ok") + ")")
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: property_tests error: {e}")
     else:
         skipped.append("security_paths (prose-only)")
+        skipped.append("property_tests (prose-only)")
 
     # Web E2E + Comet contract when product has a website (fail closed)
     if not prose_only:

@@ -1,18 +1,17 @@
-# PR Draft — HSQ-3 P3 G15 protect SoT pin
+# PR Draft — CI matrix steps 1–5
 
-**Spec:** `.agents/specs/HSQ-3-p3-protect-sot-pin.md`
-**spec_sha256:** 4a75fc6b1ab5ddf97d484eb2503900868696202db91f92b8826b4e9febe6915f
-**Version:** 1.4.25
+**Spec:** `.agents/specs/2026-08-12-ci-matrix-adoption.md`
+**spec_sha256:** 0c816f912a4500a931d0437e1d0891a2283b6644cb2631703a91011f54934411
+**Version:** 1.4.26
 
 ## What Problem This Solves
-Products keep forked FSM scripts after protect-list installs; silent drift from HSQ-2 floors.
+No fail-closed product daytime bar; skip-hard-gates too easy; no Semgrep/ZAP/property hooks.
 
 ## Why This Change Was Made
-P3 warn-only SoT pin — no install overwrite.
+CI matrix adoption steps 1–5 + docs/ci-matrix.md.
 
 ## User Impact
-- portfolio report notes SoT pin drift
-- CLI check_protect_sot_pin --strict optional
+Daytime CI template, stricter J6 skip, Semgrep, ZAP staging config, property_tests opt-in.
 
 ## Red-proof
 - red_cmd: `false`
@@ -21,23 +20,26 @@ P3 warn-only SoT pin — no install overwrite.
 ## Traceability
 | AC | Test |
 |----|------|
-| AC-1 | tests/test_hsq3_p3_protect_pin.py::TestProtectPin::test_ac_1_identical |
-| AC-2 | tests/test_hsq3_p3_protect_pin.py::TestProtectPin::test_ac_2_drift |
-| AC-3 | tests/test_hsq3_p3_protect_pin.py::TestProtectPin::test_ac_3_strict_cli |
-| AC-4 | portfolio_install_report evaluate notes (manual) |
+| AC-1 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_daytime_template_fail_closed |
+| AC-2 | tests/test_ci_matrix_steps.py::TestStep2SkipHardGates::test_skip_requires_env |
+| AC-3 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_semgrep_config |
+| AC-4 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_zap_targets |
+| AC-5 | tests/test_ci_matrix_steps.py::TestStep5PropertyTests |
+| AC-6 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_ci_matrix_doc |
 
 ## Threat notes
-- authz: N/A for pin checker
-- secrets: N/A
+- authz: N/A for CI matrix
+- secrets: J7 + Semgrep hardcoded pattern
+- supply-chain: lockfile audit retained in template
 
 ## Evidence pack
-- pytest tests/test_hsq3_p3_protect_pin.py
-- hard_gates suite
-- validate compliance
+- hard_gates + pytest tests/test_ci_matrix_steps.py
+- validate / compliance
+- docs/ci-matrix.md
 
 ## Things that look bad but are actually fine
-1. Warn-only default — intentional anti-break for product forks.
-2. Only pipeline_state + hard_gates pinned (not all protect list).
-3. --strict is opt-in for CI products that want fail-closed.
-4. mypy fix for P2 security_paths is drive-by.
-5. No auto-merge of forks.
+1. ZAP default warn-only.
+2. property_tests disabled by default.
+3. install overwrites product daytime-gates.yml (intentional SoT).
+4. Semgrep may need network on first CI run.
+5. Skip hard gates still exists for emergencies with env+log.

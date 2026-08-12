@@ -1,0 +1,14 @@
+# J13 — ZAP baseline targets (staging preferred). Used by scripts/zap_baseline.sh
+# fail_closed: false = warn-only (exit 0 with findings); true = exit 1 on High+
+fail_closed: false
+
+targets:
+  - id: catalyxt
+    url: https://catalyxt.xyz
+    enabled: true
+  - id: watchlist
+    url: https://watchlist.catalyxt.xyz
+    enabled: true
+  - id: bip39lab
+    url: https://bip39.catalyxt.xyz
+    enabled: true

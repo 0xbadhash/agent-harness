@@ -39,6 +39,16 @@ vault:
 product_path_prefixes:
   - src/
 
+# J14 — optional property-test targets (Hypothesis / fast-check).
+# When enabled, hard_gates requires tests referencing each module stem.
+property_tests:
+  enabled: false
+  modules: []
+  # modules:
+  #   - my_package/parser
+  #   - scripts/web_e2e_contract
+
+
 domain_review_hints:
   - domain correctness
   - no secret leakage

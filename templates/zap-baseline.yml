@@ -1,0 +1,29 @@
+# J13 — scheduled ZAP baseline (optional product/host workflow).
+# Copy to .github/workflows/zap-baseline.yml and set secrets/URLs as needed.
+name: zap-baseline
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ZAP baseline (warn-only by default)
+        run: |
+          chmod +x scripts/zap_baseline.sh 2>/dev/null || true
+          if [ -f scripts/zap_baseline.sh ]; then
+            bash scripts/zap_baseline.sh
+          else
+            echo "scripts/zap_baseline.sh missing — skip"
+          fi
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-reports
+          path: .agents/artifacts/zap/
+          if-no-files-found: ignore

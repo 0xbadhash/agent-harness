@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.26 — 2026-08-12
+
+### CI matrix adoption (steps 1–5)
+1. Product + harness **daytime-gates** fail-closed J1–J5+J7; install copies workflow
+2. **J6** `--skip-hard-gates` requires `ALLOW_SKIP_HARD_GATES=1` + skip log
+3. **J12 Semgrep** `.semgrep.yml` + CI job
+4. **J13 ZAP** `zap_baseline.sh` + `config/zap_targets.yaml` (catalyxt/watchlist/bip39)
+5. **J14 property_tests** plugin field + `check_property_tests` in hard_gates
+- `docs/ci-matrix.md` one-page matrix
+
 ## v1.4.25 — 2026-08-10
 
 ### HSQ-3 P3 protect SoT pin (warn)
