@@ -58,15 +58,16 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
         if rs:
             out["review_scope"] = rs
 
-    # smoke: section — each list item starts with "- name:" (stdlib, no PyYAML)
-    # Prefer section-scoped split so multi-entry smoke lists all parse (not only first).
-    smoke: list[dict[str, Any]] = []
-    sm = re.search(
-        r"^smoke:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
-        text,
-        re.MULTILINE | re.DOTALL,
-    )
-    if sm:
+    def _parse_smoke_list(key: str) -> list[dict[str, Any]]:
+        # smoke / smoke_ci: list items start with "- name:" (stdlib, no PyYAML)
+        found: list[dict[str, Any]] = []
+        sm = re.search(
+            rf"^{key}:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
+            text,
+            re.MULTILINE | re.DOTALL,
+        )
+        if not sm:
+            return found
         section = sm.group(1)
         parts = re.split(r"(?m)^([ \t]+-[ \t]+name:\s*\S+[ \t]*\n)", section)
         i = 1
@@ -88,9 +89,15 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
             cwd_m = re.search(r"cwd:\s*(\S+)", body)
             if cwd_m:
                 entry["cwd"] = cwd_m.group(1).strip().strip("'\"")
-            smoke.append(entry)
+            found.append(entry)
+        return found
+
+    smoke = _parse_smoke_list("smoke")
     if smoke:
         out["smoke"] = smoke
+    smoke_ci = _parse_smoke_list("smoke_ci")
+    if smoke_ci:
+        out["smoke_ci"] = smoke_ci
 
     # web_e2e: enabled/strict/require_s_ids + surfaces list (stdlib, no PyYAML)
     we: dict[str, Any] = {}
