@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.27 — 2026-08-12
+
+### Ops: when tests run
+- `scripts/test_trigger_schedule.py` — SoT schedule (ship / CI / night / ZAP / IoC)
+- OPS-DASHBOARD embeds full act map every refresh
+- Product `night-shift-log.md` embeds compact schedule
+- Night readiness reports: schedule + gate **When else** column
+- `docs/test-trigger-schedule.md`
+
 ## v1.4.26 — 2026-08-12
 
 ### CI matrix adoption (steps 1–5)

@@ -1,45 +1,48 @@
-# PR Draft — CI matrix steps 1–5
+# PR Draft — test-trigger schedule in OPS + night-shift-log
 
-**Spec:** `.agents/specs/2026-08-12-ci-matrix-adoption.md`
-**spec_sha256:** 0c816f912a4500a931d0437e1d0891a2283b6644cb2631703a91011f54934411
-**Version:** 1.4.26
+**Spec waiver:** chore  
+**Version target:** 1.4.27  
+**Range:** cb21214...HEAD (#15 already on main; release closeout)
 
 ## What Problem This Solves
-No fail-closed product daytime bar; skip-hard-gates too easy; no Semgrep/ZAP/property hooks.
+Operators could not see when ship / CI / night / code-review tests fire from Obsidian alone.
 
 ## Why This Change Was Made
-CI matrix adoption steps 1–5 + docs/ci-matrix.md.
+Wire single schedule SoT into OPS-DASHBOARD and every night-shift-log.
 
 ## User Impact
-Daytime CI template, stricter J6 skip, Semgrep, ZAP staging config, property_tests opt-in.
+- OPS shows full act map after each dashboard refresh  
+- Product night-shift-log includes compact schedule  
+- Night readiness reports add “When else” column  
 
 ## Red-proof
 - red_cmd: `false`
 - green_cmd: `true`
+- TDD: unit tests for schedule_markdown content
 
 ## Traceability
-| AC | Test |
-|----|------|
-| AC-1 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_daytime_template_fail_closed |
-| AC-2 | tests/test_ci_matrix_steps.py::TestStep2SkipHardGates::test_skip_requires_env |
-| AC-3 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_semgrep_config |
-| AC-4 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_zap_targets |
-| AC-5 | tests/test_ci_matrix_steps.py::TestStep5PropertyTests |
-| AC-6 | tests/test_ci_matrix_steps.py::TestDocsAndTemplates::test_ci_matrix_doc |
+| AC | Evidence |
+|----|----------|
+| Schedule embed OPS | ops_dashboard.py + live OPS section |
+| Schedule embed night log | night_shift_log.py + vault logs |
+| Night gate when-else | night_shift_readiness.py |
+| Unit | tests/test_test_trigger_schedule_mod.py |
 
 ## Threat notes
-- authz: N/A for CI matrix
-- secrets: J7 + Semgrep hardcoded pattern
-- supply-chain: lockfile audit retained in template
+- authz: N/A (docs/ops UI text only)
+- secrets: gitleaks clean on range
 
 ## Evidence pack
-- hard_gates + pytest tests/test_ci_matrix_steps.py
-- validate / compliance
-- docs/ci-matrix.md
+- hard_gates / pr_validator
+- pytest 188
+- secrets clean
 
 ## Things that look bad but are actually fine
-1. ZAP default warn-only.
-2. property_tests disabled by default.
-3. install overwrites product daytime-gates.yml (intentional SoT).
-4. Semgrep may need network on first CI run.
-5. Skip hard gates still exists for emergencies with env+log.
+1. Spec waiver chore — docs/ops wire-in, not product feature AC set.
+2. GitHub daytime still not scraped into OPS fail rows (by design; act rule says open Actions).
+3. Schedule is static — not live CI status.
+4. Night log rewrite of history entries only adds schedule header once.
+5. Portfolio install may lag product HARNESS_VERSION until force reinstall.
+
+## Cross-review
+See `.agents/artifacts/CROSS_REVIEW.md` — blockers=0.

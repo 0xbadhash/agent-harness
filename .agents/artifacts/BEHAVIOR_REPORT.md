@@ -1,9 +1,25 @@
 # BEHAVIOR-REPORT
-**Marker:** BEHAVIOR-REPORT
-**Runtime:** CI workflows + pr_validator skip path + zap script + property_tests check
-## Scenarios
-1. --skip-hard-gates without env → exit 1
-2. property_tests enabled without coverage → hard_gates fail
-3. daytime template requires hardcodes/secrets scripts
+
+**Marker:** BEHAVIOR-REPORT  
+**Runtime surface:** CLI scripts (ops_dashboard, night_shift_log, test_trigger_schedule)
+
+## Contract
+Operators can read **when tests run** from OPS-DASHBOARD and product night-shift-log without opening harness source.
+
+## Clauses
+
+| ID | Clause | Result | Evidence |
+|----|--------|--------|----------|
+| B1 | `python3 scripts/test_trigger_schedule.py` prints ship + night + daytime rows | **pass** | CLI output includes `/pr_review`, Night shift, daytime-gates |
+| B2 | `ops_dashboard.py --write` includes “When tests run (act map)” | **pass** | Vault OPS-DASHBOARD section present after write |
+| B3 | Rewritten `night-shift-log.md` includes schedule block | **pass** | email-detach / watchlist logs contain “When tests run” |
+| B4 | Invalid/missing import does not crash dashboard write | **pass** | try/except around schedule import in ops_dashboard |
+
+## Anti-cheat
+- Empty vault path still skips vault; schedule still attempts embed from harness scripts.
+- Schedule is static data — not derived from live CI (documented).
+
 ## Verdict
-OK
+Behavior matches ops documentation intent. Safe for `/pr_review --validate`.
+
+NEXT_SKILL=/pr_review --validate

@@ -1,0 +1,9 @@
+{
+  "card_id": null,
+  "phase": "shipped",
+  "remediation": [],
+  "score": 100.0,
+  "spec_id": ".agents/specs/HSQ-1-ship-quality-sot.md",
+  "task": "next after 1.4.6",
+  "waiver": null
+}
