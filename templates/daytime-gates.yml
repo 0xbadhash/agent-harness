@@ -49,7 +49,7 @@ jobs:
           set -euo pipefail
           export PYTHONPATH="${PYTHONPATH:-}:src:."
           if [ -f scripts/product_smoke.py ]; then
-            .venv/bin/python scripts/product_smoke.py --root .
+            PRODUCT_SMOKE_CI=1 .venv/bin/python scripts/product_smoke.py --root . --ci
           else
             .venv/bin/python -m pytest tests/ -q --tb=line -k "not e2e and not live" || \
               .venv/bin/python -m pytest tests/ -q --tb=line

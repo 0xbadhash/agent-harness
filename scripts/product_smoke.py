@@ -28,10 +28,27 @@ def run_smoke(
     product_root: Path,
     *,
     dry_run: bool = False,
+    ci: bool | None = None,
 ) -> list[dict[str, Any]]:
-    """Execute each smoke entry. Returns list of {name, cmd, cwd, exit, stdout, stderr}."""
+    """Execute each smoke entry. Returns list of {name, cmd, cwd, exit, stdout, stderr}.
+
+    When CI is true (arg, or env CI=true / PRODUCT_SMOKE_CI=1), prefer plugin
+    ``smoke_ci`` if present so GitHub Actions can stay green without Playwright
+    browsers / Foundry / full local toolchains. Local/night keep full ``smoke``.
+    """
+    import os
+
     data = load_plugin(product_root)
+    use_ci = ci
+    if use_ci is None:
+        use_ci = os.environ.get("CI", "").lower() in ("1", "true", "yes") or os.environ.get(
+            "PRODUCT_SMOKE_CI", ""
+        ).strip() in ("1", "true", "yes")
     entries = data.get("smoke") or []
+    if use_ci:
+        ci_entries = data.get("smoke_ci")
+        if isinstance(ci_entries, list) and ci_entries:
+            entries = ci_entries
     if not isinstance(entries, list):
         return []
 
@@ -109,9 +126,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Product repo root (default: cwd)",
     )
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--ci",
+        action="store_true",
+        help="Prefer smoke_ci[] from product_plugin (also auto when CI=true)",
+    )
     args = ap.parse_args(argv)
     root = args.root.expanduser().resolve()
-    results = run_smoke(root, dry_run=args.dry_run)
+    results = run_smoke(root, dry_run=args.dry_run, ci=True if args.ci else None)
     if not results:
         print("⚠️  no smoke entries in .agents/product_plugin.yaml")
         return 0
