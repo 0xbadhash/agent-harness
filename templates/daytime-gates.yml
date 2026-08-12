@@ -21,14 +21,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-        if: hashFiles('package.json') != ''
+        if: hashFiles('package.json') != '' || hashFiles('app/package.json') != ''
       - name: Python venv + deps
         run: |
           set -euo pipefail
           python -m venv .venv
           .venv/bin/pip install -U pip
           if [ -f requirements-dev.txt ]; then .venv/bin/pip install -r requirements-dev.txt || true; fi
-          # Avoid private git+https deps that break unauthenticated CI (ocr-ledger etc.)
           if [ -f requirements.txt ]; then
             if grep -qE 'git\+|git@' requirements.txt 2>/dev/null; then
               echo "requirements.txt has git deps — install filtered"
@@ -40,7 +39,6 @@ jobs:
           fi
           .venv/bin/pip install pytest hypothesis python-dotenv PyPDF2 ruff pyyaml 2>/dev/null || true
           .venv/bin/pip install shamir-mnemonic 2>/dev/null || true
-          # Skip pip install -e . (often pulls private git deps)
       - name: npm ci (if Node project)
         if: hashFiles('package.json') != '' || hashFiles('app/package.json') != ''
         run: |
@@ -49,7 +47,8 @@ jobs:
           fi
           if [ -f app/package.json ]; then
             (cd app && if [ -f package-lock.json ]; then npm ci; else npm install; fi)
-          fi      - name: J3 hardcodes
+          fi
+      - name: J3 hardcodes
         run: |
           set -euo pipefail
           test -f scripts/check_hardcodes.py
