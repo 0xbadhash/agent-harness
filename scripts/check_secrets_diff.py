@@ -19,6 +19,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -159,7 +160,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     repo = args.repo.resolve()
-    require_scanner = bool(args.require_scanner or args.strict)
+    # Tier A-4: SCANNER_STRICT=1 (or true/yes) forces require-scanner policy
+    env_strict = os.environ.get("SCANNER_STRICT", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    require_scanner = bool(args.require_scanner or args.strict or env_strict)
     rng = _range_spec(args.base, args.head)
 
     # Prefer external scanners

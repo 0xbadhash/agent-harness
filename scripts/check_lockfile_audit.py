@@ -6,6 +6,7 @@ If no audit tool is installed, warn and exit 0 (do not block offline sandboxes).
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -86,7 +87,22 @@ def check(repo: Path, base: str, head: str) -> tuple[bool, list[str]]:
                 msgs.append("pip-audit clean")
 
     if not ran:
-        msgs.append("warn: no audit tool available — skipped (install npm or pip-audit for fail-closed)")
+        strict = os.environ.get("SCANNER_STRICT", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if strict:
+            msgs.append(
+                "fail: SCANNER_STRICT set but no audit tool available "
+                "(install npm or pip-audit)"
+            )
+            return False, msgs
+        msgs.append(
+            "warn: no audit tool available — skipped "
+            "(install npm or pip-audit for fail-closed; set SCANNER_STRICT=1 to fail)"
+        )
         return True, msgs
     if failed:
         return False, msgs
