@@ -27,19 +27,29 @@ jobs:
           set -euo pipefail
           python -m venv .venv
           .venv/bin/pip install -U pip
-          if [ -f requirements-dev.txt ]; then .venv/bin/pip install -r requirements-dev.txt; fi
-          if [ -f requirements.txt ]; then .venv/bin/pip install -r requirements.txt; fi
-          .venv/bin/pip install pytest hypothesis python-dotenv PyPDF2 ruff 2>/dev/null || true
-          .venv/bin/pip install shamir-mnemonic 2>/dev/null || true
-          # editable install only if pyproject exists and is simple
-          if [ -f pyproject.toml ] && ! grep -q 'git\+http' requirements.txt 2>/dev/null; then
-            .venv/bin/pip install -e . 2>/dev/null || true
+          if [ -f requirements-dev.txt ]; then .venv/bin/pip install -r requirements-dev.txt || true; fi
+          # Avoid private git+https deps that break unauthenticated CI (ocr-ledger etc.)
+          if [ -f requirements.txt ]; then
+            if grep -qE 'git\+|git@' requirements.txt 2>/dev/null; then
+              echo "requirements.txt has git deps — install filtered"
+              grep -vE 'git\+|git@' requirements.txt > /tmp/req-nongit.txt || true
+              .venv/bin/pip install -r /tmp/req-nongit.txt || true
+            else
+              .venv/bin/pip install -r requirements.txt || true
+            fi
           fi
+          .venv/bin/pip install pytest hypothesis python-dotenv PyPDF2 ruff pyyaml 2>/dev/null || true
+          .venv/bin/pip install shamir-mnemonic 2>/dev/null || true
+          # Skip pip install -e . (often pulls private git deps)
       - name: npm ci (if Node project)
-        if: hashFiles('package.json') != ''
+        if: hashFiles('package.json') != '' || hashFiles('app/package.json') != ''
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-      - name: J3 hardcodes
+          if [ -f package.json ]; then
+            if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          fi
+          if [ -f app/package.json ]; then
+            (cd app && if [ -f package-lock.json ]; then npm ci; else npm install; fi)
+          fi      - name: J3 hardcodes
         run: |
           set -euo pipefail
           test -f scripts/check_hardcodes.py
