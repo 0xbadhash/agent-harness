@@ -1,24 +1,32 @@
-# RELEASE RUNBOOK — v1.4.18 mandatory web/app E2E
+# RELEASE_RUNBOOK — v1.4.27
 
-**Score:** 100 · **Waiver:** chore
-
-## Shipped
-- Fail-closed `check_web_e2e` for website/browser-app products
-- S-id sync Playwright ↔ Comet; surfaces + smoke e2e required
-- README, ship-flow, install_into_product Web E2E check
-- portfolio install guidance
+**When:** 2026-08-12  
+**Score:** 100 (pr_validator)  
+**Phase:** approved → shipped
 
 ## Smoke
-| Step | Exit |
-|------|------|
-| pytest tests/test_web_e2e_contract.py | 0 (11) |
-| ruff/mypy on web_e2e scripts | 0 |
-| pr_validator | 100 |
+
+| Step | Result |
+|------|--------|
+| product_smoke | see release session log |
+| validate full --skip-vault-schema | gates as run in session |
+| pytest | 188 passed |
+
+## Infra
+N/A — agent-harness has no VPS install root gate for this release (docs/ops scripts only).
+
+## Contents
+- Test trigger schedule in OPS-DASHBOARD + night-shift-log
+- SoT: scripts/test_trigger_schedule.py
 
 ## Rollback
-`git checkout v1.4.17`
+```bash
+git checkout v1.4.26
+```
 
-## §9
-1. substack-push opts out (CLI + Playwright transport).
-2. S-id presence is lexical match in Comet doc.
-3. install warns on fail but does not abort install (product can finish fixing).
+## Things that look bad but are actually fine
+1. Spec waiver chore on closeout PR_DRAFT.
+2. GitHub daytime still not scraped into OPS fail rows.
+3. Vault schema lint may fail on unrelated catalyxt dirs — skipped with --skip-vault-schema for harness SoT.
+4. Portfolio products may still show protect drift.
+5. Night logs rewritten once; next night run refreshes with new report format.
