@@ -126,6 +126,8 @@ URL_HOST_ALLOW = re.compile(
     r"api\.wise\.com|"
     r"[\w.-]+\.apihub\.citi\.com|"
     r"sandbox\.apihub\.citi\.com|"
+    # SVG / XML public namespaces (not secrets; common in exported JSON)
+    r"(www\.)?w3\.org|"
     # Product / public content platforms (not secrets)
     r"([\w-]+\.)?catalyxt\.(xyz|ltd|com)|"
     r"(www\.)?x\.com|"
@@ -156,6 +158,7 @@ ALLOW_PREFIXES = (
     "CONTRIBUTING.md",
     ".github/",  # CI paths often use runner home paths
     "product_plugin.example.yaml",  # template only
+    "data/weeks/",  # figure-it-out weekly curriculum JSON (SVG xmlns noise)
 )
 
 
