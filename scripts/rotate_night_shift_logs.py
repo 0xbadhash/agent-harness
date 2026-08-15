@@ -27,8 +27,8 @@ _SCRIPTS = Path(__file__).resolve().parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-from night_shift_log import parse_reports as _parse_reports
-from night_shift_log import render_rotated_log
+from night_shift_log import parse_reports as _parse_reports  # noqa: E402
+from night_shift_log import render_rotated_log  # noqa: E402
 
 _HOME = Path.home()
 DEFAULT_VAULT = Path(
