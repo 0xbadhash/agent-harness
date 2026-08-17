@@ -1,7 +1,7 @@
 # agent-harness
 
 <!-- CURRENT_RELEASE -->
-**Current release:** `v1.4.26` (docs synced via `/sync_docs`)
+**Current release:** `v1.4.29` (docs synced via `/sync_docs`)
 <!-- /CURRENT_RELEASE -->
 
 
@@ -40,6 +40,7 @@ python3 scripts/verify_skills.py
 Then open the product in **any** coding LLM and ship:
 
 1. **Start features with `/spec`** (required for code work — or an explicit **Spec waiver** for hotfix/chore/docs). Grill-me interview is **mandatory by default** (answer questions; do not skip to invent product).  
+n**Outer loop (large ships):** plan + PLAN_REVIEW (+ tickets if sequence ≥4). See [docs/outer-loop-playbook.md](docs/outer-loop-playbook.md).
    Guide: **[docs/start-a-feature.md](docs/start-a-feature.md)** · scaffold: `python3 scripts/start_feature.py --slug my-feature --write-spec-stub`
 2. `/execute_dev` → follow **`NEXT_SKILL=`** (`/code_review` → … → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).
 

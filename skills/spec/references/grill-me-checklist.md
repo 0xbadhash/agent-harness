@@ -64,9 +64,19 @@ Inspired by adversarial “grill the idea” practice (see `provenance.md`). Thi
 | `🛑 GRILL MISSING` | Spec would be `ready-for-agent` without `## Grill-me` + at least **3** answered themes (or spike-skipped with reason) |
 | `🛑 GRILL REJECTED` | Operator cancelled idea in grill — do not implement |
 
+## P0 features — operator stays in the loop
+
+For **P0** (wrong-product risk, security, money, irreversible data):
+
+1. Prefer the **human operator** answers G1–G3 (outcome, non-goal/kill, wrong product).  
+2. Do **not** accept “you decide” on those themes for P0.  
+3. No extra heavy automated gate — process + existing grill evidence.  
+4. See `docs/outer-loop-playbook.md` §5.
+
 ## Anti-patterns
 
 - Drafting full AC without any grill Q/A  
 - “Interview optional” or skipping because the agent is confident  
 - Stack debates during grill (defer to `--plan`)  
 - Rubber-stamp grill with empty “A: ok” lines  
+- Agent inventing P0 grill answers unattended 

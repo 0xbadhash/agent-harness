@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.30 — 2026-08-15
+
+### Outer loop (plan / tickets / plan-review)
+
+- **Plan fail-closed** for large non-waiver ships (`check_outer_loop.py` → hard_gates)
+- **Tickets** required when plan Implementation sequence ≥ N (default 4)
+- **Pre-code** `/plan_review` → PLAN_REVIEW.md when plan required
+- **Playbook:** `docs/outer-loop-playbook.md` (host design/stack + P0 grill)
+- P0 grill: operator stays on G1–G3 (process, no extra heavy gate)
+
 ## v1.4.29 — 2026-08-15
 
 ### Skills portfolio slim

@@ -5,6 +5,8 @@ It is **not** optional anymore: hard gates + `spec_gate.py` block `/pr_review` a
 
 **Grill-me is mandatory inside `/spec`.** The agent asks you questions (one at a time, with a recommended answer) before locking acceptance. Prefer answering over shipping the wrong product/feature. Evidence lives in the Spec under `## Grill-me` and is fail-closed via `scripts/check_spec_grill.py`.
 
+**P0:** you stay in grill (especially G1–G3). See [outer-loop-playbook.md](outer-loop-playbook.md).
+
 Phase still stays `init` during `/spec` (spec does not advance the FSM). “Required” means **required for a clean code ship**, not “a pipeline phase.”
 
 ---
@@ -14,6 +16,8 @@ Phase still stays `init` during `/spec` (spec does not advance the FSM). “Requ
 | Work type | You write |
 |-----------|-----------|
 | **New feature / non-trivial change** | `/spec <outcome + scope>` then answer grill-me → `/execute_dev` |
+| **Large feature** | `/spec --plan --tickets` → `/plan_review` → ship chain (plan/tickets/PLAN_REVIEW fail-closed) |
+| **Multi-PR / ambiguous product** | Host `/design` (+ `/execute-plan`) then each leaf PR through harness — playbook §2 |
 | **Hotfix** | `/execute_dev …` with `**Spec waiver:** hotfix` in `PR_DRAFT` (or scaffold below) |
 | **Chore / docs-only** | `**Spec waiver:** chore` or `docs-only` / `prose-only` |
 | **True spike only** | `/spec --spike …` (must document **Reason** ≥20 chars under Grill-me) |
@@ -26,6 +30,7 @@ Phase still stays `init` during `/spec` (spec does not advance the FSM). “Requ
 
 The agent will **grill-me** (G1–G7 themes) before finalize.  
 Optional: `--plan`, `--tickets`, `--from-conversation`.  
+**Large ships** need plan + PLAN_REVIEW (+ tickets if implementation sequence ≥ 4 steps).  
 **Not available:** `--no-interview` / `--no-clarify` (retired).
 
 ### Scaffold (files without full interview)

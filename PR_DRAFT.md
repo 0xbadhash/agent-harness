@@ -1,54 +1,59 @@
-# PR Draft — skill portfolio slim
+# PR Draft — outer-loop plan / tickets / plan-review
 
-**Spec:** docs/specs/2026-08-15-skill-portfolio-slim.md  
-**Version target:** 1.4.29  
+**Spec:** docs/specs/2026-08-15-outer-loop-plan-tickets-review.md  
+**Plan:** docs/specs/2026-08-15-outer-loop-plan-tickets-review-plan.md  
+**Tickets:** docs/specs/2026-08-15-outer-loop-plan-tickets-review/tickets/  
+**Version target:** 1.4.30  
 
 ## What Problem This Solves
 
-Portable ship_skills listed thin overlapping skills (feedback, plan_backend, audit_repo, test_automation) and optional ops skills as required install noise.
+Large non-waiver ships could pass grill without technical plan, multi-PR guidance, tickets, or pre-code plan review.
 
 ## Why This Change Was Made
 
-Operator direction: remove / demote / merge into stronger skills (`/spec`, `/night_shift`, `/sweep`, `/audit_harness`).
+Operator-selected outer-loop package: plan fail-closed, playbook, tickets ≥N, plan_review, P0 human grill process.
 
 ## User Impact
 
-- Smaller required skill set after install  
-- Products can `--delete-stale-skills` to prune removed skills  
-- Roadmap-from-gap via `/spec`; suites via night_shift  
+- Large ships: need Plan + PLAN_REVIEW (+ tickets if sequence ≥4)  
+- Host design/stack documented in outer-loop-playbook  
+- P0 grill: operator stays on G1–G3  
 
 ## Red-proof
 
 - red_cmd: `python3 -c "import sys; sys.exit(1)"`
-- green_cmd: `python3 scripts/verify_skills.py`
+- green_cmd: `python3 -m unittest tests.test_check_outer_loop -v`
 
 ## Traceability
 
 | AC | Evidence |
 |----|----------|
-| AC-1 | removed `skills/feedback`; `removed_portable_skills.txt`; verify_skills |
-| AC-2 | demoted agent_transcript + session_viewer; `optional_skills.txt` |
-| AC-3 | plan_backend removed; `/spec --roadmap-from-gap` in skills/spec/SKILL.md |
-| AC-4 | test_automation removed; night_shift suite orchestration section |
-| AC-5 | audit_repo removed; sweep + audit_harness policy-gap |
-| AC-6 | ship_skills 14; `python3 scripts/verify_skills.py` |
-| AC-7 | docs/skills-catalog.md README llm-bootstrap policy AGENT_* |
+| AC-1 | check_outer_loop.py + test_large_needs_plan |
+| AC-2 | tickets when steps ≥ N + test_tickets_required |
+| AC-3 | PLAN_REVIEW + test_large_with_plan_and_review |
+| AC-4 | hard_gates outer_loop wire |
+| AC-5 | docs/outer-loop-playbook.md |
+| AC-6 | skills/plan_review + ship_skills |
+| AC-7 | tests.test_check_outer_loop |
+| AC-8 | start-a-feature + grill-me-checklist P0 |
 
 ## Threat notes
 
-- authz: N/A skill docs only  
-- secrets: none  
+- authz: N/A docs/gates  
+- secrets: none; OUTER_LOOP_SKIP is ops escape only  
 
 ## Evidence pack
 
 | Item | Result |
 |------|--------|
-| hard_gates | pending validate |
+| hard_gates | outer_loop + existing |
 | smoke | product_smoke |
-| verify_skills | green |
+| unittest | test_check_outer_loop |
+| plan review | .agents/artifacts/PLAN_REVIEW.md |
 
 ## Things that look bad but are actually fine
 
-1. session_viewer / agent_transcript still under skills/ — optional not removed  
-2. audit_harness grows — intentional merge of policy-gap  
-3. retrospect soft warning on AGENT_REFERENCE citation  
+1. OUTER_LOOP_SKIP exists — emergency only  
+2. Plan review can still be thin prose (same class as CODE-REVIEW floor)  
+3. Multi-PR design not automated — playbook intentional  
+4. Small ships skip outer loop — by design  
