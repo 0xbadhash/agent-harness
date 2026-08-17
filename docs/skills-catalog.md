@@ -27,6 +27,7 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 | `handoff` | D/O | Switch agent | Continuity prompt |
 | `retrospect` | O/R | After ship / night fail | Learning loop |
 | `audit_harness` | C | Process audit | Harness scorecard + **policy-gap narrative** (ex-audit_repo) |
+| `plan_review` | R | After `/spec --plan` on large ships | Pre-code adversarial plan review → `PLAN_REVIEW.md` (outer loop) |
 
 ## Optional (not in ship_skills) — `config/optional_skills.txt`
 

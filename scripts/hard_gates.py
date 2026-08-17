@@ -521,6 +521,25 @@ def evaluate(
     else:
         skipped.append("web_e2e (prose-only)")
 
+    # Outer loop: plan / tickets / PLAN_REVIEW for large non-waiver ships
+    if not prose_only:
+        try:
+            from check_outer_loop import check as _outer  # type: ignore
+
+            o_ok, o_msgs = _outer(root, pr_draft, base=base_g, head=head_g)
+            if not o_ok:
+                for msg in o_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: outer_loop — {msg}")
+            else:
+                skipped.append(
+                    "outer_loop (" + (o_msgs[0] if o_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: outer_loop error: {e}")
+    else:
+        skipped.append("outer_loop (prose-only)")
+
     return HardGatesResult(
         ok=len(violations) == 0,
         violations=violations,
