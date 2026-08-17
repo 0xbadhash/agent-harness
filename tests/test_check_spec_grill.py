@@ -86,7 +86,7 @@ class TestCheckSpecGrill(unittest.TestCase):
             sp.parent.mkdir(parents=True)
             sp.write_text(COMPLETE, encoding="utf-8")
             (root / "PR_DRAFT.md").write_text(
-                f"**Spec:** docs/specs/s.md\n", encoding="utf-8"
+                "**Spec:** docs/specs/s.md\n", encoding="utf-8"
             )
             ok, msgs = csg.check_from_pr_draft(root, root / "PR_DRAFT.md")
             self.assertTrue(ok, msgs)

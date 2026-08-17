@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.29 — 2026-08-15
+
+### Skills portfolio slim
+
+- **Removed:** `feedback`, `plan_backend`, `audit_repo`, `test_automation` (see `removed_portable_skills.txt`)
+- **Demoted (optional):** `agent_transcript`, `session_viewer` → `optional_skills.txt`
+- **Merged:** plan_backend → `/spec --roadmap-from-gap`; test_automation → `/night_shift` suites; audit_repo narrative → `/audit_harness`
+- **Primary hygiene obsolete-scan:** `/sweep`
+- ship_skills required set: 14 skills
+
 ## v1.4.28 — 2026-08-12
 
 ### Tier A/B/C Best-of-Agent-Harnesses

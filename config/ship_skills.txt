@@ -1,5 +1,7 @@
 # Ship-chain skills that MUST be present after install_into_product.sh
 # One skill directory name per line. Comments start with #.
+#
+# Required ship FSM + ops:
 spec
 execute_dev
 code_review
@@ -9,13 +11,13 @@ pr_review
 release_mgmt
 sync_docs
 qa_campaign
-plan_backend
-audit_repo
 sweep
-feedback
-test_automation
 night_shift
 handoff
-session_viewer
-agent_transcript
 retrospect
+audit_harness
+#
+# Removed from required install (see config/removed_portable_skills.txt):
+# feedback, plan_backend, audit_repo, test_automation
+# Optional (config/optional_skills.txt; not verified):
+# agent_transcript, session_viewer

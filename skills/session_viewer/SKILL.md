@@ -1,8 +1,8 @@
 ---
 name: session_viewer
 description: >
-  Render agent session transcripts (JSONL or text logs) as a simple HTML viewer
-  for local inspection. Ops/debug only — not a ship FSM step.
+  OPTIONAL ops/debug skill (not in ship_skills). Render session transcripts
+  (JSONL/text) as local HTML. Not a ship FSM step.
 disable-model-invocation: true
 user-invocable: true
 max-retries: 0
@@ -10,7 +10,7 @@ timeout-seconds: 300
 ---
 
 # Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
-# `/session_viewer` — local session HTML (P3)
+# `/session_viewer` — optional local session HTML (demoted; not ship_skills)
 
 Use when the user wants to **view or export** a coding-agent session.
 

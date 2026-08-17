@@ -58,7 +58,7 @@
 - [ ] Decisions → vault `decisions.md` or repo design docs
 
 ### Phase 7 — Feedback
-- [ ] Append session notes to `AGENT_FEEDBACK.md` via `/feedback` skill
+- [ ] Append session notes to `AGENT_FEEDBACK.md` via `/retrospect` or vault dev-log
 - [ ] Pipeline phase advanced only by skill scripts (`pipeline_state.py`)
 
 ## Pipeline skills (quick map)
@@ -72,8 +72,9 @@
 | Docs + vault release | `/sync_docs` |
 | Multi-persona review | `/cross_review` (scoped obsolete/cleanup under Maintainability) |
 | Hygiene + whole-repo obsolete scan | `/sweep` |
-| Policy gaps + whole-repo obsolete scan | `/audit_repo` |
-| Session feedback | `/feedback` |
+| Harness scorecard + policy-gap narrative | `/audit_harness` |
+| Roadmap from gap analysis | `/spec --roadmap-from-gap` |
+| Overnight suites / coverage | `/night_shift` |
 
 Obsolete protocol (evidence only, no deletes): `.agents/policy/OBSOLETE_CLEANUP_SCAN.md`
 

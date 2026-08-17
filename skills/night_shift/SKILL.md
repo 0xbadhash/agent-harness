@@ -43,6 +43,20 @@ Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate fu
 
 **ORCH-TOOLS:** `tools/bin/lint_and_test.sh` → `validate full` (+ optional `--coverage`).
 
+## Test suite orchestration (ex-`/test_automation`)
+
+Night readiness **owns** multi-level suite execution overnight. Do **not** use a separate `/test_automation` skill (removed).
+
+When operators or agents need suite work during night / readiness:
+
+1. **Run full bar:** `python3 scripts/night_shift_readiness.py` (or product_smoke + `validate full`).
+2. **Coverage floors:** `python3 scripts/check_module_coverage.py --run --soft-if-missing` (config: `config/coverage_config.json`).
+3. **Scaffold missing tests:** only when matrix gaps or coverage modules show zero hits — use product stack conventions; prefer fixing failing suites over inventing broad scaffolds.
+4. **Quality:** no generic root mocks; no secrets in fixtures; phpunit/pytest via plugin smoke.
+5. Report coverage + fail gates in vault TODO (existing night_shift paths).
+
+Bounded autofix may format/fix deps; it does **not** invent product features or auto-ship.
+
 **Vault (per product_plugin.vault.project_label):**
 
 | Path | Content |

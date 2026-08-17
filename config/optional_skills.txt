@@ -1,0 +1,4 @@
+# Optional portable skills (installed if present under skills/, not required by verify_skills).
+# Docs / continuity only — not ship FSM.
+agent_transcript
+session_viewer

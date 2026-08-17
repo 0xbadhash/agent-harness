@@ -145,6 +145,27 @@ User may pass: harness-only, product-only, or **both** (default when auditing a 
 
 When both: score **portable harness** and **product coupling** separately in Executive Summary.
 
+## POLICY-GAP NARRATIVE (ex-`/audit_repo`)
+
+`/audit_repo` is **removed**. When the operator needs a **policy/gap analysis** (not just hygiene):
+
+1. Pre-condition: phase ∈ {init, shipped, blocked} preferred.
+2. Scan codebase read-only against `ENGINEERING_ASSURANCE.md` / constitution / base_constraints.
+3. **Obsolete / cleanup scan:** same protocol as `/sweep` — follow `policy/OBSOLETE_CLEANUP_SCAN.md`  
+   (evidence only, Tier A/B/C, confidence ∈ [0,1]). **Do not duplicate a second full-tree delete pass if `/sweep` already ran the same day** — reference that output when present.
+4. Emit or update `PRODUCTION_GAP_ANALYSIS.md` with GAP/DOC/OPS entries (include obsolete tags).
+5. §9 “looks bad but fine” ≥3 when recommending removals.
+6. Roadmap structuring from that gap file → **`/spec --roadmap-from-gap`** (not a separate plan_backend skill).
+7. Output: `✅ AUDIT COMPLETE` + Mode A scorecard + gap path + obsolete Tier A count.
+
+**Division of labor**
+
+| Need | Skill |
+|------|--------|
+| Scripted hygiene + drift + obsolete tables | `/sweep` |
+| Process harness quality dimensions + policy gap narrative | `/audit_harness` |
+| Feature acceptance + roadmap OPEN | `/spec` (+ grill-me) |
+
 ## HANDOFF
 
 Write report to user (and optional path if they named one). Do not create new product files unless permitted.

@@ -22,7 +22,8 @@ preserve-artifacts-on-failure: true
 # Bridge: references/speckit-bridge.md (when .specify/ exists — do not install Spec Kit from this skill)
 
 When invoked with `/spec` (args: idea text, `--from-conversation`, `--plan`,
-`--tickets`, `--spike`, `--linear`, `--github`, `--skip-constitution-warn`):
+`--tickets`, `--roadmap-from-gap`, `--spike`, `--linear`, `--github`,
+`--skip-constitution-warn`):
 
 ## 0. Pre-condition + constitution
 
@@ -52,6 +53,7 @@ When invoked with `/spec` (args: idea text, `--from-conversation`, `--plan`,
 | `--spike` | **Only** allowed skip of full grill; must set `## Grill-me` **Status:** `spike-skipped` + reason ≥20 chars; still need checkable AC or halt |
 | `--plan` | Also write technical plan file **after** grill + clarify |
 | `--tickets` | Write ticket files **after** grill + clarify (and plan if any) |
+| `--roadmap-from-gap` | Structure product roadmap from gap analysis (ex-`/plan_backend`) |
 
 **Removed (do not honor as free skips):**
 
@@ -167,6 +169,19 @@ Append OPEN item to `product_plugin.product_roadmap`:
 ```
 
 Ensure `## Open work` exists. Mark `**Next:** true` or place first for default `/execute_dev` target.
+
+## 8b. Roadmap from gap analysis (`--roadmap-from-gap`) — ex-`/plan_backend`
+
+When the operator wants a structured roadmap from an existing gap analysis (or after `/audit_harness` / `/sweep` produces one):
+
+1. Pre-condition: gap analysis doc exists (`PRODUCTION_GAP_ANALYSIS.md` or product equivalent).
+2. Prioritize: P0 → P1 → P2.
+3. Each item: title, acceptance criteria, risk, dependencies; prefer linking a Spec path when one exists.
+4. Write/update the product roadmap (`product_plugin.product_roadmap`, often `ROADMAP.md`) — not harness backlog.
+5. Still run grill-me for any **new feature** item before `/execute_dev` (or open a separate `/spec` per item).
+6. Output: `✅ ROADMAP READY. Next: /spec <item> or /execute_dev` when Spec already ready.
+
+Do **not** invent gap findings — only structure what the analysis already states.
 
 ## 9. Tickets (`--tickets`)
 

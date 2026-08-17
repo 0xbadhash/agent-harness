@@ -9,7 +9,7 @@ Used by:
 |-------|--------|------------------------|
 | `/sweep` | **Whole repo** (product tree; skip vendor/node_modules/.venv) | Sweep report + optional worksheet; §9 noisies |
 | `/cross_review` | **Review scope only** (uncommitted diff, `--diff A..B`, or named paths) — Maintainability persona | `## Cross-review` → obsolete subsection; severity map below |
-| `/audit_repo` | **Whole repo** policy scan | `PRODUCTION_GAP_ANALYSIS.md` as GAP/DOC/OPS; false friends in §9 |
+| `/audit_harness` | **Whole repo** policy-gap narrative (ex-audit_repo) | `PRODUCTION_GAP_ANALYSIS.md` as GAP/DOC/OPS; false friends in §9 |
 
 Do **not** treat this protocol as a pipeline phase advance.
 
@@ -63,7 +63,7 @@ Each row: **Item | Conf | Verdict | Evidence** (1–3 concrete facts).
 - **No deletes** in the skill run that only “scans.”
 - Recommend ordered cleanup only as a **proposal** list.
 - Map severity for cross_review when something in-scope is dangerous (e.g. web-exposed debug + keys) → Security may also flag; Maintainability owns “dead/redundant.”
-- Include **≥3** §9 “looks bad but fine” when the skill already requires §9 (sweep, cross_review, audit_repo).
+- Include **≥3** §9 “looks bad but fine” when the skill already requires §9 (sweep, cross_review, audit_harness).
 
 ### Severity map (cross_review only)
 
@@ -82,6 +82,6 @@ Each row: **Item | Conf | Verdict | Evidence** (1–3 concrete facts).
 ## Obsolete / cleanup scan (evidence only — no deletes)
 
 **Scope:** {whole-repo | diff: <range> | paths: …}
-**Skill:** {/sweep | /cross_review | /audit_repo}
+**Skill:** {/sweep | /cross_review | /audit_harness}
 **Protocol:** `.agents/policy/OBSOLETE_CLEANUP_SCAN.md`
 ```

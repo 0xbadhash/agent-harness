@@ -40,7 +40,7 @@ Patterns named in the spirit of White’s catalog (Persona, Template, Recipe, Er
 | **Output automator** | Deterministic closeout | `run_ship_chain.py` (no LLM depth) | C |
 | **Flipped interaction** | Human owns intent | `/spec` only human acceptance for features | R |
 | **Game / constraint** | Scope freeze | `review_scope.py` + code_review scope governor | C/E |
-| **Reflection** | After ship learning | `/retrospect` · `/feedback` | O/R |
+| **Reflection** | After ship learning | `/retrospect` | O/R |
 | **Infinite generation guard** | Stop loops | max 3 remediation cycles; night autofix ×1 | C |
 
 ---
