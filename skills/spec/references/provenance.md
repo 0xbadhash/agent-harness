@@ -18,4 +18,5 @@ Ship remains harness-owned: `/execute_dev` → `/cross_review` → `/pr_review` 
 
 - **Alex Finn** — idea → interview → agent-grabbable work item  
 - **Matt Pocock** — grill, to-spec template, to-tickets  
+- **Portfolio default (2026-08-15)** — grill-me is **mandatory** on `/spec` (not optional); evidence in Spec `## Grill-me`; gate `check_spec_grill.py`  
 - **Fable-style** — complete brief before unattended implement  

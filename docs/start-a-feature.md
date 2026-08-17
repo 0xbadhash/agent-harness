@@ -3,6 +3,8 @@
 **For code work, `/spec` is required** (or an explicit **Spec waiver**).  
 It is **not** optional anymore: hard gates + `spec_gate.py` block `/pr_review` and expect a Spec path or waiver before/during ship.
 
+**Grill-me is mandatory inside `/spec`.** The agent asks you questions (one at a time, with a recommended answer) before locking acceptance. Prefer answering over shipping the wrong product/feature. Evidence lives in the Spec under `## Grill-me` and is fail-closed via `scripts/check_spec_grill.py`.
+
 Phase still stays `init` during `/spec` (spec does not advance the FSM). “Required” means **required for a clean code ship**, not “a pipeline phase.”
 
 ---
@@ -11,9 +13,10 @@ Phase still stays `init` during `/spec` (spec does not advance the FSM). “Requ
 
 | Work type | You write |
 |-----------|-----------|
-| **New feature / non-trivial change** | `/spec <outcome + scope>` then `/execute_dev` |
+| **New feature / non-trivial change** | `/spec <outcome + scope>` then answer grill-me → `/execute_dev` |
 | **Hotfix** | `/execute_dev …` with `**Spec waiver:** hotfix` in `PR_DRAFT` (or scaffold below) |
 | **Chore / docs-only** | `**Spec waiver:** chore` or `docs-only` / `prose-only` |
+| **True spike only** | `/spec --spike …` (must document **Reason** ≥20 chars under Grill-me) |
 
 ### Feature (recommended)
 
@@ -21,7 +24,9 @@ Phase still stays `init` during `/spec` (spec does not advance the FSM). “Requ
 /spec Users can <outcome>. In scope: …. Out of scope: ….
 ```
 
-Optional: `--plan`, `--tickets`, `--from-conversation`.
+The agent will **grill-me** (G1–G7 themes) before finalize.  
+Optional: `--plan`, `--tickets`, `--from-conversation`.  
+**Not available:** `--no-interview` / `--no-clarify` (retired).
 
 ### Scaffold (files without full interview)
 
