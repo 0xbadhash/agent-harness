@@ -275,9 +275,9 @@ flowchart TB
 |-------|------|------|
 | `/night_shift` | C/O | Overnight readiness |
 | `/retrospect` | O/R | Learning notes |
-| `/feedback` | O | Session notes (harness meta) |
+| `session notes or /retrospect` | O | Session notes (harness meta) |
 | `/handoff` / `/session_viewer` / `/agent_transcript` | D/O | Continuity / audit |
-| `/plan_backend` / `/audit_repo` / `/sweep` / `/test_automation` | E/C | Support, not phase drivers |
+| `/sweep` / `/audit_harness` / `/night_shift` | E/C | Support, not phase drivers |
 
 Install manifest: `config/ship_skills.txt`.
 

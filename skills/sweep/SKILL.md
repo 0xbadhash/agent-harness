@@ -26,4 +26,6 @@ When invoked with `/sweep`:
 9. Output: `✅ SWEEP DONE` + pass/fail counts + obsolete Tier A count.
 
 Does **not** advance pipeline phase. For compliance score use `/pr_review`.  
-Diff-scoped dead code only → `/cross_review`. Policy/gap framing → `/audit_repo`.
+Diff-scoped dead code only → `/cross_review`.  
+**Hygiene + obsolete scan primary:** this skill (`/sweep`).  
+**Process harness scoring / policy-gap narrative:** `/audit_harness` (not a second obsolete-scan skill).

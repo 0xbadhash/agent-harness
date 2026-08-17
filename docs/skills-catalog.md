@@ -9,85 +9,74 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 **CODER mode** (C=Compute, O=Organize, D=Display, E=Engineer, R=Reason): teaching labels only — not pipeline phases. Session pack: `python3 scripts/session_context.py --write`.
 
-## User-invoked (ship)
+## User-invoked (ship) — `config/ship_skills.txt`
 
 | Skill | Mode | When to fire | Does |
 |-------|------|--------------|------|
-| `spec` | R/O | **Start of every feature** (not optional for code ships) | Constitution → **grill-me (mandatory)** → draft → clarify → checkable AC in `.agents/specs/` (+ plan/tickets) + roadmap OPEN. Prefer operator Q&A over inventing product. Phase stays `init`; `spec_gate` + `check_spec_grill` enforce Spec path + grill evidence (or waiver). Guide: [start-a-feature.md](start-a-feature.md) |
-| `execute_dev` | E/C | Building one task | TDD, implement, validate; mandatory `/code_review` closeout for non-prose; handoff → `ready_for_review`; prints `NEXT_SKILL=` |
-| `code_review` | E/R | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only; secrets + scope; prints `NEXT_SKILL=` |
-| `cross_review` | R | When `NEXT_SKILL=/cross_review` | Multi-persona + obsolete scan; P0-first; then `NEXT_SKILL=` |
-| `behavior_validator` | C/E | When `NEXT_SKILL=/behavior_validator` | Source-blind contract check; then `NEXT_SKILL=/pr_review --validate` |
-| `pr_review` | C | Scoring a ready change | Deterministic rubric; soft cross-review; secrets; smoke reminder; **only** skill that sets `approved`/`blocked` |
-| `vps_infra_ops` | C/E | After `approved`, **only if required** | **Product-owned** (not in portable install). `--verify` → `INFRA_RUNBOOK.md`; phase stays `approved`; then `NEXT_SKILL=/release_mgmt` |
-| `release_mgmt` | E/C | Shipping | Smoke (plugin), version, tag, `shipped` (expects infra PASS when required) |
-| `sync_docs` | O/D | After ship | Full repo+vault doc sync → `init` |
-| `qa_campaign` | E/C | After full FSM / **large** release | Deep multi-layer QA + bug hunt; suggested after `/sync_docs` only when diff is large (`--force-qa` to always) |
-| `retrospect` | O/R | After ship or night_shift fail | Learning loop → `RETRO.md` backlog items; not a phase |
+| `spec` | R/O | **Start of every feature** | Constitution → **grill-me** → draft → clarify → AC (+ plan/tickets); optional `--roadmap-from-gap` (ex-plan_backend). Phase stays `init`. |
+| `execute_dev` | E/C | Building one task | TDD, implement, validate; handoff → `ready_for_review` |
+| `code_review` | E/R | After execute_dev (non-prose) | P0-first closeout |
+| `cross_review` | R | Large / multi-persona | Multi-persona + obsolete scan (scoped) |
+| `behavior_validator` | C/E | Runtime surface | Source-blind contract check |
+| `pr_review` | C | Scoring | Deterministic rubric; sets `approved`/`blocked` |
+| `release_mgmt` | E/C | Shipping | Smoke, version, tag, `shipped` |
+| `sync_docs` | O/D | After ship | Repo (+ optional vault) stamps → `init` |
+| `qa_campaign` | E/C | Large release | Deep multi-layer QA after FSM |
+| `night_shift` | C/O | Overnight readiness | Gates + smoke + **suite orchestration** (ex-test_automation); vault TODO; no auto-ship |
+| `sweep` | C/E | Hygiene | Drift, skills audit, **primary obsolete-scan** |
+| `handoff` | D/O | Switch agent | Continuity prompt |
+| `retrospect` | O/R | After ship / night fail | Learning loop |
+| `audit_harness` | C | Process audit | Harness scorecard + **policy-gap narrative** (ex-audit_repo) |
 
-Ship-chain manifest (must install): `config/ship_skills.txt`.
+## Optional (not in ship_skills) — `config/optional_skills.txt`
 
-## Support (not ship phases)
+Still may ship under `skills/` for install convenience; **not** verified as required.
 
 | Skill | Mode | When to fire | Does |
 |-------|------|--------------|------|
-| `handoff` | D/O | Switch agent / delegate | Clipboard-ready handoff prompt for a fresh agent |
-| `session_viewer` | D | Inspect a session log | JSONL/text → local HTML |
-| `agent_transcript` | D/O | Optional PR provenance | Sanitized markdown; ask user before PR insert |
-| `night_shift` | C/O | Overnight / on-demand readiness | Gates (matrix, smoke, coverage, optional live); vault TODO + night-shift-log; multi-product timer 03:15 HKT; **no** auto-ship — [night-shift.md](night-shift.md) |
-| `sweep` | C/E | Hygiene pass | Status, drift, skills audit, whole-repo obsolete/cleanup (evidence only) |
-| `feedback` | O | End of session | Harness feedback log |
-| `audit_repo` | E/C | Policy gaps | Gap analysis + whole-repo obsolete/cleanup (evidence only) |
-| `audit_harness` | C | Harness self-audit | Policy / install health of the harness kit |
-| `plan_backend` | O/E | After audit | Roadmap structure (product fills content) |
-| `test_automation` | C/E | Suite orchestration | Run/scaffold tests |
+| `session_viewer` | D | Debug session log | JSONL/text → local HTML |
+| `agent_transcript` | D/O | Optional PR provenance | Sanitized markdown; ask user first |
+
+## Removed (do not install)
+
+Listed in `config/removed_portable_skills.txt` (product `--delete-stale-skills`):
+
+| Former skill | Replaced by |
+|--------------|-------------|
+| `feedback` | Session notes / vault dev-log / `/retrospect` |
+| `plan_backend` | `/spec --roadmap-from-gap` |
+| `audit_repo` | `/sweep` (hygiene) + `/audit_harness` (policy gap) |
+| `test_automation` | `/night_shift` suite section + product_smoke / validate |
 
 ## Product-only skills
 
 Live **only** in the product repo under `.agents/skills/<name>/`.  
-Examples: `vps_infra_ops`, deploy, cloud topology, app-specific ops.  
+Examples: `vps_infra_ops`, deploy, cloud topology.  
 **Never** copy product hostnames into this harness repo.
 
 ## Key scripts (not skills)
 
-| Script | Mode | Role |
-|--------|------|------|
-| `scripts/next_skill.py` | C/D | Single-line `NEXT_SKILL=…` after ship steps |
-| `scripts/session_context.py` | O/D | One-shot Organize pack (phase, OPEN, night FAIL, lag) |
-| `scripts/smoke_unit.sh` | C | Portable unit smoke (no nested `bash -c`) |
-| `scripts/daytime_readiness_subset.py` | C | Daytime hardcodes + validate + smoke (pre-night) |
-| `scripts/ensure_vault_group_write.py` | C | Vault ACL/group-write for night_shift logs |
-| `scripts/vault_fs.py` | C | Group-friendly vault file writes |
-| `scripts/check_hardcodes.py` | C | Zero-tolerance hardcodes (with content/vendored skips) |
-| `scripts/pipeline_state.py` | C | FSM phase get/set |
-| `scripts/pr_validator.py` | C | Deterministic PR score |
-
-## Description field (routing)
-
-The YAML `description` is the agent’s **load trigger**. Front-load:
-
-- What the skill does  
-- When it should fire  
-- When it must **not** fire  
-
-Vague descriptions → wrong skill loads → wasted context.
+| Script | Role |
+|--------|------|
+| `scripts/next_skill.py` | `NEXT_SKILL=…` handoff |
+| `scripts/spec_gate.py` + `check_spec_grill.py` | Spec + grill evidence |
+| `scripts/pipeline_state.py` | FSM |
+| `scripts/pr_validator.py` | PR score |
+| `scripts/night_shift_readiness.py` | Night bar |
+| `scripts/session_viewer.py` / `agent_transcript.py` | Optional helpers |
 
 ## Install + verify
 
-After `install_into_product.sh`, ship-chain skills are listed in `config/ship_skills.txt` (copied to `.agents/policy/ship_skills.txt`).
-
 ```bash
-python3 scripts/verify_skills.py          # frontmatter + ship-chain presence
-bash scripts/bootstrap_check.sh           # files + pipeline + next_skill smoke
+python3 scripts/verify_skills.py          # ship_skills presence
+bash scripts/bootstrap_check.sh
+# prune deleted portable skills from a product:
+./install_into_product.sh /path/to/product --delete-stale-skills
 ```
-
-Any LLM: [llm-bootstrap.md](llm-bootstrap.md).
 
 ## Related
 
 - [Writing skills](writing-skills.md)  
 - [Ship flow](ship-flow.md)  
-- [Detailed ship flow](ship-flow-detailed.md)  
-- [Prompt patterns](prompt-patterns.md)  
-- [LLM bootstrap](llm-bootstrap.md)  
+- [Start a feature](start-a-feature.md)  
 - [Night shift](night-shift.md)  

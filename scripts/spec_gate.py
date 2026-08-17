@@ -131,12 +131,12 @@ def check(
     if spec_id:
         # Relative to product root
         cand = root / spec_id
-        path: Path | None = None
+        spec_path: Path | None = None
         if cand.is_file():
-            path = cand
+            spec_path = cand
         elif Path(spec_id).is_file():
-            path = Path(spec_id)
-        if path is None:
+            spec_path = Path(spec_id)
+        if spec_path is None:
             msgs.append(f"fail: Spec path not found: {spec_id}")
             return False, msgs
         msgs.append(f"ok: Spec file {spec_id}")
@@ -144,7 +144,7 @@ def check(
         try:
             from check_spec_grill import check_path as _grill_check  # type: ignore
 
-            g_ok, g_msgs = _grill_check(path)
+            g_ok, g_msgs = _grill_check(spec_path)
             msgs.extend(g_msgs)
             if not g_ok:
                 return False, msgs

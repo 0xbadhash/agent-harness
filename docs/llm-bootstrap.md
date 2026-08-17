@@ -118,9 +118,11 @@ python3 scripts/next_skill.py --after behavior_validator
 
 From `config/ship_skills.txt` / `.agents/policy/ship_skills.txt`:
 
-Ship-chain: `spec` · `execute_dev` · `code_review` · `cross_review` · `behavior_validator` · `pr_review` · `release_mgmt` · `sync_docs` · `qa_campaign`  
+Ship-chain (required): see `config/ship_skills.txt` — `spec` · `execute_dev` · `code_review` · `cross_review` · `behavior_validator` · `pr_review` · `release_mgmt` · `sync_docs` · `qa_campaign` · `sweep` · `night_shift` · `handoff` · `retrospect` · `audit_harness`  
 
-Support (also installed): `plan_backend` · `audit_repo` · `audit_harness` · `sweep` · `feedback` · `test_automation` · `night_shift` · `handoff` · `session_viewer` · `agent_transcript`  
+Optional (not verified): `session_viewer` · `agent_transcript`  
+
+**Removed:** `feedback` · `plan_backend` (→ `/spec --roadmap-from-gap`) · `audit_repo` (→ `/sweep` + `/audit_harness`) · `test_automation` (→ `/night_shift` suites)  
 
 Product-only (not in portable harness): `vps_infra_ops` when the product needs infra verify.
 

@@ -228,12 +228,9 @@ Full table: **[docs/skills-catalog.md](docs/skills-catalog.md)**.
 | `/qa_campaign` | Post-FSM deep E2E QA + bug hunt + root-cause fixes (suggested after `/sync_docs`) |
 | `/night_shift` | Overnight readiness; vault TODO; **no** auto-ship — [night-shift.md](docs/night-shift.md) |
 | `/handoff` | Clipboard handoff for a fresh agent |
-| `/session_viewer` / `/agent_transcript` | Session HTML / sanitized transcript (ops) |
-| `/sweep` | Hygiene pass |
-| `/feedback` | Session notes (harness only) |
-| `/audit_repo` / `/audit_harness` | Policy / harness gap scan |
-| `/plan_backend` | Roadmap from gaps |
-| `/test_automation` | Suite orchestration |
+| `/sweep` | Hygiene + primary obsolete scan |
+| `/audit_harness` | Process harness scorecard + policy-gap narrative |
+| `/session_viewer` / `/agent_transcript` | **Optional** (not ship_skills) — session HTML / sanitized transcript |
 
 Product-only skills (`/vps_infra_ops`, deploy, host topology) live **in the product repo**, not here.
 

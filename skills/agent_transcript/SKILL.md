@@ -1,8 +1,9 @@
 ---
 name: agent_transcript
 description: >
-  Best-effort sanitized session summary for optional GitHub PR/issue bodies.
-  Local-only discovery; always ask user before inserting; fail closed on secrets.
+  OPTIONAL docs-only skill (not in ship_skills). Best-effort sanitized session
+  summary for GitHub PR/issue bodies. Local-only; ask user before inserting;
+  fail closed on secrets. Not required for ship closeout.
 disable-model-invocation: true
 user-invocable: true
 max-retries: 0
@@ -10,7 +11,7 @@ timeout-seconds: 300
 ---
 
 # Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints
-# `/agent_transcript` — sanitized PR provenance (P3)
+# `/agent_transcript` — optional PR provenance (demoted; not ship_skills)
 
 Use during agent-created **GitHub PR/issue** workflows when the user wants a
 collapsed transcript section.
