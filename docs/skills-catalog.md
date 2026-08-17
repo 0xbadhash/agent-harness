@@ -13,7 +13,7 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 
 | Skill | Mode | When to fire | Does |
 |-------|------|--------------|------|
-| `spec` | R/O | **Start of every feature** (not optional for code ships) | Constitution → interview → draft → clarify → checkable AC in `.agents/specs/` (+ plan/tickets) + roadmap OPEN. Phase stays `init`, but hard gates / `spec_gate` require Spec path or waiver. Guide: [start-a-feature.md](start-a-feature.md) |
+| `spec` | R/O | **Start of every feature** (not optional for code ships) | Constitution → **grill-me (mandatory)** → draft → clarify → checkable AC in `.agents/specs/` (+ plan/tickets) + roadmap OPEN. Prefer operator Q&A over inventing product. Phase stays `init`; `spec_gate` + `check_spec_grill` enforce Spec path + grill evidence (or waiver). Guide: [start-a-feature.md](start-a-feature.md) |
 | `execute_dev` | E/C | Building one task | TDD, implement, validate; mandatory `/code_review` closeout for non-prose; handoff → `ready_for_review`; prints `NEXT_SKILL=` |
 | `code_review` | E/R | After execute_dev (non-prose code) | P0-first closeout; required unless prose-only; secrets + scope; prints `NEXT_SKILL=` |
 | `cross_review` | R | When `NEXT_SKILL=/cross_review` | Multi-persona + obsolete scan; P0-first; then `NEXT_SKILL=` |

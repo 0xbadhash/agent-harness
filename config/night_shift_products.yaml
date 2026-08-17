@@ -13,4 +13,5 @@ agent-harness: ~/agent-harness
 ocr-ledger: ~/ocr-ledger
 zk-business-card: ~/zk-business-card
 bip39lab: ~/bip39lab
-atom-learning-family: ~/atom-learning-family
+# product_id must match product_plugin product_id / project_label (figure-it-out)
+figure-it-out: ~/figure-it-out

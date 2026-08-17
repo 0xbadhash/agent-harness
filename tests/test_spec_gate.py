@@ -32,12 +32,18 @@ class TestSpecGate(unittest.TestCase):
             root = Path(td)
             spec = root / ".agents" / "specs" / "x.md"
             spec.parent.mkdir(parents=True)
-            spec.write_text("# s\n", encoding="utf-8")
+            spec.write_text(
+                "# s\n\n## Grill-me\n\n**Status:** complete\n\n"
+                "### G1\n- Q: Outcome?\n  - A: Done.\n"
+                "### G2\n- Q: Non-goal?\n  - A: Nothing extra.\n"
+                "### G3\n- Q: Product?\n  - A: This repo.\n",
+                encoding="utf-8",
+            )
             (root / "PR_DRAFT.md").write_text(
                 "**Spec:** .agents/specs/x.md\n", encoding="utf-8"
             )
-            ok, _ = sg.check(root)
-            self.assertTrue(ok)
+            ok, msgs = sg.check(root)
+            self.assertTrue(ok, msgs)
 
     def test_pipeline_waiver(self):
         with tempfile.TemporaryDirectory() as td:

@@ -39,7 +39,7 @@ python3 scripts/verify_skills.py
 
 Then open the product in **any** coding LLM and ship:
 
-1. **Start features with `/spec`** (required for code work — or an explicit **Spec waiver** for hotfix/chore/docs).  
+1. **Start features with `/spec`** (required for code work — or an explicit **Spec waiver** for hotfix/chore/docs). Grill-me interview is **mandatory by default** (answer questions; do not skip to invent product).  
    Guide: **[docs/start-a-feature.md](docs/start-a-feature.md)** · scaffold: `python3 scripts/start_feature.py --slug my-feature --write-spec-stub`
 2. `/execute_dev` → follow **`NEXT_SKILL=`** (`/code_review` → … → `/pr_review --validate` → `/release_mgmt` → `/sync_docs`).
 
@@ -217,7 +217,7 @@ Full table: **[docs/skills-catalog.md](docs/skills-catalog.md)**.
 
 | Skill | Job |
 |-------|-----|
-| `/spec` | **Front door for features** — constitution + clarify → checkable acceptance (+ plan/tickets); or use Spec waiver for hotfix/chore/docs |
+| `/spec` | **Front door for features** — constitution + **grill-me** + clarify → checkable acceptance (+ plan/tickets); Spec waiver for hotfix/chore/docs |
 | `/execute_dev` | One task, **TDD mandatory**; non-prose requires `/code_review` closeout; `NEXT_SKILL=` |
 | `/code_review` | P0-first closeout after implement (required unless prose-only) |
 | `/cross_review` | Multi-persona + obsolete scan when `NEXT_SKILL` says so |

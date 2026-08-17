@@ -3,6 +3,8 @@
 Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`.  
 **What / why** only. Technical **how** goes in optional `-plan.md` when using `--plan`.
 
+**Grill-me is mandatory** (see `grill-me-checklist.md`). Do not mark `ready-for-agent` without `## Grill-me`.
+
 ---
 
 ```markdown
@@ -10,12 +12,13 @@ Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`.
 
 - **Product:** <product_id from product_plugin>
 - **Created:** <ISO date>
-- **Status:** draft | ready-for-agent
+- **Status:** draft | ready-for-agent | rejected
 - **Priority:** P0 | P1 | P2
 - **Roadmap:** <product_plugin.product_roadmap path> → Open work
 - **Plan:** `.agents/specs/<…>-plan.md` | none
 - **Tracker:** local | Linear <url> | GitHub <url>
 - **Constitution:** .agents/CONSTITUTION.md | AGENTS.md | policy defaults
+- **Grill-me:** complete | spike-skipped
 
 ## Problem Statement
 
@@ -58,6 +61,41 @@ Checkable pass/fail only:
 ## Out of Scope
 
 Bullet list. Protects `/execute_dev` from scope creep.
+
+## Grill-me
+
+**Status:** complete | spike-skipped
+**Date:** <ISO date>
+
+### G1 Outcome
+- Q: …?
+  - A: …
+
+### G2 Non-goal / kill
+- Q: …?
+  - A: …
+
+### G3 Wrong product
+- Q: …?
+  - A: …
+
+### G4 Cheapest alternative
+- Q: …?
+  - A: …
+
+### G5 Abuse / failure
+- Q: …?
+  - A: …
+
+### G6 Verify
+- Q: …?
+  - A: …
+
+### G7 Priority
+- Q: …?
+  - A: …
+
+(If spike-skipped: omit G* and put **Reason:** ≥20 chars under Status.)
 
 ## Clarifications
 

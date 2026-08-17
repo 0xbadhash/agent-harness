@@ -1,7 +1,9 @@
 # Clarify checklist (`/spec` step 5)
 
-Run **after** a draft spec, **before** `ready-for-agent`.  
-Goal: “unit tests for English” — coverage of underspecified areas.
+Run **after** a draft spec **and after grill-me**, **before** `ready-for-agent`.  
+Goal: “unit tests for English” — coverage of underspecified areas **not already closed in `## Grill-me`**.
+
+**Prerequisite:** grill-me complete or spike-skipped (see `grill-me-checklist.md`).
 
 ## Scan for gaps
 
@@ -32,6 +34,7 @@ Mark each as OK or needs Q:
 
 ## Anti-patterns
 
-- Re-asking facts already in the repo or constitution  
+- Re-asking facts already in the repo, constitution, or **Grill-me** answers  
 - Stack debates during clarify (defer to `--plan`)  
 - Clarifying forever without writing acceptance updates  
+- Skipping grill-me and dumping everything into Clarifications  
