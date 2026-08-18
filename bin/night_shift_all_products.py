@@ -19,6 +19,8 @@ import argparse
 import os
 import subprocess
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -355,6 +357,12 @@ def main() -> int:
         default=[],
         help="Run only this product id (repeatable)",
     )
+    ap.add_argument(
+        "--jobs",
+        type=int,
+        default=0,
+        help="Parallel product workers (default: min(product count, 10); 1 = sequential)",
+    )
     args = ap.parse_args()
 
     products = _load_products(args.products_file)
@@ -363,7 +371,12 @@ def main() -> int:
         products = [(n, p) for n, p in products if n in allow]
 
     when = datetime.now(UTC)
-    print(f"night_shift_all: {len(products)} product(s) @ {when.isoformat()}")
+    n_prod = len(products)
+    jobs = args.jobs if args.jobs > 0 else min(n_prod, 10)
+    jobs = max(1, min(jobs, n_prod or 1))
+    print(
+        f"night_shift_all: {n_prod} product(s) jobs={jobs} @ {when.isoformat()}"
+    )
 
     # Path contract P0/P1: fleet paths + consumers (fail closed for multi-product run)
     path_gate_failed = False
@@ -386,24 +399,77 @@ def main() -> int:
         if grc != 0:
             path_gate_failed = True
 
-    rows: list[dict] = []
-    for name, root in products:
-        print(f"--- {name} ({root}) ---")
+    vault_resolved = args.vault.expanduser().resolve()
+    wall0 = time.perf_counter()
+    try:
+        import resource
+
+        def _cpu_s() -> float:
+            self_u = resource.getrusage(resource.RUSAGE_SELF)
+            ch_u = resource.getrusage(resource.RUSAGE_CHILDREN)
+            return (
+                self_u.ru_utime
+                + self_u.ru_stime
+                + ch_u.ru_utime
+                + ch_u.ru_stime
+            )
+
+        cpu0 = _cpu_s()
+    except Exception:  # noqa: BLE001
+
+        def _cpu_s() -> float:
+            return time.process_time()
+
+        cpu0 = _cpu_s()
+
+    def _job(item: tuple[str, Path]) -> dict:
+        name, root = item
+        print(f"--- start {name} ({root}) ---", flush=True)
         row = run_one(
             name,
             root,
-            vault=args.vault.expanduser().resolve(),
+            vault=vault_resolved,
             quick=args.quick,
             skip_live=args.skip_live,
             dry_run=args.dry_run,
         )
-        rows.append(row)
         pf = row.get("preflight") or {}
         if pf:
-            print(f"   preflight: {pf.get('status')}: {pf.get('message', '')[:120]}")
-        print(f"{'✅' if row['ok'] else '❌'} {name} exit={row['exit']}")
+            print(
+                f"   {name} preflight: {pf.get('status')}: "
+                f"{str(pf.get('message', ''))[:120]}",
+                flush=True,
+            )
+        print(
+            f"{'✅' if row['ok'] else '❌'} {name} exit={row['exit']}",
+            flush=True,
+        )
+        return row
 
-    for n in write_summary(args.vault.expanduser().resolve(), when, rows, args.dry_run):
+    # Preserve config order in summary regardless of completion order
+    rows: list[dict] = []
+    if jobs == 1 or n_prod <= 1:
+        for item in products:
+            rows.append(_job(item))
+    else:
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futs = {pool.submit(_job, item): item[0] for item in products}
+            by_name: dict[str, dict] = {}
+            for fut in as_completed(futs):
+                row = fut.result()
+                by_name[str(row["name"])] = row
+            rows = [by_name[n] for n, _ in products if n in by_name]
+
+    wall_s = time.perf_counter() - wall0
+    cpu_s = max(0.0, _cpu_s() - cpu0)
+    print(
+        f"night_shift_all timing: wall={wall_s:.1f}s "
+        f"cpu_self+children={cpu_s:.1f}s "
+        f"jobs={jobs} products={n_prod} "
+        f"(parallel: wall→~slowest product, not sum)"
+    )
+
+    for n in write_summary(vault_resolved, when, rows, args.dry_run):
         print(n)
 
     passed = sum(1 for r in rows if r["ok"])

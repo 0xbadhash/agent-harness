@@ -1,4 +1,7 @@
 # Optional portable skills (installed if present under skills/, not required by verify_skills).
-# Docs / continuity only — not ship FSM.
+# Docs / continuity / deep QA / audits — not every ship cycle.
 agent_transcript
 session_viewer
+qa_campaign
+retrospect
+audit_harness

@@ -111,6 +111,34 @@ class TestNextSkill(unittest.TestCase):
         nxt, _ = ns.decide("qa_campaign", base="a", head="b", repo=ROOT)
         self.assertEqual(nxt, "(done)")
 
+    def test_spec_with_plan_routes_plan_review(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "PR_DRAFT.md").write_text(
+                "**Spec:** docs/s.md\n**Plan:** docs/s-plan.md\n",
+                encoding="utf-8",
+            )
+            nxt, meta = ns.decide("spec", base="a", head="b", repo=root)
+        self.assertEqual(nxt, "/plan_review")
+        self.assertIn("Plan", meta.get("reason", ""))
+
+    def test_spec_without_plan_to_execute(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "PR_DRAFT.md").write_text(
+                "**Spec:** docs/s.md\n", encoding="utf-8"
+            )
+            nxt, _ = ns.decide("spec", base="a", head="b", repo=root)
+        self.assertEqual(nxt, "/execute_dev")
+
+    def test_plan_review_to_execute(self):
+        nxt, _ = ns.decide("plan_review", base="a", head="b", repo=ROOT)
+        self.assertEqual(nxt, "/execute_dev")
+
     def test_empty_after_raises(self):
         with self.assertRaises(ValueError):
             ns.decide("", base="a", head="b", repo=ROOT)

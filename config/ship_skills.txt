@@ -1,7 +1,8 @@
 # Ship-chain skills that MUST be present after install_into_product.sh
 # One skill directory name per line. Comments start with #.
 #
-# Required ship FSM + ops:
+# Required = installed + verify_skills. Router must route or honestly skip.
+# qa_campaign / retrospect / audit_harness → optional_skills (not every ship).
 spec
 execute_dev
 code_review
@@ -10,15 +11,10 @@ behavior_validator
 pr_review
 release_mgmt
 sync_docs
-qa_campaign
+plan_review
 sweep
 night_shift
 handoff
-retrospect
-audit_harness
-plan_review
 #
-# Removed from required install (see config/removed_portable_skills.txt):
-# feedback, plan_backend, audit_repo, test_automation
-# Optional (config/optional_skills.txt; not verified):
-# agent_transcript, session_viewer
+# plan_review: NEXT_SKILL after /spec when **Plan:** is linked; else skipped.
+# qa_campaign: optional — only suggested after sync_docs on *large* ships (--force-qa).
