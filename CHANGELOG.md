@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.33 — 2026-08-18
+
+### Inventory + transportation leftovers
+
+- Refresh local pipeline.json / SESSION_CONTEXT to current VERSION (ops)
+- Strip legacy full "When tests run" tables from night-shift-log bodies; one Schedule SoT link
+
 ## v1.4.32 — 2026-08-18
 
 ### surface_inventory pane call

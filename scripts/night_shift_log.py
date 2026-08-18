@@ -101,6 +101,40 @@ def merge_timeline(
     return rows
 
 
+SCHEDULE_SOT_LINE = (
+    "_Schedule SoT: `docs/test-trigger-schedule.md` · "
+    "`scripts/test_trigger_schedule.py` (not copied into this log)._"
+)
+
+# Full "When tests run" act-map tables (legacy embeds) — strip from log bodies
+_ACT_MAP_BLOCK_RE = re.compile(
+    r"(?:^|\n)##\s+When tests run[^\n]*\n"
+    r"(?:.*?\n)*?"
+    r"(?=^##\s+Gates\b|^##\s+(?!When)|^# Night shift readiness|\Z)",
+    re.M | re.S,
+)
+_COMPACT_SCHEDULE_RE = re.compile(
+    r"(?:^|\n)_SoT: `scripts/test_trigger_schedule\.py`[^\n]*\n"
+    r"(?:\|[^\n]*\n)+"
+    r"(?:###[^\n]*\n(?:[-*][^\n]*\n|\n)*)*",
+    re.M,
+)
+_SCHEDULE_SOT_DUP_RE = re.compile(
+    r"(?:^|\n)_Schedule SoT:[^\n]*\n",
+    re.M,
+)
+
+
+def strip_schedule_tables(text: str) -> str:
+    """Remove pasted act-map tables; keep a single SoT pointer outside bodies."""
+    out = _ACT_MAP_BLOCK_RE.sub("\n", text)
+    out = _COMPACT_SCHEDULE_RE.sub("\n", out)
+    # Drop per-report schedule one-liners too (header holds the only SoT link)
+    out = _SCHEDULE_SOT_DUP_RE.sub("\n", out)
+    out = re.sub(r"\n{3,}", "\n\n", out)
+    return out.strip() + "\n"
+
+
 def render_log_document(
     product_id: str,
     timeline: list[tuple[str, str]],
@@ -123,19 +157,16 @@ def render_log_document(
     if not timeline:
         lines.append("| — | — |")
     lines.append("")
-    # One schedule SoT — never re-embed full table (reports used to duplicate it)
-    lines.append(
-        "_Schedule SoT: `docs/test-trigger-schedule.md` · "
-        "`scripts/test_trigger_schedule.py` (not copied into this log)._"
-    )
+    # One schedule SoT — never embed full table (once in header only)
+    lines.append(SCHEDULE_SOT_LINE)
     lines.append("")
     lines.append("---")
     lines.append("")
     bodies: list[str] = []
     for body in report_bodies:
-        b = body.strip()
+        b = strip_schedule_tables(body.strip())
         if b:
-            bodies.append(b)
+            bodies.append(b.rstrip())
     lines.append("\n\n---\n\n".join(bodies))
     if bodies:
         lines.append("")
@@ -173,8 +204,8 @@ def write_night_shift_log(
         prior_rows = parse_timeline_rows(existing)
 
     timeline = merge_timeline(prior_rows, when_label, overall)
-    new_body = report_md.rstrip() + "\n"
-    bodies = [new_body] + [r["body"] for r in prior_reports]
+    new_body = strip_schedule_tables(report_md.rstrip() + "\n")
+    bodies = [new_body] + [strip_schedule_tables(r["body"]) for r in prior_reports]
     text = render_log_document(product_id, timeline, bodies)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     try:
