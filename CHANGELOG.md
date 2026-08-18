@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.32 — 2026-08-18
+
+### surface_inventory pane call
+
+- `scripts/surface_inventory.py` lists known Catalyxt hosts by default (exit 0)
+- No env flag required for list; no domain-find; CEO host list only
+- Unit: `tests/test_surface_inventory.py`
+
 ## v1.4.31 — 2026-08-18
 
 ### Night parallel + Waiting leftovers

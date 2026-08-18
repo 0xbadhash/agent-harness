@@ -130,6 +130,7 @@ URL_HOST_ALLOW = re.compile(
     r"(www\.)?w3\.org|"
     # Product / public content platforms (not secrets)
     r"([\w-]+\.)?catalyxt\.(xyz|ltd|com)|"
+    r"(www\.)?artauthenticity\.xyz|"
     r"(www\.)?x\.com|"
     r"(www\.)?twitter\.com|"
     r"api\.twitter\.com|"

@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Optional declared-surface inventory (portable; default off).
+"""Declared Catalyxt surface inventory (portable; no domain-find).
 
-Reads URLs from ``config/zap_targets.yaml`` (or ``--config`` / ``ZAP_TARGETS_FILE``).
-Optionally probes live HTTP status. Writes an artifact — does **not** embed into
-docs SoT, does **not** enumerate DNS/CT (no domain-find), does **not** add ZAP
-to the night loop.
+Default invocation (pane / operator)::
 
-Enable::
+  python3 scripts/surface_inventory.py
 
-  SURFACE_INVENTORY=1 python3 scripts/surface_inventory.py
-  python3 scripts/surface_inventory.py --probe --write
+Always lists **known** hosts shipped with this harness (and any extra from
+``config/zap_targets.yaml``). Does **not** scan DNS/CT/internet for new names.
+Does **not** invent typo domains. Optional ``--probe`` may HEAD/GET declared
+URLs only. Optional ``--write`` writes
+``.agents/artifacts/SURFACE_INVENTORY.md``.
 
-Exit 0 always unless ``--strict`` and a probed URL is non-2xx/3xx.
+Not a night/ship hard gate. Not added to ``night_shift_all``.
 """
 from __future__ import annotations
 
@@ -26,19 +26,19 @@ from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parents[1]
 
+# Known Catalyxt hosts already in the portfolio surface (CEO list). No typos.
+KNOWN_CATALYXT_HOSTS: tuple[tuple[str, str], ...] = (
+    ("catalyxt", "https://catalyxt.xyz"),
+    ("watchlist", "https://watchlist.catalyxt.xyz"),
+    ("artauthenticity", "https://artauthenticity.xyz"),
+    ("bip39lab", "https://bip39.catalyxt.xyz"),
+    ("figure-it-out", "https://figure.catalyxt.xyz"),
+    ("zk-business-card", "https://card.catalyxt.xyz"),
+    ("ui", "https://ui.catalyxt.xyz"),
+)
 
-def _enabled(cli_force: bool) -> bool:
-    if cli_force:
-        return True
-    return os.environ.get("SURFACE_INVENTORY", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
 
-
-def _parse_targets(cfg: Path) -> list[dict[str, str]]:
+def _parse_zap_targets(cfg: Path) -> list[dict[str, str]]:
     if not cfg.is_file():
         return []
     rows: list[dict[str, str]] = []
@@ -60,6 +60,32 @@ def _parse_targets(cfg: Path) -> list[dict[str, str]]:
     return rows
 
 
+def _merge_targets(zap_cfg: Path) -> list[dict[str, str]]:
+    """Known list first, then zap_targets extras (dedupe by URL host+path)."""
+    seen: set[str] = set()
+    out: list[dict[str, str]] = []
+    for tid, url in KNOWN_CATALYXT_HOSTS:
+        key = url.rstrip("/").lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"id": tid, "url": url, "source": "known"})
+    for row in _parse_zap_targets(zap_cfg):
+        url = (row.get("url") or "").rstrip("/")
+        key = url.lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "id": row.get("id") or "zap",
+                "url": url,
+                "source": "zap_targets",
+            }
+        )
+    return out
+
+
 def _probe(url: str, timeout: float = 12.0) -> tuple[str, str]:
     req = urllib.request.Request(url, method="HEAD")
     try:
@@ -68,7 +94,6 @@ def _probe(url: str, timeout: float = 12.0) -> tuple[str, str]:
     except urllib.error.HTTPError as e:
         return str(e.code), "http_error"
     except Exception as e:  # noqa: BLE001
-        # Some hosts reject HEAD — try GET
         try:
             req2 = urllib.request.Request(url, method="GET")
             with urllib.request.urlopen(req2, timeout=timeout) as resp:  # noqa: S310
@@ -84,52 +109,63 @@ def main(argv: list[str] | None = None) -> int:
         "--config",
         type=Path,
         default=None,
-        help="zap_targets.yaml (default: <root>/config/zap_targets.yaml)",
+        help="Optional zap_targets.yaml to merge (extras only)",
     )
-    ap.add_argument("--probe", action="store_true", help="HEAD/GET each declared URL")
-    ap.add_argument("--write", action="store_true", help="Write artifact under .agents/artifacts/")
-    ap.add_argument("--force", action="store_true", help="Run even if SURFACE_INVENTORY unset")
-    ap.add_argument("--strict", action="store_true", help="Exit 1 if any probe fails")
+    ap.add_argument(
+        "--probe",
+        action="store_true",
+        help="HEAD/GET each *declared* URL only (still no discovery)",
+    )
+    ap.add_argument(
+        "--write",
+        action="store_true",
+        help="Write .agents/artifacts/SURFACE_INVENTORY.md",
+    )
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit 1 if --probe and any URL is not 2xx/3xx",
+    )
     args = ap.parse_args(argv)
     root = args.root.resolve()
-
-    if not _enabled(bool(args.force)):
-        print(
-            "surface_inventory off (set SURFACE_INVENTORY=1 or pass --force)",
-            file=sys.stderr,
-        )
-        return 0
 
     cfg = args.config or Path(
         os.environ.get("ZAP_TARGETS_FILE") or (root / "config" / "zap_targets.yaml")
     )
-    targets = _parse_targets(cfg)
+    targets = _merge_targets(cfg)
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# SURFACE_INVENTORY",
         "",
         f"_Generated {now} by `scripts/surface_inventory.py`_",
         "",
-        f"**Config:** `{cfg}`",
-        f"**Probe:** {'yes' if args.probe else 'no (declared only)'}",
+        f"**Known hosts:** {len(KNOWN_CATALYXT_HOSTS)} (CEO list) · "
+        f"**zap merge:** `{cfg.name if cfg.is_file() else 'n/a'}`",
+        f"**Probe:** {'yes (declared URLs only)' if args.probe else 'no (list only)'}",
         "",
-        "| id | url | status | note |",
-        "|----|-----|--------|------|",
+        "| id | url | status | source |",
+        "|----|-----|--------|--------|",
     ]
     bad = 0
     for t in targets:
         url = t.get("url") or ""
         tid = t.get("id") or ""
-        status, note = ("—", "declared") if not args.probe else _probe(url)
-        if args.probe and not re.match(r"^2\d\d$|^3\d\d$", status):
-            bad += 1
-        lines.append(f"| {tid} | `{url}` | {status} | {note} |")
+        src = t.get("source") or ""
+        if args.probe:
+            status, note = _probe(url)
+            src = f"{src}/{note}"
+            if not re.match(r"^2\d\d$|^3\d\d$", status):
+                bad += 1
+        else:
+            status = "—"
+        lines.append(f"| {tid} | `{url}` | {status} | {src} |")
     if not targets:
-        lines.append("| — | — | — | no targets in config |")
+        lines.append("| — | — | — | empty |")
     lines.extend(
         [
             "",
-            "> Declared surfaces only — no DNS/CT crawl. Not a night/ship hard gate.",
+            "> Declared / known surfaces only — **no** DNS/CT/internet discovery.",
+            "> Not a night/ship hard gate. ZAP remains schedule/manual, not night_all.",
             "",
         ]
     )
@@ -140,7 +176,8 @@ def main(argv: list[str] | None = None) -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(md, encoding="utf-8")
         print(f"✅ wrote {out}", file=sys.stderr)
-    if args.strict and bad:
+    # Pane default call must succeed (exit 0) even without env flags
+    if args.strict and args.probe and bad:
         return 1
     return 0
 
