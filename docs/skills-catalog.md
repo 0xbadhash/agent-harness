@@ -21,22 +21,22 @@ Each skill is a folder with `SKILL.md` (YAML frontmatter + Markdown body).
 | `pr_review` | C | Scoring | Deterministic rubric; sets `approved`/`blocked` |
 | `release_mgmt` | E/C | Shipping | Smoke, version, tag, `shipped` |
 | `sync_docs` | O/D | After ship | Repo (+ optional vault) stamps → `init` |
-| `qa_campaign` | E/C | Large release | Deep multi-layer QA after FSM |
-| `night_shift` | C/O | Overnight readiness | Gates + smoke + **suite orchestration** (ex-test_automation); vault TODO; no auto-ship |
+| `night_shift` | C/O | Overnight readiness | Gates + smoke + suite orchestration; **parallel products** (`--jobs`); vault TODO; no auto-ship; **no ZAP crawl** |
 | `sweep` | C/E | Hygiene | Drift, skills audit, **primary obsolete-scan** |
 | `handoff` | D/O | Switch agent | Continuity prompt |
-| `retrospect` | O/R | After ship / night fail | Learning loop |
-| `audit_harness` | C | Process audit | Harness scorecard + **policy-gap narrative** (ex-audit_repo) |
-| `plan_review` | R | After `/spec --plan` on large ships | Pre-code adversarial plan review → `PLAN_REVIEW.md` (outer loop) |
+| `plan_review` | R | After `/spec` when `**Plan:**` linked | Pre-code plan review → `PLAN_REVIEW.md` (`NEXT_SKILL` routes; skip if no Plan) |
 
 ## Optional (not in ship_skills) — `config/optional_skills.txt`
 
-Still may ship under `skills/` for install convenience; **not** verified as required.
+Installed if present; **not** verify-required. Router may suggest on large ships only.
 
 | Skill | Mode | When to fire | Does |
 |-------|------|--------------|------|
 | `session_viewer` | D | Debug session log | JSONL/text → local HTML |
 | `agent_transcript` | D/O | Optional PR provenance | Sanitized markdown; ask user first |
+| `qa_campaign` | E/C | After sync_docs on **large** (or `--force-qa`) | Deep QA — honest skip on small ships |
+| `retrospect` | O/R | After ship / night fail | Learning loop (manual) |
+| `audit_harness` | C | Process audit | Scorecard + policy-gap (manual) |
 
 ## Removed (do not install)
 

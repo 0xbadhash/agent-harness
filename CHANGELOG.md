@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.31 — 2026-08-18
+
+### Night parallel + Waiting leftovers
+
+- `bin/night_shift_all_products.py --jobs` parallel products (default min(n,10)); wall/cpu timing
+- `scripts/surface_inventory.py` optional declared-surface inventory (no domain-find)
+- ship_skills vs next_skill: `/plan_review` after Spec+Plan; qa_campaign/retrospect/audit_harness → optional
+- Archive leftover `*-plan.md`; skills/plan_review SoT
+- pipeline/SESSION_CONTEXT refreshed; night reports link schedule SoT once
+- `zap_summarize.py` → SUMMARY.md (raw HTML not in loops); ZAP not in night_all
+
 ## v1.4.30 — 2026-08-15
 
 ### Outer loop (plan / tickets / plan-review)

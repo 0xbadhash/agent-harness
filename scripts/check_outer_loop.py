@@ -140,14 +140,24 @@ def check(
     if sm:
         spec_path = _resolve(root, sm.group(1))
 
+    def _plan_token(raw: str | None) -> str | None:
+        if not raw:
+            return None
+        t = raw.strip().strip("`")
+        if t.lower() in {"none", "n/a", "na", "-", "archived"}:
+            return None
+        if t.lower().startswith("archived"):
+            return None
+        return t
+
     plan_rel = None
     pm = PLAN_RE.search(draft)
     if pm:
-        plan_rel = pm.group(1)
-    elif spec_path and spec_path.is_file():
+        plan_rel = _plan_token(pm.group(1))
+    if plan_rel is None and spec_path and spec_path.is_file():
         sp = PLAN_RE.search(spec_path.read_text(encoding="utf-8", errors="replace"))
         if sp:
-            plan_rel = sp.group(1)
+            plan_rel = _plan_token(sp.group(1))
 
     if not plan_rel:
         return False, [

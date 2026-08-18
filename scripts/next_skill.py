@@ -206,6 +206,40 @@ def decide(
     if after == "behavior_validator":
         return "/pr_review --validate", {**meta, "reason": "behavior done"}
 
+    if after == "plan_review":
+        return "/execute_dev", {
+            **meta,
+            "reason": "pre-code plan review done → implement",
+        }
+
+    if after == "spec":
+        # Honest route: plan_review only when a Plan is linked (large/outer-loop ships)
+        draft = repo / "PR_DRAFT.md"
+        needs_plan_review = False
+        if draft.is_file():
+            text = draft.read_text(encoding="utf-8", errors="replace")
+            if "**Plan:**" in text or "**plan:**" in text.lower():
+                # ignore Plan: none
+                import re as _re
+
+                m = _re.search(r"\*\*Plan:\*\*\s*(\S+)", text, _re.I)
+                if m:
+                    tok = m.group(1).strip().strip("`")
+                    low = tok.lower()
+                    if low not in {"none", "n/a", "na", "-"} and not low.startswith(
+                        "archived"
+                    ):
+                        needs_plan_review = True
+        if needs_plan_review:
+            return "/plan_review", {
+                **meta,
+                "reason": "Spec linked a Plan → pre-code /plan_review before execute_dev",
+            }
+        return "/execute_dev", {
+            **meta,
+            "reason": "Spec done, no Plan linked → execute_dev (small/waiver ships skip plan_review)",
+        }
+
     if after == "pr_review":
         # Only suggest vps_infra when product requires it; else release.
         if not skip_infra and _infra_required(repo):
@@ -272,6 +306,12 @@ def decide(
 
     if after in ("session_viewer", "agent_transcript"):
         return "(return to ship path)", {**meta, "reason": "ops skill; resume execute_dev or pr_review"}
+
+    if after in ("retrospect", "audit_harness", "sweep", "night_shift"):
+        return "(done)", {
+            **meta,
+            "reason": f"{after} is support/ops (not an FSM advance); resume ship when ready",
+        }
 
     # Only these skills need a diff baseline to choose the next step
     _needs_scope = {"execute_dev", "code_review", "cross_review"}

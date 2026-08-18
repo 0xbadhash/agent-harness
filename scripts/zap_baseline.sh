@@ -72,3 +72,8 @@ for url in "${URLS[@]:1}"; do
 done
 
 exit "$rc"
+
+# Compact summary for ops (avoid hauling raw HTML into night/ship loops)
+if [[ -f "$ROOT/scripts/zap_summarize.py" ]]; then
+  python3 "$ROOT/scripts/zap_summarize.py" --dir "$REPORT_DIR" --write || true
+fi

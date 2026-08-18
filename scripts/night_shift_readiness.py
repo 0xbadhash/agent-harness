@@ -564,13 +564,12 @@ def build_report_md(
         "Ship-time gates (`/pr_review --validate`) and GitHub `daytime-gates` run at other times — see schedule below.",
         "",
     ]
-    try:
-        from test_trigger_schedule import schedule_markdown  # type: ignore
-
-        lines.append(schedule_markdown(compact=True).rstrip())
-        lines.append("")
-    except Exception:  # noqa: BLE001
-        pass
+    # One schedule SoT — do not embed full "When tests run" table (transportation waste)
+    lines.append(
+        "_Schedule SoT (do not duplicate here): "
+        "`docs/test-trigger-schedule.md` · `scripts/test_trigger_schedule.py`_"
+    )
+    lines.append("")
     lines.extend(
         [
             "## Gates (this night run)",

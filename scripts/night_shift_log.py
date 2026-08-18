@@ -123,16 +123,12 @@ def render_log_document(
     if not timeline:
         lines.append("| — | — |")
     lines.append("")
-    # When each test class runs (ship / CI / night) — operator act map
-    try:
-        from test_trigger_schedule import schedule_markdown  # type: ignore
-
-        lines.append(schedule_markdown(compact=True).rstrip())
-        lines.append("")
-    except Exception:  # noqa: BLE001
-        lines.append(
-            "_Test schedule unavailable (install `scripts/test_trigger_schedule.py`)._\n"
-        )
+    # One schedule SoT — never re-embed full table (reports used to duplicate it)
+    lines.append(
+        "_Schedule SoT: `docs/test-trigger-schedule.md` · "
+        "`scripts/test_trigger_schedule.py` (not copied into this log)._"
+    )
+    lines.append("")
     lines.append("---")
     lines.append("")
     bodies: list[str] = []

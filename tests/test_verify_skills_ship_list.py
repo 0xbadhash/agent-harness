@@ -20,22 +20,27 @@ class TestShipSkillsSlim(unittest.TestCase):
             "pr_review",
             "release_mgmt",
             "sync_docs",
-            "qa_campaign",
+            "plan_review",
             "sweep",
             "night_shift",
             "handoff",
+        }
+        lines = [
+            ln.strip()
+            for ln in text.splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        for name in required:
+            self.assertIn(name, lines)
+        for gone in (
+            "feedback",
+            "plan_backend",
+            "audit_repo",
+            "test_automation",
+            "qa_campaign",
             "retrospect",
             "audit_harness",
-        }
-        for name in required:
-            self.assertIn(name, text)
-        for gone in ("feedback", "plan_backend", "audit_repo", "test_automation"):
-            # not present as a required line (comments may mention names)
-            lines = [
-                ln.strip()
-                for ln in text.splitlines()
-                if ln.strip() and not ln.strip().startswith("#")
-            ]
+        ):
             self.assertNotIn(gone, lines)
 
     def test_ac_removed_dirs(self):
@@ -44,8 +49,14 @@ class TestShipSkillsSlim(unittest.TestCase):
 
     def test_ac_optional_list(self):
         opt = (ROOT / "config" / "optional_skills.txt").read_text(encoding="utf-8")
-        self.assertIn("agent_transcript", opt)
-        self.assertIn("session_viewer", opt)
+        for name in (
+            "agent_transcript",
+            "session_viewer",
+            "qa_campaign",
+            "retrospect",
+            "audit_harness",
+        ):
+            self.assertIn(name, opt)
 
 
 if __name__ == "__main__":
