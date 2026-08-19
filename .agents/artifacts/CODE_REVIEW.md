@@ -1,30 +1,13 @@
-# CODE-REVIEW — Tier A/B/C 1.4.28
-
+# CODE-REVIEW — release origin gate (1.4.34)
 **Marker:** CODE-REVIEW  
-**Verdict:** PASS / approve for release  
-**Date:** 2026-08-12
-
-## Scope
-
-Tier A: harness.manifest, compatibility matrix, protect_sot_merge, SCANNER_STRICT policy.  
-Tier B: MCP contract, recovery_demo, evidence_hash, PI fixtures, github_daytime_status + OPS embed.  
-Tier C: benchmark scaffold, SBOM/signing checklist, sandbox policy, opt-in telemetry; multi-agent runtime NON_GOAL.
+**Verdict:** PASS / approve  
 
 ## Findings
-
-| Severity | Finding | Disposition |
-|----------|---------|-------------|
-| P0 | none | — |
-| P1 | none | — |
-| P2 | OPS may slow if gh blocked | best-effort try/except; document |
-| P3 | protect_sot_merge always exit 0 | intentional report mode |
-
-## Quality floor
-
-- Manifest owns_agent_loop=false enforced in check  
-- Secrets still fail-closed on findings  
-- Unit coverage for all tiers in tests/test_tier_abc_1_4_28.py  
+- No P0: `release_origin_gate.py` push then `ls-remote` verify is fail-closed; missing tag/HEAD exits non-zero.
+- `finish_ship.py --require-push` wires auto-push then gate; `--skip-origin-push` / `--verify-only` support dry miss without network push.
+- Unit tests cover push invocation and verify miss paths; red_cmd dry miss EXIT 1 proven on this branch.
+- Night-bar `73c2221` intentionally absent from this branch (cut from `origin/main`).
+- Skill `release_mgmt` step 9 documents mandatory origin gate; no new skill surface.
 
 ## Verdict
-
-**Approve** — ready for cross-review / behavior / pr_review --validate.
+Approve for merge/tag of v1.4.34 release-origin fail-closed gate. No stamp/Playwright in scope.

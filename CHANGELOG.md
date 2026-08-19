@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.34 — 2026-08-19
+
+### Release origin fail-closed gate
+
+- `scripts/release_origin_gate.py` — push HEAD+tags then fetch; fail if origin lacks HEAD or `v$VERSION`
+- `finish_ship.py --require-push` auto-pushes then fail-closed verifies (not optional)
+- `/release_mgmt` skill mandates origin gate before claiming released
+
 ## v1.4.33 — 2026-08-18
 
 ### Inventory + transportation leftovers

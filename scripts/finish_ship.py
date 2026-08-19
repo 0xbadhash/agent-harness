@@ -5,19 +5,25 @@ Prints the ordered NEXT_SKILL plan from current phase, verifies git cleanliness
 and optional remote sync, writes .agents/artifacts/PUSH_PROOF.md.
 
   python3 scripts/finish_ship.py
-  python3 scripts/finish_ship.py --require-push   # fail if ahead/behind origin
+  python3 scripts/finish_ship.py --require-push
+      # auto-push HEAD + tags, then fail-closed if origin lacks HEAD or v$VERSION
   python3 scripts/finish_ship.py --root /path/to/product
 
-Exit 0 when proof ok (and push ok if required). Exit 1 on gaps.
+Exit 0 when proof ok (and origin gate ok if --require-push). Exit 1 on gaps.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 
 # Canonical post-implement skill order (agents still run each skill)
 SKILL_CHAIN = [
@@ -27,7 +33,7 @@ SKILL_CHAIN = [
     "pr_review --validate",
     "release_mgmt",
     "sync_docs",
-    "git push origin HEAD --tags",
+    "finish_ship --require-push  # auto-push + origin HEAD/tag gate",
 ]
 
 
@@ -67,13 +73,22 @@ def _plan_for_phase(phase: str) -> list[str]:
     if phase == "ready_for_review":
         return list(SKILL_CHAIN)
     if phase == "approved":
-        return ["release_mgmt", "sync_docs", "git push origin HEAD --tags"]
+        return [
+            "release_mgmt",
+            "sync_docs",
+            "finish_ship --require-push",
+        ]
     if phase == "shipped":
-        return ["sync_docs (if not done)", "git push origin HEAD --tags"]
+        return ["sync_docs (if not done)", "finish_ship --require-push"]
     return list(SKILL_CHAIN)
 
 
-def evaluate(root: Path, *, require_push: bool = False) -> PushProof:
+def evaluate(
+    root: Path,
+    *,
+    require_push: bool = False,
+    skip_origin_push: bool = False,
+) -> PushProof:
     root = root.resolve()
     phase = _pipeline_phase(root)
     plan = _plan_for_phase(phase)
@@ -98,7 +113,8 @@ def evaluate(root: Path, *, require_push: bool = False) -> PushProof:
             remote_sync = "diverged"
         elif "ahead" in line:
             remote_sync = "ahead"
-            missing.append("local commits not pushed (git push)")
+            if not require_push:
+                missing.append("local commits not pushed (git push)")
         elif "behind" in line:
             remote_sync = "behind"
             missing.append("remote ahead — pull/rebase before push proof")
@@ -108,18 +124,48 @@ def evaluate(root: Path, *, require_push: bool = False) -> PushProof:
     # tag hint: VERSION or latest tag
     has_tag = False
     ver = root / "VERSION"
+    version = ""
     if ver.is_file():
-        v = ver.read_text(encoding="utf-8").strip()
-        rc, tags = _run(["git", "tag", "-l", f"v{v}"], root)
+        version = ver.read_text(encoding="utf-8").strip()
+        rc, tags = _run(["git", "tag", "-l", f"v{version}"], root)
         has_tag = bool(tags.strip())
         if phase in ("shipped", "approved") and not has_tag:
-            notes.append(f"VERSION={v} but tag v{v} not found (ok if not yet released)")
+            notes.append(f"VERSION={version} but tag v{version} not found (ok if not yet released)")
     else:
         notes.append("no VERSION file")
 
-    if require_push and remote_sync != "ok":
-        if "remote not in sync" not in " ".join(missing):
-            missing.append(f"require-push: remote_sync={remote_sync}")
+    # Fail-closed origin gate: auto-push HEAD+tags then verify ls-remote
+    if require_push and not dirty:
+        try:
+            from release_origin_gate import ensure_release_on_origin  # type: ignore
+
+            do_push = not skip_origin_push
+            ok_gate, gate_msgs = ensure_release_on_origin(root, do_push=do_push)
+            for gm in gate_msgs:
+                notes.append(gm)
+            if not ok_gate:
+                missing.append(
+                    "require-push: origin missing HEAD and/or "
+                    f"v{version or '?'} (release_origin_gate FAIL)"
+                )
+            else:
+                # refresh remote_sync after successful push
+                rc, sb = _run(["git", "status", "-sb"], root)
+                if rc == 0:
+                    line = sb.splitlines()[0] if sb else ""
+                    if "ahead" in line and "behind" in line:
+                        remote_sync = "diverged"
+                    elif "ahead" in line:
+                        remote_sync = "ahead"
+                    elif "behind" in line:
+                        remote_sync = "behind"
+                    else:
+                        remote_sync = "ok"
+                notes.append("ok: release_origin_gate PASS")
+        except Exception as e:  # noqa: BLE001
+            missing.append(f"require-push: release_origin_gate error: {e}")
+    elif require_push and dirty:
+        missing.append("require-push: cannot push/verify while dirty")
 
     # Artifacts that score often needs
     for rel, label in (
@@ -129,14 +175,16 @@ def evaluate(root: Path, *, require_push: bool = False) -> PushProof:
         if not (root / rel).exists() and phase in ("ready_for_review", "approved"):
             notes.append(f"optional check: missing {label}")
 
-    ok = len(missing) == 0 if require_push else (not dirty and remote_sync in ("ok", "ahead", "no_upstream", "unknown"))
     if require_push:
-        ok = len([m for m in missing if "dirty" in m or "push" in m or "require-push" in m or "behind" in m or "diverged" in m or "remote" in m]) == 0 and not dirty and remote_sync == "ok"
+        ok = not dirty and len(missing) == 0 and remote_sync == "ok"
     else:
         # soft: dirty fails; ahead is warning not fail without --require-push
         ok = not dirty
         if remote_sync == "ahead":
-            notes.append("ahead of origin — run git push for full closeout (or --require-push)")
+            notes.append(
+                "ahead of origin — /release_mgmt must finish_ship --require-push "
+                "(auto-push + fail-closed origin gate)"
+            )
 
     return PushProof(
         ok=ok,
@@ -203,16 +251,32 @@ def write_artifact(root: Path, proof: PushProof) -> Path:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=Path("."))
-    ap.add_argument("--require-push", action="store_true")
+    ap.add_argument(
+        "--require-push",
+        action="store_true",
+        help="Auto-push HEAD+tags then fail-closed if origin lacks HEAD or v$VERSION",
+    )
+    ap.add_argument(
+        "--skip-origin-push",
+        action="store_true",
+        help="With --require-push: verify only (no git push) — for dry-miss tests",
+    )
     args = ap.parse_args(argv)
     root = args.root.resolve()
-    proof = evaluate(root, require_push=args.require_push)
+    proof = evaluate(
+        root,
+        require_push=args.require_push,
+        skip_origin_push=bool(args.skip_origin_push),
+    )
     path = write_artifact(root, proof)
     print(f"finish_ship ok={proof.ok} phase={proof.phase} remote={proof.remote_sync} out={path}")
     for step in proof.plan:
         print(f"  PLAN: {step}")
     for m in proof.missing:
         print(f"  ❌ {m}")
+    for n in proof.notes:
+        if n.startswith("ok:") or n.startswith("fail:"):
+            print(f"  · {n}")
     return 0 if proof.ok else 1
 
 
