@@ -1,9 +1,10 @@
 {
   "card_id": null,
-  "phase": "shipped",
+  "phase": "approved",
   "remediation": [],
-  "score": 100.0,
-  "spec_id": ".agents/specs/HSQ-1-ship-quality-sot.md",
-  "task": "next after 1.4.6",
+  "score": 100,
+  "spec_id": null,
+  "task": "1.4.34 release origin fail-closed push gate",
+  "updated_at": "2026-08-19T01:08Z",
   "waiver": null
 }

@@ -1,21 +1,9 @@
-# BEHAVIOR-REPORT — Tier A/B/C 1.4.28
-
+# BEHAVIOR-REPORT — release origin gate
 **Marker:** BEHAVIOR-REPORT  
-**Verdict:** PASS
+**Verdict:** PASS  
 
-## Scenarios
-
-| # | Scenario | Result |
-|---|----------|--------|
-| 1 | check_harness_manifest on SoT | exit 0 |
-| 2 | check_compatibility alignment | exit 0 |
-| 3 | SCANNER_STRICT without gitleaks/trufflehog | exit 1 |
-| 4 | recovery_demo creates/reads phase | exit 0 |
-| 5 | check_pi_fixtures | exit 0 |
-| 6 | check_sbom_signing (docs/signing.md) | exit 0 |
-| 7 | telemetry default off | no file |
-| 8 | unittest suite | 13 ok |
-
-## Runtime surface
-
-New scripts are CLI-only; no HTTP service. Behavior validated via unit + direct CLI runs.
+## Observed
+- Dry miss: `python3 scripts/release_origin_gate.py --verify-only --expect-tag v0.0.0-missing-dry-miss` → EXIT 1 (fail-closed).
+- Existing tag `v1.4.33` visible via `git ls-remote --tags origin`.
+- Unit: `tests.test_release_origin_gate` (3) green.
+- No stamp/Playwright; gate is git remote behavior only.

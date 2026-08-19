@@ -35,22 +35,31 @@ When invoked with `/release_mgmt`:
    - infra reference (if any)
    - **Evidence pack (B5):** required at score time in PR_DRAFT (`## Evidence pack` with ≥2 of hard_gates / smoke / pytest / validate / coverage / SBOM). Also paste into RELEASE_RUNBOOK: hard_gates summary, smoke table, coverage/SBOM if any.
    - rollback, §9 (≥3)
-7. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`
-8. **Branch cleanup (optional when `gh` available):** delete merged feature branches per product policy.
-9. Output: `✅ RELEASED. Run /sync_docs` then honor `NEXT_SKILL=` (qa_campaign only if large)
-10. **Post-tag portfolio (default when this repo is agent-harness SoT):** after tag + push of harness:
+7. **Tag** `v$VERSION` (from `VERSION` file) on the release commit.
+8. **Phase → shipped** via `scripts/pipeline_state.py set-phase shipped --score <X>`
+9. **Origin gate (mandatory — push is not optional):**
+   ```bash
+   python3 scripts/finish_ship.py --require-push
+   # ≡ auto: git push origin HEAD && git push origin --tags
+   #   then fetch + fail-closed if origin lacks HEAD or tag v$VERSION
+   # SoT: scripts/release_origin_gate.py
+   ```
+   Halt `🛑 ORIGIN GATE FAIL` if origin is behind HEAD or `git ls-remote --tags origin` lacks `v$VERSION`.
+   Do **not** treat push as a later human step. Do **not** claim released until this passes.
+10. **Branch cleanup (optional when `gh` available):** delete merged feature branches per product policy.
+11. Output: `✅ RELEASED. Run /sync_docs` then honor `NEXT_SKILL=` (qa_campaign only if large)
+12. **Post-tag portfolio (default when this repo is agent-harness SoT):** after origin gate PASS:
     ```bash
     python3 scripts/remaining_board.py
-    # DEFAULT: reinstall + push lagging products (A4)
-    python3 scripts/portfolio_install_report.py --install --push
-    python3 scripts/finish_ship.py --require-push
+    python3 scripts/portfolio_install_report.py --install --force --push
     ```
-    Skip portfolio only if operator sets `PORTFOLIO_INSTALL=0` or passes explicit report-only for a dry run.
-11. **Unattended deterministic closeout (optional):** if reviews already done and you want scripted score→ship→push:
+    Skip portfolio only if `PORTFOLIO_INSTALL=0`.
+13. **Unattended deterministic closeout (optional):**
     ```bash
     python3 scripts/run_ship_chain.py --root . --base <task-base> --head HEAD --push
     ```
 
 ```
-/pr_review --validate → approved → [product infra] → /release_mgmt → shipped → /sync_docs
+/pr_review --validate → approved → [product infra] → /release_mgmt
+  → tag → finish_ship --require-push (auto-push + origin gate) → sync_docs
 ```
