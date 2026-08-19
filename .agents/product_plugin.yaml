@@ -38,6 +38,13 @@ domain_review_hints:
   - portable harness (no host-only defaults)
   - no secret leakage
 
+# Harness SoT is not a web3/client_secrets product — traits stay off (auto).
+traits:
+  web: false
+  web3: false
+  client_secrets: false
+
+
 night_shift:
   default_host: ""
   live_path: ""

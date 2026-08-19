@@ -12,6 +12,12 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from product_plugin import load_plugin  # noqa: E402
+from product_trait_contract import (  # noqa: E402
+    ISO_RE,
+    SECRET_WALL_RE,
+    ensure_trait_scenarios,
+    infer_traits,
+)
 from web_e2e_contract import (  # noqa: E402
     DEFAULT_E2E_DIR,
     allocate_scenario_ids,
@@ -189,17 +195,63 @@ def render_comet(
     return "\n".join(lines)
 
 
-def render_spec_ts(surface_id: str, path: str, title: str) -> str:
+def _named_stub_body(sc: dict) -> str:
+    """Named stub — contract comment + skip, not a tautological body-visible assert."""
+    gid = sc["global_id"]
+    name = sc["name"]
+    path = sc["path"]
+    local = sc["local_id"]
+    blob = f"{local} {name}"
+    if ISO_RE.search(blob):
+        contract = (
+            "CONTRACT: holder A never painted as holder B; "
+            "garbage / wrong id → plain English error, not another person (IDOR)."
+        )
+        skip_reason = "scaffold named stub: implement isolation assertions"
+    elif SECRET_WALL_RE.search(blob):
+        contract = (
+            "CONTRACT: no mnemonic/seed export; no sessionStorage/localStorage leak "
+            "of client secrets."
+        )
+        skip_reason = "scaffold named stub: implement secret-wall assertions"
+    else:
+        contract = f"CONTRACT: implement real assertions for {gid} — not body-visible tautology."
+        skip_reason = f"scaffold named stub: implement {gid} assertions"
+
+    steps = sc.get("steps") or []
+    steps_c = "\n".join(f"   * - {s}" for s in steps) or "   * - (add steps)"
+    return f'''  /**
+   * {contract}
+{steps_c}
+   */
+  test.skip("{gid} {name}", async ({{ page }}) => {{
+    await page.goto("{path}");
+    // {skip_reason}
+    void page;
+  }});
+'''
+
+
+def render_spec_ts(surface_id: str, path: str, title: str, scenarios: list[dict] | None = None) -> str:
+    """Emit named S-id stubs (test.skip with S-id in title) — never tautological smoke-only."""
+    scenarios = scenarios or []
+    if not scenarios:
+        # Fallback single named smoke stub (still S-id shaped when allocated elsewhere)
+        scenarios = [
+            {
+                "global_id": "S0",
+                "local_id": "smoke",
+                "name": f"{title} smoke — replace with real assertion",
+                "path": path,
+                "steps": [f"Open {path}", "Assert primary control (not merely body visible)"],
+            }
+        ]
+    bodies = "\n".join(_named_stub_body(sc) for sc in scenarios)
     return f'''import {{ test, expect }} from "@playwright/test";
 
-/** Auto-scaffolded surface: {surface_id} — extend with product assertions */
+/** Auto-scaffolded surface: {surface_id} — named stubs (not tautological). */
 test.describe("{surface_id}", () => {{
-  test("smoke", async ({{ page }}) => {{
-    await page.goto("{path}");
-    await expect(page.locator("body")).toBeVisible();
-    // TODO: assert heading / primary control for {title}
-  }});
-}});
+{bodies}}});
 '''
 
 
@@ -258,6 +310,13 @@ def main() -> int:
         surfaces = _default_surfaces(root)
         print("⚠️  No web_e2e.surfaces in plugin — using filesystem defaults (add surfaces for stable IDs)")
 
+    traits = infer_traits(root, plugin)
+    surfaces = ensure_trait_scenarios(surfaces, traits)
+    if traits.get("web3", {}).get("active"):
+        print("· web3 trait — ensuring isolation (iso-two-holder) named scenario")
+    if traits.get("client_secrets", {}).get("active"):
+        print("· client_secrets trait — ensuring secret-wall named scenario")
+
     scenarios = allocate_scenario_ids(surfaces)
     _raw_ns = plugin.get("night_shift")
     ns: dict[str, Any] = _raw_ns if isinstance(_raw_ns, dict) else {}
@@ -297,22 +356,26 @@ def main() -> int:
 
         e2e_dir = root / str(cfg.get("e2e_dir") or DEFAULT_E2E_DIR)
         e2e_dir.mkdir(parents=True, exist_ok=True)
-        seen_pw: set[str] = set()
+        by_pw: dict[str, list[dict]] = {}
         for sc in scenarios:
-            rel = sc["playwright"]
-            if rel in seen_pw:
-                continue
-            seen_pw.add(rel)
+            by_pw.setdefault(sc["playwright"], []).append(sc)
+        for rel, scs in by_pw.items():
             path = root / rel
             if path.is_file() and not args.force_tests:
                 print(f"  = keep {rel}")
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
+            head = scs[0]
             path.write_text(
-                render_spec_ts(sc["surface_id"], sc["path"], sc["title"]),
+                render_spec_ts(
+                    head["surface_id"],
+                    head["path"],
+                    head.get("title") or head["surface_id"],
+                    scenarios=scs,
+                ),
                 encoding="utf-8",
             )
-            print(f"  + {rel}")
+            print(f"  + {rel} ({', '.join(s['global_id'] for s in scs)})")
 
         pw_name = str(cfg.get("playwright_config") or "playwright.config.ts")
         pw_path = root / pw_name

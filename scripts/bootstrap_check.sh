@@ -37,6 +37,8 @@ need "scripts/verify_skills.py"
 need "scripts/check_web_e2e.py"
 need "scripts/scaffold_web_e2e.py"
 need "scripts/web_e2e_contract.py"
+need "scripts/check_product_traits.py"
+need "scripts/product_trait_contract.py"
 
 if [[ -f scripts/pipeline_state.py ]]; then
   python3 scripts/pipeline_state.py get || fail=1
@@ -85,6 +87,20 @@ if [[ -f scripts/check_web_e2e.py ]]; then
     fail=1
   else
     echo "  ✅ check_web_e2e OK (or no website)"
+  fi
+fi
+
+if [[ -f scripts/check_product_traits.py ]]; then
+  set +e
+  python3 scripts/check_product_traits.py --root "$ROOT"
+  tr_rc=$?
+  set -e
+  if [[ $tr_rc -ne 0 ]]; then
+    echo "  ❌ check_product_traits failed (web3 isolation / client_secrets categories)"
+    echo "     scaffold: python3 scripts/scaffold_web_e2e.py --root . --write"
+    fail=1
+  else
+    echo "  ✅ check_product_traits OK"
   fi
 fi
 

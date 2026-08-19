@@ -518,8 +518,25 @@ def evaluate(
                 skipped.append("web_e2e (no website)")
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: web_e2e check error: {e}")
+
+        # Product traits → required test categories (web3 isolation, client_secrets, …)
+        try:
+            from check_product_traits import check as _traits  # type: ignore
+
+            tr_ok, tr_msgs = _traits(root)
+            if not tr_ok:
+                for msg in tr_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: product_traits — {msg}")
+            else:
+                skipped.append(
+                    "product_traits (" + (tr_msgs[0] if tr_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: product_traits error: {e}")
     else:
         skipped.append("web_e2e (prose-only)")
+        skipped.append("product_traits (prose-only)")
 
     # Outer loop: plan / tickets / PLAN_REVIEW for large non-waiver ships
     if not prose_only:

@@ -1,4 +1,5 @@
-# CROSS-REVIEW — release origin gate
+# CROSS-REVIEW — product-trait categories 1.4.35
 **Marker:** CROSS-REVIEW  
 **Verdict:** PASS  
-Ops: push not optional on release. Security: uses existing remotes only.
+
+Independent check: dry-miss fixture EXIT 1; web-only no isolation force; named stubs; hard_gates wire present. No product broadcast. Approve.

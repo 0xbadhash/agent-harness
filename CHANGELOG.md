@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.4.35 — 2026-08-19
+
+### Product-trait fail-closed test categories
+
+- Infer/declare `traits` (web / web3 / client_secrets) in product_plugin — no new skill
+- `product_trait_contract.py` + `check_product_traits.py` wired into hard_gates + bootstrap
+- web3 → require Comet+Playwright isolation S-id (iso-/two-holder/IDOR/…); holder A ≠ B; garbage id plain English
+- client_secrets → property_tests on crypto modules + secret-wall S-id (no export / no session leak)
+- `scaffold_web_e2e.py` emits **named** stubs (`test.skip("S…")`), not tautological body-visible smoke
+- Dry miss: web3 without isolation → EXIT 1; web-only not forced to isolation
+- No portfolio broadcast in this ship (harness SoT only)
+
+
 ## v1.4.34 — 2026-08-19
 
 ### Release origin fail-closed gate

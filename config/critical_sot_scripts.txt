@@ -7,5 +7,11 @@ scripts/night_shift_readiness.py
 scripts/product_smoke.py
 scripts/product_plugin.py
 scripts/check_secrets_diff.py
+scripts/check_product_traits.py
+scripts/product_trait_contract.py
+scripts/check_web_e2e.py
+scripts/web_e2e_contract.py
+scripts/scaffold_web_e2e.py
+scripts/check_property_tests.py
 scripts/test_trigger_schedule.py
 scripts/ops_dashboard.py

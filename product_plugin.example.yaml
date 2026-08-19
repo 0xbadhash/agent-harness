@@ -70,6 +70,17 @@ night_shift:
   live_expect_code: "200"
   coverage_soft: "1"        # "0" = hard-fail if coverage tooling missing
 
+# Product traits → required test categories (fail closed in hard_gates).
+# Declare true/false to force; omit or "auto" to infer from repo signals.
+# Does not invent a new skill — wires web_e2e / property_tests / scaffold stubs.
+#   web            — Playwright + Comet (existing web_e2e_contract)
+#   web3           — isolation S-id (iso-/two-holder/IDOR/wrong-id-not-other-holder)
+#   client_secrets — property_tests on crypto modules + secret-wall S-id
+traits:
+  web: auto
+  web3: auto              # infer: solana/web3/ethers/viem/wallet/PDA/holder
+  client_secrets: auto    # infer: bip39/mnemonic/seed/secret-export
+
 # Website / app E2E (Playwright + Comet/Perplexity) — MANDATORY when UI detected.
 # Detection: web/, SPA/Next app, playwright.config, e2e specs, package.json browser deps, …
 # Fail closed via scripts/check_web_e2e.py (hard_gates + release). Opt out: enabled: false.

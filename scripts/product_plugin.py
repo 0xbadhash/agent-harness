@@ -172,6 +172,28 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
             we["surfaces"] = []
         if we:
             out["web_e2e"] = we
+
+    # traits: web / web3 / client_secrets (true|false|auto)
+    tm = re.search(
+        r"^traits:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if tm:
+        traits: dict[str, Any] = {}
+        section = tm.group(1)
+        for key in ("web", "web3", "client_secrets"):
+            key_m = re.search(rf"^[ \t]+{key}:\s*(\S+)", section, re.MULTILINE)
+            if key_m:
+                raw = key_m.group(1).strip().strip("'\"")
+                if raw.lower() in ("true", "yes", "1", "on"):
+                    traits[key] = True
+                elif raw.lower() in ("false", "no", "0", "off"):
+                    traits[key] = False
+                else:
+                    traits[key] = raw  # auto or free-form
+        if traits:
+            out["traits"] = traits
     return out
 
 
