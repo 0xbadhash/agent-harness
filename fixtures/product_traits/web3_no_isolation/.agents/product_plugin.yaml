@@ -1,0 +1,18 @@
+product_id: web3-dry-miss
+traits:
+  web: true
+  web3: true
+  client_secrets: false
+web_e2e:
+  enabled: true
+  surfaces:
+    - id: home
+      order: 0
+      path: /
+      playwright: e2e/home.spec.ts
+      scenarios:
+        - id: smoke
+          name: Smoke load
+smoke:
+  - name: e2e
+    cmd: [npm, run, test:e2e]

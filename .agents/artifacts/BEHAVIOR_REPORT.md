@@ -1,9 +1,9 @@
-# BEHAVIOR-REPORT — release origin gate
+# BEHAVIOR-REPORT — product-trait categories
 **Marker:** BEHAVIOR-REPORT  
 **Verdict:** PASS  
 
 ## Observed
-- Dry miss: `python3 scripts/release_origin_gate.py --verify-only --expect-tag v0.0.0-missing-dry-miss` → EXIT 1 (fail-closed).
-- Existing tag `v1.4.33` visible via `git ls-remote --tags origin`.
-- Unit: `tests.test_release_origin_gate` (3) green.
-- No stamp/Playwright; gate is git remote behavior only.
+- Dry miss: `python3 scripts/check_product_traits.py --root fixtures/product_traits/web3_no_isolation` → EXIT 1.
+- Web-only fixture: isolation stubs not required → PASS.
+- Harness SoT (`traits.web3/client_secrets/web=false`): check_product_traits EXIT 0.
+- Unit: `tests.test_product_traits` (6) green.
