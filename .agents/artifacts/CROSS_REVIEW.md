@@ -1,5 +1,5 @@
-# CROSS-REVIEW — product-trait categories 1.4.35
+# CROSS-REVIEW — night shift no kanban write 1.4.36
 **Marker:** CROSS-REVIEW  
 **Verdict:** PASS  
 
-Independent check: dry-miss fixture EXIT 1; web-only no isolation force; named stubs; hard_gates wire present. No product broadcast. Approve.
+Independent check: upsert/sync no-op; write_vault leaves kanban.md untouched; no recreate. Approve.
