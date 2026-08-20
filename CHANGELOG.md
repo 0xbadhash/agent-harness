@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.36 — 2026-08-20
+
+### Night shift: stop writing agent-tasks/kanban.md
+
+- `night_shift_readiness.py`: `upsert_kanban_readiness_done` / `sync_kanban_readiness_file` are no-ops; `write_vault` no longer calls them
+- Dropped `KANBAN_AUTO_MARKER`; docstring no longer claims kanban Done notes
+- Tests assert night-shift/readiness never writes or upserts `agent-tasks/kanban.md`
+- Ops deletes the file separately; this ship does not recreate it
+
 ## v1.4.35 — 2026-08-19
 
 ### Product-trait fail-closed test categories

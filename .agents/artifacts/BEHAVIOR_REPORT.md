@@ -1,9 +1,9 @@
-# BEHAVIOR-REPORT — product-trait categories
+# BEHAVIOR-REPORT — night shift no kanban write
 **Marker:** BEHAVIOR-REPORT  
 **Verdict:** PASS  
 
 ## Observed
-- Dry miss: `python3 scripts/check_product_traits.py --root fixtures/product_traits/web3_no_isolation` → EXIT 1.
-- Web-only fixture: isolation stubs not required → PASS.
-- Harness SoT (`traits.web3/client_secrets/web=false`): check_product_traits EXIT 0.
-- Unit: `tests.test_product_traits` (6) green.
+- `upsert_kanban_readiness_done(..., overall=PASS)` returns identical text + no-op message.
+- `sync_kanban_readiness_file` does not modify or create `agent-tasks/kanban.md`.
+- `write_vault` on PASS leaves existing kanban.md bytes unchanged.
+- Unit: `tests.test_night_shift_kanban_sync` green.

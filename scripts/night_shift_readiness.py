@@ -14,8 +14,9 @@ Writes (per product root):
   - .agents/artifacts/NIGHT_SHIFT_TODO.md
   - vault 01-Projects/<project_label>/night-shift-log.md
   - vault 01-Projects/<project_label>/TODO.md
-  - vault agent-tasks/kanban.md Done note when overall PASS (auto:night_shift_readiness)
   - optional vault ad-hoc note via sync_vault_devlog.py when present
+
+Does **not** write vault ``agent-tasks/kanban.md`` (kanban upsert removed).
 
 Exit 0 = all gates pass; 1 = one or more failures (still writes reports).
 """
@@ -36,7 +37,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
 ARTIFACTS = ROOT / ".agents" / "artifacts"
 DEFAULT_VAULT = Path("/opt/second-brain/vault")
-KANBAN_AUTO_MARKER = "auto:night_shift_readiness"
 
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -649,15 +649,6 @@ def build_todo_md(
     return "\n".join(lines)
 
 
-def _gate_summary(results: list[dict[str, Any]]) -> str:
-    passed = sum(1 for r in results if r.get("ok"))
-    total = len(results)
-    names = ",".join(r.get("name", "?") for r in results if r.get("ok"))
-    if len(names) > 120:
-        names = names[:117] + "..."
-    return f"{passed}/{total}" + (f" {names}" if names else "")
-
-
 def upsert_kanban_readiness_done(
     text: str,
     *,
@@ -666,52 +657,12 @@ def upsert_kanban_readiness_done(
     when_iso: str,
     gate_summary: str,
 ) -> tuple[str, str]:
-    """Insert or refresh a Done card for night_shift PASS. Pure (no I/O).
+    """No-op: night shift must not upsert agent-tasks/kanban.md.
 
-    Returns (new_text, message). Unchanged text when overall != PASS.
+    Kept as a stable import surface for older callers; never mutates ``text``.
     """
-    if overall != "PASS":
-        return text, "kanban: skip (not PASS)"
-
-    day = when_iso[:10] if when_iso else _now().strftime("%Y-%m-%d")
-    card_id = f"T-NS-{product_id}-{day.replace('-', '')}"
-    # Stable product-scoped id without date for single refreshable card
-    stable_title = f"Night shift readiness PASS ({product_id})"
-    notes_line = (
-        f"  - notes: {KANBAN_AUTO_MARKER} @ {when_iso} · {gate_summary} · "
-        f"see `01-Projects/{product_id}/TODO.md`"
-    )
-    card_body = (
-        f"- [x] **{card_id}** — {stable_title} ({day})\n"
-        f"{notes_line}\n"
-        f"  - links: `01-Projects/{product_id}/TODO.md` | "
-        f"`01-Projects/{product_id}/night-shift-log.md` | skill `night_shift`\n"
-    )
-
-    # Refresh existing auto card (any id) by marker in notes
-    if KANBAN_AUTO_MARKER in text:
-        # Replace from list item containing marker back to previous list item or section
-        pattern = re.compile(
-            r"- \[[ xX]\] \*\*T-[^*]+\*\* — [^\n]*\n"
-            r"(?:  - [^\n]*\n)*?"
-            rf"  - notes: {re.escape(KANBAN_AUTO_MARKER)}[^\n]*\n"
-            r"(?:  - [^\n]*\n)*",
-            re.MULTILINE,
-        )
-        if pattern.search(text):
-            new_text = pattern.sub(card_body, text, count=1)
-            return new_text, "kanban: refresh readiness Done note"
-        # Marker present but odd shape — fall through to insert
-
-    # Insert under ## Done (after heading / comment block)
-    done_m = re.search(r"(## Done\n(?:<!--[^\n]*-->\n)?\n?)", text)
-    if done_m:
-        insert_at = done_m.end()
-        new_text = text[:insert_at] + card_body + "\n" + text[insert_at:]
-        return new_text, "kanban: insert readiness Done note"
-    # No Done section — append
-    new_text = text.rstrip() + "\n\n## Done\n\n" + card_body
-    return new_text, "kanban: append Done section + readiness note"
+    del product_id, overall, when_iso, gate_summary  # unused — API stable
+    return text, "kanban: no-op (night shift does not write agent-tasks/kanban.md)"
 
 
 def sync_kanban_readiness_file(
@@ -723,37 +674,9 @@ def sync_kanban_readiness_file(
     results: list[dict[str, Any]],
     dry_run: bool,
 ) -> str:
-    """Write PASS readiness into vault agent-tasks/kanban.md Done note."""
-    kanban = vault / "agent-tasks" / "kanban.md"
-    if overall != "PASS":
-        return "kanban: skip (not PASS)"
-    if dry_run:
-        return f"kanban: dry-run would upsert {kanban}"
-    if not kanban.is_file():
-        return f"kanban: skip (missing {kanban})"
-    try:
-        original = kanban.read_text(encoding="utf-8")
-    except OSError as exc:
-        return f"kanban: skip (read {exc})"
-    when_iso = when.strftime("%Y-%m-%dT%H:%M:%SZ")
-    new_text, msg = upsert_kanban_readiness_done(
-        original,
-        product_id=product_id,
-        overall=overall,
-        when_iso=when_iso,
-        gate_summary=_gate_summary(results),
-    )
-    if new_text == original:
-        return msg
-    try:
-        try:
-            from vault_fs import write_text as _vw  # type: ignore
-            _vw(kanban, new_text)
-        except ImportError:
-            kanban.write_text(new_text, encoding="utf-8")
-    except OSError as exc:
-        return f"kanban: skip (write {exc})"
-    return f"{msg} → {kanban}"
+    """No-op: never reads or writes vault agent-tasks/kanban.md."""
+    del vault, product_id, overall, when, results, dry_run  # unused — API stable
+    return "kanban: no-op (night shift does not write agent-tasks/kanban.md)"
 
 
 def write_vault(
@@ -774,6 +697,9 @@ def write_vault(
     if not vault.is_dir():
         return [f"⚠️ VAULT SKIP: {vault} not found"]
 
+    # results retained for call-site compatibility; kanban sync removed
+    del results
+
     proj = vault / project_rel
     try:
         proj.mkdir(parents=True, exist_ok=True)
@@ -789,16 +715,7 @@ def write_vault(
             todo_path.write_text(todo_md, encoding="utf-8")
         notes.append(f"vault TODO: {todo_path}")
 
-        notes.append(
-            sync_kanban_readiness_file(
-                vault,
-                product_id=product_id,
-                overall=overall,
-                when=when,
-                results=results or [],
-                dry_run=dry_run,
-            )
-        )
+        # Intentionally does NOT call sync_kanban_readiness_file / write kanban.md
 
         devlog = SCRIPTS / "sync_vault_devlog.py"
         if devlog.is_file():
