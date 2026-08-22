@@ -160,6 +160,8 @@ ALLOW_PREFIXES = (
     ".github/",  # CI paths often use runner home paths
     "product_plugin.example.yaml",  # template only
     "data/weeks/",  # figure-it-out weekly curriculum JSON (SVG xmlns noise)
+    # CEO declared-host inventory — URLs/hosts are the data, not secrets
+    "scripts/surface_inventory.py",
 )
 
 
