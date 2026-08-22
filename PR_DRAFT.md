@@ -1,46 +1,46 @@
-# PR Draft — night shift stops writing agent-tasks/kanban.md
+# PR Draft — night bar surface_inventory hardcodes
 
 **Spec waiver:** chore  
-**Version target:** 1.4.36  
+**Version target:** 1.4.37  
 
 ## What Problem This Solves
-Night shift readiness still upserted vault `agent-tasks/kanban.md` Done notes every PASS (last hit T-NS-zk-business-card-20260819). Ops will delete the file; writers must stop first.
+Night readiness FAIL `scripts/surface_inventory.py:33 [external_url] https://artauthenticity.xyz` across products stuck on protected stale `check_hardcodes` (1.4.34) while SoT was 1.4.36+.
 
 ## Why This Change Was Made
-CEO: night shift must not write kanban.md. Fail-closed ship on harness SoT only. Do not reopen 1.4.35 trait gates.
+WINDOW 2 night bar: align install to current harness; fix night runner so stale FAIL cannot recur. No live sites.
 
 ## User Impact
-- `night_shift_readiness.write_vault` no longer touches kanban.md
-- `upsert_kanban_readiness_done` / `sync_kanban_readiness_file` are no-ops (never write)
-- Ops deletes kanban.md separately after this tag
+- Inventory SoT uses hostnames; scheme applied at runtime
+- Night autofix rewrites old https:// literals in product surface_inventory when hardcodes fails on that path
+- Portfolio install propagates fixed inventory (not protected)
 
 ## Red-proof
-- red_cmd: `python3 -c "import importlib.util; from pathlib import Path; p=Path('scripts/night_shift_readiness.py'); s=importlib.util.spec_from_file_location('n', p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); t='KEEP'; o,_=m.upsert_kanban_readiness_done(t, product_id='x', overall='PASS', when_iso='2026-08-19T00:00:00Z', gate_summary='1/1'); import sys; sys.exit(0 if o!=t else 1)"`
-- green_cmd: `python3 -m unittest tests.test_night_shift_kanban_sync -v`
+- red_cmd: `python3 -c "from pathlib import Path; t=Path('scripts/surface_inventory.py').read_text(); import sys; sys.exit(0 if 'https://artauthenticity.xyz' in t.split('KNOWN_CATALYXT_HOSTS',1)[1].split(')',1)[0] else 1)"`
+- green_cmd: `python3 -m unittest tests.test_surface_inventory -v`
 
 ## Traceability
 | AC | Test / smoke |
 |----|--------------|
-| AC-1 upsert never mutates kanban text | tests/test_night_shift_kanban_sync.py::test_upsert_is_noop_unchanged |
-| AC-2 sync never writes existing kanban.md | tests/test_night_shift_kanban_sync.py::test_sync_never_writes_kanban_file |
-| AC-3 sync does not create missing kanban.md | tests/test_night_shift_kanban_sync.py::test_sync_does_not_create_missing_kanban |
-| AC-4 write_vault does not touch kanban.md | tests/test_night_shift_kanban_sync.py::test_write_vault_does_not_touch_kanban |
-| smoke | python3 -m unittest tests.test_night_shift_kanban_sync -v |
+| AC-1 KNOWN table has no https://artauthenticity literal | tests/test_surface_inventory.py::test_source_has_no_artauthenticity_https_literal |
+| AC-2 known_url builds https | tests/test_surface_inventory.py::test_known_url_builds_https |
+| AC-3 merge still emits https URLs | tests/test_surface_inventory.py::test_merge_includes_known |
+| AC-4 night autofix clears old scanner FAIL | night_shift_autofix.try_fix_surface_inventory_hardcodes |
+| smoke | python3 -m unittest tests.test_surface_inventory -v |
 
 ## Threat notes
-- authz: vault writes still limited to project night-shift-log / TODO / optional devlog
-- secrets: none logged by this change
-- abuse: no recreate of agent-tasks/kanban.md
+- authz: none
+- secrets: inventory hosts are public CEO list, not credentials
+- abuse: autofix only rewrites known CEO host tuple https→hostname
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | pr_validator |
-| unittest | tests/test_night_shift_kanban_sync.py |
-| red/green | red expects old mutate behavior EXIT 1; green unittest |
+| unittest | tests/test_surface_inventory.py |
+| dry proof | old scanner + new inventory EXIT 0; autofix on old inventory EXIT 0 |
 
 ## Things that look bad but are actually fine
-1. No portfolio install / product VERSION bumps
-2. Dirty leftover MORNING_TRIAGE / NIGHT_SHIFT_* / ops_dashboard.py left unstaged
-3. Night-bar 73c2221 stays unpushed
-4. Does not reopen 1.4.35 trait-checklist PASSes
+1. Does not reopen 1.4.35 trait gates or 1.4.36 kanban writer ship
+2. Night-bar 73c2221 stays unpushed
+3. Leftover MORNING_TRIAGE / NIGHT_SHIFT_* / ops_dashboard left unstaged
+4. check_hardcodes remains protect-listed on products — inventory fix does not need scanner overwrite

@@ -1,13 +1,13 @@
-# CODE-REVIEW — night shift no kanban.md write (1.4.36)
+# CODE-REVIEW — night bar surface_inventory hardcodes (1.4.37)
 **Marker:** CODE-REVIEW  
 **Verdict:** PASS / approve  
 
 ## Findings
-- No P0: `write_vault` no longer calls kanban sync; upsert/sync are no-ops that never write or create `agent-tasks/kanban.md`.
-- `KANBAN_AUTO_MARKER` removed; docstring updated.
-- Tests assert no-op + no file mutation/creation via `write_vault`.
-- Out of scope leftovers (ops_dashboard, night reports) intentionally unstaged.
-- Does not reopen 1.4.35 trait gates. Night-bar 73c2221 not on branch.
+- No P0: hostname-only KNOWN table removes the external_url tripwire for stale scanners.
+- known_url() preserves https at merge/probe time; pane still lists full URLs.
+- Autofix is mechanical and bounded to CEO host tuple https→hostname + known_url wiring.
+- Hardcodes proposal path no longer calls inventory a secret leak.
+- Night-bar 73c2221 not included. Leftovers unstaged.
 
 ## Verdict
-Approve merge/tag of v1.4.36.
+Approve v1.4.37.

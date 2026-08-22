@@ -1,5 +1,5 @@
-# CROSS-REVIEW — night shift no kanban write 1.4.36
+# CROSS-REVIEW — night bar surface_inventory 1.4.37
 **Marker:** CROSS-REVIEW  
 **Verdict:** PASS  
 
-Independent check: upsert/sync no-op; write_vault leaves kanban.md untouched; no recreate. Approve.
+Independent: old scanner + new inventory PASS; autofix recovers old inventory. Approve.
