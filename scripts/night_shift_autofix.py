@@ -254,7 +254,9 @@ def try_fix_surface_inventory_hardcodes(
         return None
     if "KNOWN_CATALYXT_HOSTS" not in text:
         return None
-    if "https://artauthenticity.xyz" not in text and not _SURFACE_INV_HTTPS.search(text):
+    # Detect https://host literals via regex only (no full URL string in this file —
+    # a literal here would re-trip product check_hardcodes on night_shift_autofix.py).
+    if not _SURFACE_INV_HTTPS.search(text):
         return None
 
     new = text
