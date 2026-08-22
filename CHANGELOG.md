@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.38 — 2026-08-22
+
+### Night bar hotfix: autofix must not embed inventory URL literal
+
+- `night_shift_autofix.py` detects surface_inventory https hosts via regex only (no `https://artauthenticity.xyz` string in autofix source)
+- Prevents hardcodes FAIL migrating from surface_inventory.py to night_shift_autofix.py after 1.4.37 install
+
 ## v1.4.37 — 2026-08-22
 
 ### Night bar: surface_inventory hardcodes FAIL cannot recur

@@ -1,13 +1,10 @@
-# CODE-REVIEW — night bar surface_inventory hardcodes (1.4.37)
+# CODE-REVIEW — night bar autofix URL literal (1.4.38)
 **Marker:** CODE-REVIEW  
 **Verdict:** PASS / approve  
 
 ## Findings
-- No P0: hostname-only KNOWN table removes the external_url tripwire for stale scanners.
-- known_url() preserves https at merge/probe time; pane still lists full URLs.
-- Autofix is mechanical and bounded to CEO host tuple https→hostname + known_url wiring.
-- Hardcodes proposal path no longer calls inventory a secret leak.
-- Night-bar 73c2221 not included. Leftovers unstaged.
+- No P0: removed inventory URL literal from autofix; detection remains regex-based.
+- Re-install clears product hardcodes FAIL on night_shift_autofix.py.
 
 ## Verdict
-Approve v1.4.37.
+Approve v1.4.38.

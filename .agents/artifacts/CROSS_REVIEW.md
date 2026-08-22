@@ -1,5 +1,3 @@
-# CROSS-REVIEW — night bar surface_inventory 1.4.37
+# CROSS-REVIEW — 1.4.38
 **Marker:** CROSS-REVIEW  
 **Verdict:** PASS  
-
-Independent: old scanner + new inventory PASS; autofix recovers old inventory. Approve.

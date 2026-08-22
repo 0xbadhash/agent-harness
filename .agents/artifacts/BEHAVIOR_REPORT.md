@@ -1,8 +1,5 @@
-# BEHAVIOR-REPORT — night bar surface_inventory
+# BEHAVIOR-REPORT — 1.4.38
 **Marker:** BEHAVIOR-REPORT  
 **Verdict:** PASS  
 
-## Observed
-- New inventory + watchlist-era check_hardcodes → EXIT 0.
-- Old inventory FAIL on :33 artauthenticity; autofix rewrite → EXIT 0; merge still yields https://artauthenticity.xyz.
-- Unit tests.test_surface_inventory green. No live --probe.
+Observed: old check_hardcodes + fixed autofix + new inventory → EXIT 0.
