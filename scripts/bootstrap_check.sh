@@ -39,6 +39,10 @@ need "scripts/scaffold_web_e2e.py"
 need "scripts/web_e2e_contract.py"
 need "scripts/check_product_traits.py"
 need "scripts/product_trait_contract.py"
+need "scripts/check_stale_agent_config.py"
+need "scripts/check_edit_guard.py"
+need "scripts/green_checkpoint.py"
+need "scripts/run_agent_config_evals.py"
 
 if [[ -f scripts/pipeline_state.py ]]; then
   python3 scripts/pipeline_state.py get || fail=1
@@ -101,6 +105,19 @@ if [[ -f scripts/check_product_traits.py ]]; then
     fail=1
   else
     echo "  ✅ check_product_traits OK"
+  fi
+fi
+
+if [[ -f scripts/check_stale_agent_config.py ]]; then
+  set +e
+  python3 scripts/check_stale_agent_config.py --root "$ROOT"
+  st_rc=$?
+  set -e
+  if [[ $st_rc -ne 0 ]]; then
+    echo "  ❌ check_stale_agent_config failed (AGENTS/skills/plugin name missing files)"
+    fail=1
+  else
+    echo "  ✅ check_stale_agent_config OK"
   fi
 fi
 

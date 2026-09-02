@@ -557,6 +557,41 @@ def evaluate(
     else:
         skipped.append("outer_loop (prose-only)")
 
+    # Stale agent-config refs (AGENTS / skills / plugin / ship_skills)
+    if not prose_only:
+        try:
+            from check_stale_agent_config import check as _stale  # type: ignore
+
+            st_ok, st_msgs = _stale(root)
+            if not st_ok:
+                for msg in st_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: stale_agent_config — {msg}")
+            else:
+                skipped.append(
+                    "stale_agent_config (" + (st_msgs[0] if st_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: stale_agent_config error: {e}")
+
+        try:
+            from check_edit_guard import check as _eg  # type: ignore
+
+            eg_ok, eg_msgs = _eg(root, base=base_g, head=head_g)
+            if not eg_ok:
+                for msg in eg_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: edit_guard — {msg}")
+            else:
+                skipped.append(
+                    "edit_guard (" + (eg_msgs[0] if eg_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: edit_guard error: {e}")
+    else:
+        skipped.append("stale_agent_config (prose-only)")
+        skipped.append("edit_guard (prose-only)")
+
     return HardGatesResult(
         ok=len(violations) == 0,
         violations=violations,

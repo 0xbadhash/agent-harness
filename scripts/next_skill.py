@@ -203,6 +203,33 @@ def decide(
         raise ValueError("empty --after; pass the skill that just finished")
     meta: dict[str, str] = {"after": after}
 
+    # Gap 3: if HEAD already passed smoke+hard_gates, do not extra-loop
+    try:
+        from green_checkpoint import head_is_green  # type: ignore
+
+        _green, _gmsg = head_is_green(Path(repo).resolve())
+    except Exception:  # noqa: BLE001
+        _green, _gmsg = False, ""
+    if _green:
+        meta["green_checkpoint"] = "hit"
+        if after in (
+            "execute_dev",
+            "code_review",
+            "cross_review",
+            "behavior_validator",
+            "pr_review",
+        ):
+            return "/release_mgmt", {
+                **meta,
+                "reason": "green checkpoint == HEAD — no extra review/polish loop",
+            }
+        if after == "sync_docs" and not force_qa:
+            return "(done)", {
+                **meta,
+                "reason": "green checkpoint — skip qa_campaign extra loop",
+                "qa": "skipped_green",
+            }
+
     if after == "behavior_validator":
         return "/pr_review --validate", {**meta, "reason": "behavior done"}
 

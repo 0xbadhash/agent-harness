@@ -1,41 +1,48 @@
-# PR Draft — night bar autofix no URL literal
+# PR Draft — agent-config gates 1.4.39
 
 **Spec waiver:** chore  
-**Version target:** 1.4.38  
+**Spec:** `.agents/specs/2026-09-02-agent-sdlc-gates.md`  
+**Version target:** 1.4.39  
 
 ## What Problem This Solves
-1.4.37 install moved the hardcodes FAIL from `surface_inventory.py:33` to `night_shift_autofix.py:257` because autofix contained the literal `https://artauthenticity.xyz`.
+Stale agent config, late-only guards, extra loops after green, no evals when skills/AGENTS/gates change.
 
 ## Why This Change Was Made
-Night bar: FAIL must not recur. Detect via regex only.
+Operator: implement ranked gaps 1–4, full FSM, then portfolio install. No product VERSION bumps.
 
 ## User Impact
-- Products' protected check_hardcodes no longer trip on autofix source
+- hard_gates fail on missing agent-config refs
+- diffs cannot include `.env`/secrets; fix-tasks cannot rewrite tests
+- after score ≥95 at this SHA, next_skill goes to release, not another polish loop
+- CI runs frozen agent-config evals (no LLM)
 
 ## Red-proof
-- red_cmd: `python3 -c "from pathlib import Path; import sys; t=Path('scripts/night_shift_autofix.py').read_text(); sys.exit(0 if 'https://artauthenticity.xyz' in t else 1)"`
-- green_cmd: `python3 scripts/check_hardcodes.py`
+- red_cmd: `python3 -c "import tempfile,sys; from pathlib import Path; sys.path.insert(0,'scripts'); import check_stale_agent_config as s; td=Path(tempfile.mkdtemp()); (td/'scripts').mkdir(); (td/'scripts'/'next_skill.py').write_text('x'); (td/'AGENTS.md').write_text('python3 scripts/nope_missing.py\n'); ok,_=s.check(td); raise SystemExit(0 if ok else 1)"`
+- green_cmd: `python3 -m unittest tests.test_stale_agent_config tests.test_edit_guard tests.test_green_checkpoint tests.test_agent_config_evals -v`
 
 ## Traceability
 | AC | Test / smoke |
 |----|--------------|
-| AC-1 autofix source has no artauthenticity https literal | red_cmd EXIT 1; check_hardcodes green |
-| smoke | python3 scripts/check_hardcodes.py |
+| AC-1 stale missing script fails | tests/test_stale_agent_config.py |
+| AC-2 edit_guard .env and fix-task tests | tests/test_edit_guard.py |
+| AC-3 green next_skill → release_mgmt | tests/test_green_checkpoint.py |
+| AC-4 evals pass on SoT | tests/test_agent_config_evals.py |
+| smoke | product_smoke + run_agent_config_evals.py |
 
 ## Threat notes
 - authz: none
-- secrets: none
-- abuse: regex still matches CEO host https literals in inventory files
+- secrets: edit_guard blocks secret paths in diffs
+- abuse: extra polish after green is routed away, not a host kill-switch
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | pr_validator |
-| unittest | check_hardcodes |
-| validate | old scanner + fixed autofix EXIT 0 |
+| unittest | stale / edit_guard / green / evals |
+| validate | run_agent_config_evals.py |
 
 ## Things that look bad but are actually fine
-1. Follow-on to 1.4.37 same night bar (hotfix, not a reopen of trait/kanban ships)
-2. Leftovers MORNING_TRIAGE / NIGHT_SHIFT_* / ops_dashboard left unstaged
-3. Night-bar 73c2221 stays unpushed
-4. Product check_hardcodes stays protect-listed — inventory/autofix fixes do not need scanner overwrite
+1. Spec waiver chore while a spec file exists — outer_loop skip; grill is in the spec
+2. Leftover MORNING_TRIAGE / NIGHT_SHIFT_* / ops_dashboard unstaged
+3. No Claude Code PreToolUse — portable scripts are the pin
+4. Night-bar 73c2221 stays unpushed

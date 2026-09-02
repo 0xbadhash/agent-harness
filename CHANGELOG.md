@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.39 — 2026-09-02
+
+### Agent-config gates (stale refs, edit guard, green checkpoint, evals)
+
+- `check_stale_agent_config.py` — fail if AGENTS/skills/ship_skills/plugin name missing files or skills
+- `check_edit_guard.py` — block secrets/`.env` in diff; `--fix-task` blocks test rewrites
+- `green_checkpoint.py` — bind score≥95 to HEAD SHA; `next_skill` skips extra polish loops
+- `run_agent_config_evals.py` — frozen no-LLM evals in daytime-gates
+- Wired into hard_gates + bootstrap; portfolio install after tag (no product VERSION bump)
+
 ## v1.4.38 — 2026-08-22
 
 ### Night bar hotfix: autofix must not embed inventory URL literal

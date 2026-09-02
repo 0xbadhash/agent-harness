@@ -43,3 +43,5 @@ jobs:
       - name: Checklist when skill paths change
         run: |
           python scripts/agent_eval_checklist.py --root . --skip-tests || true
+      - name: Agent-config evals (stale refs / edit guard)
+        run: python scripts/run_agent_config_evals.py --root .
