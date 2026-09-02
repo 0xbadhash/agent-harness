@@ -1,8 +1,8 @@
-# PR Draft — agent-config gates 1.4.39
+# PR Draft — agent-config gates 1.4.40
 
 **Spec waiver:** chore  
 **Spec:** `.agents/specs/2026-09-02-agent-sdlc-gates.md`  
-**Version target:** 1.4.39  
+**Version target:** 1.4.40  
 
 ## What Problem This Solves
 Stale agent config, late-only guards, extra loops after green, no evals when skills/AGENTS/gates change.
