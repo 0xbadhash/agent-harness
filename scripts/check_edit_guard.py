@@ -57,25 +57,27 @@ def _is_protected(rel: str) -> bool:
 
 
 def _is_test(rel: str) -> bool:
-    name = Path(rel).name
-    if name.startswith("test_") and name.endswith(".py"):
-        return True
-    return any(rel.startswith(p) or f"/{p}" in rel for p in ("tests/", "e2e/"))
+    """Only tests/ and e2e/ trees — not scripts/test_*.py helpers."""
+    rel = rel.replace("\\", "/").lstrip("./")
+    return rel.startswith("tests/") or rel.startswith("e2e/") or "/e2e/" in rel
 
 
 def _fix_task_from_draft(root: Path) -> bool:
     draft = root / "PR_DRAFT.md"
     if not draft.is_file():
         return False
-    t = draft.read_text(encoding="utf-8", errors="replace").lower()
-    if "edit_guard: allow_test_edits" in t:
+    t = draft.read_text(encoding="utf-8", errors="replace")
+    low = t.lower()
+    if "edit_guard: allow_test_edits" in low:
         return False
-    return bool(
-        "hotfix" in t
-        or "**spec waiver:** hotfix" in t
-        or "bugfix" in t
-        or "fix-task" in t
-    )
+    # Spec waiver line only — do not match the word "hotfix" in changelog prose
+    for line in t.splitlines():
+        s = line.strip().lower()
+        if s.startswith("**spec waiver:**") and "hotfix" in s:
+            return True
+        if s.startswith("edit_guard: fix-task"):
+            return True
+    return False
 
 
 def check(
