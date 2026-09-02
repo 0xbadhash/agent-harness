@@ -48,8 +48,8 @@ def _scan_text(rel: str, text: str, root: Path, missing: list[str]) -> None:
                 continue
             if "<" in raw or "{" in raw:
                 continue
-            # Portfolio runner lives in harness SoT bin/; products often omit it
-            if raw.startswith("bin/") and not (root / "bin").is_dir():
+            # Portfolio runners live in harness SoT bin/; missing bin/* is not product rot
+            if raw.startswith("bin/") and not (root / raw).exists():
                 continue
             # Outputs / optional local files are not required to exist
             if raw.startswith(".agents/artifacts/") or "/artifacts/" in raw:

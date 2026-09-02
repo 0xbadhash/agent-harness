@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.40 — 2026-09-02
+
+### Stale-ref: missing bin/* is not product rot
+
+- `check_stale_agent_config.py` skips absent `bin/` paths (harness night_shift_all runner)
+
 ## v1.4.39 — 2026-09-02
 
 ### Agent-config gates (stale refs, edit guard, green checkpoint, evals)
