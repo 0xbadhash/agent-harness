@@ -1,10 +1,13 @@
-# CODE-REVIEW — night bar autofix URL literal (1.4.38)
+# CODE-REVIEW — agent-config gates 1.4.39
 **Marker:** CODE-REVIEW  
 **Verdict:** PASS / approve  
 
 ## Findings
-- No P0: removed inventory URL literal from autofix; detection remains regex-based.
-- Re-install clears product hardcodes FAIL on night_shift_autofix.py.
+- No P0: stale-ref scanner is conservative (SoT ship_skills, skip artifacts/optional constitution).
+- Edit guard is diff-based (portable); not a Claude hook — documented.
+- Green checkpoint skips extra next_skill loops only when SHA+score match.
+- Evals are deterministic, no LLM-as-judge.
+- Leftovers unstaged. 73c2221 not on branch.
 
 ## Verdict
-Approve v1.4.38.
+Approve v1.4.39.

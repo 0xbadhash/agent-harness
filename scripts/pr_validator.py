@@ -235,6 +235,15 @@ def main() -> int:
         phase = "approved" if result["score"] >= 95 else "blocked"
         pipeline_state.set_phase(phase, score=result["score"])
         print(f"✅ pipeline → {phase} (score {result['score']})")
+        if result["score"] >= 95:
+            try:
+                from green_checkpoint import write as _gc_write  # type: ignore
+                from pathlib import Path as _P
+
+                _gc_write(_P("."), score=float(result["score"]))
+                print("✅ green_checkpoint bound to HEAD")
+            except Exception as e:  # noqa: BLE001
+                print(f"⚠️ green_checkpoint write skipped: {e}")
     return 0 if result["score"] >= 95 else 1
 
 
