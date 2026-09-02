@@ -33,6 +33,26 @@ class TestEditGuard(unittest.TestCase):
             ok, msgs = eg.check(ROOT, fix_task=False)
         self.assertTrue(ok, msgs)
 
+    def test_scripts_test_helper_is_not_a_test_file(self):
+        self.assertFalse(eg._is_test("scripts/test_trigger_schedule.py"))
+        self.assertTrue(eg._is_test("tests/test_foo.py"))
+
+    def test_chore_draft_mentioning_hotfix_is_not_fix_task(self):
+        import tempfile
+        from pathlib import Path as P
+
+        with tempfile.TemporaryDirectory() as tmp:
+            td = P(tmp)
+            (td / "PR_DRAFT.md").write_text(
+                "**Spec waiver:** chore\n\nFollow-on to a prior hotfix.\n",
+                encoding="utf-8",
+            )
+            self.assertFalse(eg._fix_task_from_draft(td))
+            (td / "PR_DRAFT.md").write_text(
+                "**Spec waiver:** hotfix\n", encoding="utf-8"
+            )
+            self.assertTrue(eg._fix_task_from_draft(td))
+
 
 if __name__ == "__main__":
     unittest.main()

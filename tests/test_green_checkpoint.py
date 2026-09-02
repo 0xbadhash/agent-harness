@@ -21,9 +21,20 @@ class TestGreenCheckpoint(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             td = Path(tmp)
             with mock.patch.object(gc, "_sha", return_value="abc" * 8):
-                gc.write(td, score=100, sha="abc" * 8)
-                ok, msg = gc.head_is_green(td)
+                with mock.patch.object(gc, "_dirty", return_value=False):
+                    gc.write(td, score=100, sha="abc" * 8)
+                    ok, msg = gc.head_is_green(td)
             self.assertTrue(ok, msg)
+
+    def test_dirty_tree_is_not_green(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            td = Path(tmp)
+            gc.write(td, score=100, sha="abc" * 8)
+            with mock.patch.object(gc, "_sha", return_value="abc" * 8):
+                with mock.patch.object(gc, "_dirty", return_value=True):
+                    ok, msg = gc.head_is_green(td)
+            self.assertFalse(ok, msg)
+            self.assertIn("dirty", msg.lower())
             data = json.loads((td / ".agents" / "state" / "green_checkpoint.json").read_text())
             self.assertEqual(data["score"], 100)
 
@@ -32,9 +43,10 @@ class TestGreenCheckpoint(unittest.TestCase):
             td = Path(tmp)
             gc.write(td, score=100, sha="deadbeef" * 5)
             with mock.patch.object(gc, "_sha", return_value="deadbeef" * 5):
-                nxt, meta = ns.decide(
-                    "code_review", base="HEAD~1", head="HEAD", repo=td
-                )
+                with mock.patch.object(gc, "_dirty", return_value=False):
+                    nxt, meta = ns.decide(
+                        "code_review", base="HEAD~1", head="HEAD", repo=td
+                    )
             self.assertEqual(nxt, "/release_mgmt")
             self.assertIn("green", meta.get("reason", "").lower())
 

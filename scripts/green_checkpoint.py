@@ -28,6 +28,17 @@ def _sha(root: Path) -> str:
     return (r.stdout or "").strip()
 
 
+def _dirty(root: Path) -> bool:
+    r = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return bool((r.stdout or "").strip())
+
+
 def path_for(root: Path) -> Path:
     return root / ".agents" / "state" / "green_checkpoint.json"
 
@@ -72,6 +83,8 @@ def head_is_green(root: Path, *, min_score: float = 95.0) -> tuple[bool, str]:
         return False, f"checkpoint {got[:12]} != HEAD {sha[:12]}"
     if score < min_score:
         return False, f"checkpoint score {score} < {min_score}"
+    if _dirty(root):
+        return False, "working tree dirty — green checkpoint does not skip review"
     return True, f"ok: HEAD {sha[:12]} green score={score}"
 
 
