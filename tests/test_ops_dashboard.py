@@ -28,6 +28,21 @@ class TestOpsDashboard(unittest.TestCase):
         md = od.render(d, None)
         self.assertIn("What went well", md)
 
+    def test_render_embeds_watchlist_and_scout(self):
+        d = od.Dashboard(
+            when_utc="t",
+            when_hkt="t",
+            overall="GREEN",
+            went_well=[od.Item("green", "x", "ok")],
+        )
+        md = od.render(d, None)
+        self.assertIn("## Watchlist notes", md)
+        self.assertIn("![[agent-tasks/WATCHLIST-NOTES]]", md)
+        self.assertIn("## Scout", md)
+        self.assertIn("![[agent-tasks/SCOUT]]", md)
+        self.assertLess(md.find("## Watchlist notes"), md.find("## Scout"))
+        self.assertLess(md.find("## Scout"), md.find("## At a glance"))
+
 
 if __name__ == "__main__":
     unittest.main()
