@@ -15,3 +15,4 @@ zk-business-card: ~/zk-business-card
 bip39lab: ~/bip39lab
 # product_id must match product_plugin product_id / project_label (figure-it-out)
 figure-it-out: ~/figure-it-out
+jasmine: ~/jasmine
