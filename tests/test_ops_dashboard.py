@@ -36,12 +36,22 @@ class TestOpsDashboard(unittest.TestCase):
             went_well=[od.Item("green", "x", "ok")],
         )
         md = od.render(d, None)
+        self.assertIn("## Desk board", md)
         self.assertIn("## Watchlist notes", md)
         self.assertIn("![[agent-tasks/WATCHLIST-NOTES]]", md)
         self.assertIn("## Scout", md)
         self.assertIn("![[agent-tasks/SCOUT]]", md)
+        self.assertIn("## Substack", md)
+        self.assertIn("![[agent-tasks/SUBSTACK]]", md)
+        self.assertLess(md.find("## Desk board"), md.find("## Watchlist notes"))
         self.assertLess(md.find("## Watchlist notes"), md.find("## Scout"))
-        self.assertLess(md.find("## Scout"), md.find("## At a glance"))
+        self.assertLess(md.find("## Scout"), md.find("## Substack"))
+        self.assertLess(md.find("## Substack"), md.find("## At a glance"))
+        scout_i = md.find("## Scout")
+        sub_i = md.find("## Substack")
+        glance_i = md.find("## At a glance")
+        self.assertIn("![[agent-tasks/SUBSTACK]]", md[sub_i:glance_i])
+        self.assertIn("![[agent-tasks/SCOUT]]", md[scout_i:sub_i])
 
 
 if __name__ == "__main__":
