@@ -19,11 +19,11 @@ def _load():
 
 
 class TestNightShiftAllParallel(unittest.TestCase):
-    def test_ten_product_list_unchanged(self):
+    def test_product_list_includes_jasmine(self):
         mod = _load()
         products = mod._load_products(ROOT / "config" / "night_shift_products.yaml")
         ids = [n for n, _ in products]
-        self.assertEqual(len(ids), 10, ids)
+        self.assertEqual(len(ids), 11, ids)
         for need in (
             "watchlist",
             "email-detach",
@@ -35,6 +35,7 @@ class TestNightShiftAllParallel(unittest.TestCase):
             "zk-business-card",
             "bip39lab",
             "figure-it-out",
+            "jasmine",
         ):
             self.assertIn(need, ids)
 

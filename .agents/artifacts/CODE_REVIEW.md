@@ -1,13 +1,10 @@
-# CODE-REVIEW — agent-config gates 1.4.39
+# CODE-REVIEW — night register jasmine 1.4.41
 **Marker:** CODE-REVIEW  
 **Verdict:** PASS / approve  
 
 ## Findings
-- No P0: stale-ref scanner is conservative (SoT ship_skills, skip artifacts/optional constitution).
-- Edit guard is diff-based (portable); not a Claude hook — documented.
-- Green checkpoint skips extra next_skill loops only when SHA+score match.
-- Evals are deterministic, no LLM-as-judge.
-- Leftovers unstaged. 73c2221 not on branch.
+- No P0: one product path added; check_night_shift_product_paths OK (11).
+- Jasmine harness already on origin (72cb95e). Duplicate dirs not deleted.
 
 ## Verdict
-Approve v1.4.39.
+Approve v1.4.41.

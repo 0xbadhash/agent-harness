@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.41 — 2026-09-03
+
+### Night shift: register jasmine
+
+- `config/night_shift_products.yaml` adds `jasmine: ~/jasmine` (was installed locally, untracked)
+- Product repo already has harness 1.4.40 committed (`72cb95e`)
+
 ## v1.4.40 — 2026-09-02
 
 ### Stale-ref: missing bin/* is not product rot

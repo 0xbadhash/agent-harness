@@ -1,48 +1,43 @@
-# PR Draft — agent-config gates 1.4.40
+# PR Draft — register jasmine on night shift
 
 **Spec waiver:** chore  
-**Spec:** `.agents/specs/2026-09-02-agent-sdlc-gates.md`  
-**Version target:** 1.4.40  
+**Version target:** 1.4.41  
 
 ## What Problem This Solves
-Stale agent config, late-only guards, extra loops after green, no evals when skills/AGENTS/gates change.
+Jasmine had harness files on disk but was not on the night product list and the install was never committed. Night_all skipped it.
 
 ## Why This Change Was Made
-Operator: implement ranked gaps 1–4, full FSM, then portfolio install. No product VERSION bumps.
+Operator: cleanup agent-harness across repos including jasmine.
 
 ## User Impact
-- hard_gates fail on missing agent-config refs
-- diffs cannot include `.env`/secrets; fix-tasks cannot rewrite tests
-- after score ≥95 at this SHA, next_skill goes to release, not another polish loop
-- CI runs frozen agent-config evals (no LLM)
+- `night_shift_all` includes ~/jasmine
+- No product VERSION bump
 
 ## Red-proof
-- red_cmd: `python3 -c "import tempfile,sys; from pathlib import Path; sys.path.insert(0,'scripts'); import check_stale_agent_config as s; td=Path(tempfile.mkdtemp()); (td/'scripts').mkdir(); (td/'scripts'/'next_skill.py').write_text('x'); (td/'AGENTS.md').write_text('python3 scripts/nope_missing.py\n'); ok,_=s.check(td); raise SystemExit(0 if ok else 1)"`
-- green_cmd: `python3 -m unittest tests.test_stale_agent_config tests.test_edit_guard tests.test_green_checkpoint tests.test_agent_config_evals -v`
+- red_cmd: `python3 -c "raise SystemExit(0 if 'no-such-product-zzz' in open('config/night_shift_products.yaml').read() else 1)"`
+- green_cmd: `python3 scripts/check_night_shift_product_paths.py`
 
 ## Traceability
 | AC | Test / smoke |
 |----|--------------|
-| AC-1 stale missing script fails | tests/test_stale_agent_config.py |
-| AC-2 edit_guard .env and fix-task tests | tests/test_edit_guard.py |
-| AC-3 green next_skill → release_mgmt | tests/test_green_checkpoint.py |
-| AC-4 evals pass on SoT | tests/test_agent_config_evals.py |
-| smoke | product_smoke + run_agent_config_evals.py |
+| AC-1 jasmine in night yaml | check_night_shift_product_paths.py |
+| AC-2 path exists | same |
+| smoke | product_smoke |
 
 ## Threat notes
 - authz: none
-- secrets: edit_guard blocks secret paths in diffs
-- abuse: extra polish after green is routed away, not a host kill-switch
+- secrets: none
+- abuse: none
 
 ## Evidence pack
 | Item | Result |
 |------|--------|
 | hard_gates | pr_validator |
-| unittest | stale / edit_guard / green / evals |
-| validate | run_agent_config_evals.py |
+| unittest | path check |
+| validate | check_night_shift_product_paths |
 
 ## Things that look bad but are actually fine
-1. Spec waiver chore while a spec file exists — outer_loop skip; grill is in the spec
-2. Leftover MORNING_TRIAGE / NIGHT_SHIFT_* / ops_dashboard unstaged
-3. No Claude Code PreToolUse — portable scripts are the pin
-4. Night-bar 73c2221 stays unpushed
+1. Duplicate checkouts catalyxt.ltd / atom-learning-family left in place (same remotes as website / figure-it-out)
+2. artauthenticity still has no harness (not requested)
+3. Jasmine game WIP (src/) not committed
+4. Night leftover artifacts on harness unstaged
