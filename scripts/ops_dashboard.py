@@ -28,6 +28,8 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
+import grp
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -117,9 +119,16 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
     # Prefer morning triage (includes recheck) over multi-product SUMMARY
     summary = (vault / "agent-tasks/night-shift/SUMMARY.md") if vault else None
     triage = harness / ".agents/artifacts/MORNING_TRIAGE.md"
-    text = _read(triage)
-    if not text and summary:
-        text = _read(summary)
+    triage_text = _read(triage)
+    sum_text = _read(summary) if summary else ""
+    # Prefer live SUMMARY when it is at least as new as morning triage so a
+    # stale triage cannot repaint closed FAILs onto the official dash.
+    use_summary = False
+    if summary and summary.is_file() and sum_text:
+        t_m = triage.stat().st_mtime if triage.is_file() else 0.0
+        if summary.stat().st_mtime >= t_m:
+            use_summary = True
+    text = sum_text if use_summary else (triage_text or sum_text)
     if not text:
         att.append(
             Item(
@@ -151,6 +160,9 @@ def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[I
             continue
         pid = _pid(line)
         if not pid:
+            continue
+        # BIP39 is not an Ops Dashboard item
+        if pid.lower() in {"bip39lab", "bip39", "bip39-lab"}:
             continue
         # Morning triage recheck wins
         if "yes→ok" in line or "recheck green" in line.lower():
@@ -715,16 +727,25 @@ def build(vault: Path | None, quick: bool) -> Dashboard:
     d.went_well.extend(w)
     d.attention.extend(a)
 
-    # Night fail tickets as todos
+    # Night fail tickets as todos — only if that product is still failing
+    fail_ids = set()
+    for item in d.failing:
+        m = re.search(r"\*\*([a-zA-Z0-9_-]+)\*\*", item.summary)
+        if m:
+            fail_ids.add(m.group(1))
     tickets = HARNESS / ".agents/artifacts/NIGHT_FAIL_TICKETS.md"
     ttext = _read(tickets)
     for line in ttext.splitlines():
         if line.strip().startswith("- [ ]"):
+            body = line.strip()[6:][:120]
+            mentioned = re.findall(r"\[([a-zA-Z0-9_-]+)\]", body)
+            if mentioned and not any(m in fail_ids for m in mentioned):
+                continue
             d.todos.append(
                 Item(
                     "fail",
                     "night_shift",
-                    line.strip()[6:][:120],
+                    body,
                     action="See NIGHT_FAIL_TICKETS / product TODO",
                 )
             )
@@ -947,7 +968,27 @@ def main(argv: list[str] | None = None) -> int:
         out = vault / "agent-tasks" / "OPS-DASHBOARD.md"
         try:
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(md, encoding="utf-8")
+            fd, tmp = tempfile.mkstemp(
+                prefix=".OPS-DASHBOARD.", suffix=".tmp", dir=str(out.parent)
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    fh.write(md)
+                os.replace(tmp, out)
+            except Exception:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
+            try:
+                os.chmod(out, 0o664)
+            except OSError:
+                pass
+            try:
+                os.chown(out, -1, grp.getgrnam("secondbrain").gr_gid)
+            except (OSError, KeyError):
+                pass
             print(f"ops_dashboard overall={d.overall} wrote={out}")
         except OSError as e:
             # fallback home vault
