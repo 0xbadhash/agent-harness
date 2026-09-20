@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.43 — 2026-09-20
+
+### Night shift: drop ocr-ledger (CEO stamp)
+
+- Remove `ocr-ledger` from `config/night_shift_products.yaml` and twin fallbacks
+  (`bin/night_shift_all_products.py` DEFAULT_PRODUCTS, `scripts/kanban_ensure_spec.py`)
+- Test SoT: drop ocr-ledger; include `ui` (registered in 1.4.42); remaining count 11
+- ui stays on night_shift
+
 ## v1.4.42 — 2026-09-20
 
 ### Security gaps stamp (CEO): ZAP 7/7 + Semgrep PATH + ui night_shift
