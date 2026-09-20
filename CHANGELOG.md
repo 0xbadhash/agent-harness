@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.42 — 2026-09-20
+
+### Security gaps stamp (CEO): ZAP 7/7 + Semgrep PATH + ui night_shift
+
+- `config/zap_targets.yaml` expands warn-only to locked 7 hosts (card, figure, artauthenticity, ui)
+- Semgrep standing install on VPS PATH (not ephemeral-only); no Sonar
+- `config/night_shift_products.yaml` adds `ui: ~/catalyxt-ds` (ui.catalyxt.xyz DS)
+
 ## v1.4.41 — 2026-09-03
 
 ### Night shift: register jasmine

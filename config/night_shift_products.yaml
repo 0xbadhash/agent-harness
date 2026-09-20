@@ -16,3 +16,6 @@ bip39lab: ~/bip39lab
 # product_id must match product_plugin product_id / project_label (figure-it-out)
 figure-it-out: ~/figure-it-out
 jasmine: ~/jasmine
+# ui.catalyxt.xyz design system (DS); path = catalyxt-ds repo
+# yaml key `ui` matches surface_inventory id; plugin product_id remains catalyxt-ds
+ui: ~/catalyxt-ds

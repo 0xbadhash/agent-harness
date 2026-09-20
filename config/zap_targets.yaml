@@ -1,5 +1,6 @@
 # J13 — ZAP baseline targets (staging preferred). Used by scripts/zap_baseline.sh
 # fail_closed: false = warn-only (exit 0 with findings); true = exit 1 on High+
+# Locked surface inventory: 7 CEO hosts (surface_inventory.py). Keep warn-only.
 fail_closed: false
 
 targets:
@@ -11,4 +12,16 @@ targets:
     enabled: true
   - id: bip39lab
     url: https://bip39.catalyxt.xyz
+    enabled: true
+  - id: zk-business-card
+    url: https://card.catalyxt.xyz
+    enabled: true
+  - id: figure-it-out
+    url: https://figure.catalyxt.xyz
+    enabled: true
+  - id: artauthenticity
+    url: https://artauthenticity.xyz
+    enabled: true
+  - id: ui
+    url: https://ui.catalyxt.xyz
     enabled: true
