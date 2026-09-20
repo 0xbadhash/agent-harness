@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.44 — 2026-09-21
+
+### Night validate_full: surface alias ui→catalyxt-ds is not strict-warn
+
+- `vault_schema_lint.py`: compare `project_label` to plugin `product_id`, not the
+  night_shift yaml key (surface aliases like `ui: ~/catalyxt-ds` are intentional)
+- Clears shared validate_full FAIL 0/11 from one WARN across all products
+- Test: `tests/test_vault_schema_lint_surface_alias.py`
+
 ## v1.4.43 — 2026-09-20
 
 ### Night shift: drop ocr-ledger (CEO stamp)

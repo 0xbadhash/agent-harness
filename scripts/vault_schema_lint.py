@@ -173,18 +173,23 @@ def main() -> int:
     label_to_pid: dict[str, str] = {}
     for pid, proot in products.items():
         cfg = load_plugin_vault(proot)
-        label = (cfg.get("project_label") or pid).strip()
+        # night_shift yaml key may be a surface alias (e.g. ui → catalyxt-ds);
+        # vault folder identity is plugin product_id / project_label.
+        plugin_pid = (cfg.get("product_id") or "").strip()
+        label = (cfg.get("project_label") or plugin_pid or pid).strip()
         if not label:
             errors.append(f"product {pid}: missing project_label in plugin")
             continue
         extras = set(cfg.get("extra_dirs") or [])
         label_to_extra[label] = extras
         label_to_pid[label] = pid
-        # check declared paths exist in plugin consistency
-        if label != pid and pid not in label:
+        # Warn only when vault label disagrees with *plugin* product_id.
+        # Do not compare against night_shift yaml key (surface aliases are OK).
+        compare_id = plugin_pid or pid
+        if label != compare_id and compare_id not in label:
             warns.append(
                 f"product {pid}: project_label={label!r} differs from product_id "
-                f"(ok if intentional; folder is 01-Projects/{label}/)"
+                f"{compare_id!r} (ok if intentional; folder is 01-Projects/{label}/)"
             )
 
     projects_root = vault / "01-Projects"
