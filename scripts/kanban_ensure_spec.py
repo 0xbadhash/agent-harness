@@ -73,7 +73,6 @@ def _load_product_roots() -> dict[str, Path]:
         ("email-detach", home / "email-detach"),
         ("substack-push", home / "substack-push"),
         ("catalyxt", home / "catalyxt-website"),
-        ("ocr-ledger", home / "ocr-ledger"),
     ):
         if pid not in roots and rel.is_dir():
             roots[pid] = rel

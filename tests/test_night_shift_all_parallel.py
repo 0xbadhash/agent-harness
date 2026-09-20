@@ -35,11 +35,11 @@ class TestNightShiftAllParallel(unittest.TestCase):
             "second-brain",
             "catalyxt",
             "agent-harness",
-            "ocr-ledger",
             "zk-business-card",
             "bip39lab",
             "figure-it-out",
             "jasmine",
+            "ui",
         )
         cfg_ids: list[str] = []
         for line in cfg.read_text(encoding="utf-8").splitlines():

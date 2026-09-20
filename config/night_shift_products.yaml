@@ -10,7 +10,6 @@ substack-push: ~/substack-push
 second-brain: ~/second-brain
 catalyxt: ~/catalyxt-website
 agent-harness: ~/agent-harness
-ocr-ledger: ~/ocr-ledger
 zk-business-card: ~/zk-business-card
 bip39lab: ~/bip39lab
 # product_id must match product_plugin product_id / project_label (figure-it-out)
