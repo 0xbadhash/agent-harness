@@ -1,6 +1,6 @@
-# Multi-product night shift — 2026-09-05 19:16 UTC · 2026-09-06 03:16 HKT
+# Multi-product night shift — 2026-09-19 19:16 UTC · 2026-09-20 03:16 HKT
 
-**Overall:** FAIL (10/11 products)
+**Overall:** PASS (11/11 products)
 **Schedule:** 03:15 Asia/Hong_Kong (harness timer)
 **SoT:** `/home/debian/agent-harness`
 
@@ -14,24 +14,13 @@
 | agent-harness | ✅ | 0 | `/home/debian/agent-harness` |
 | ocr-ledger | ✅ | 0 | `/home/debian/ocr-ledger` |
 | zk-business-card | ✅ | 0 | `/home/debian/zk-business-card` |
-| bip39lab | ❌ | 1 | `/home/debian/bip39lab` |
+| bip39lab | ✅ | 0 | `/home/debian/bip39lab` |
 | figure-it-out | ✅ | 0 | `/home/debian/figure-it-out` |
 | jasmine | ✅ | 0 | `/home/debian/jasmine` |
 
 ## Per-product failures (tails)
 
-### bip39lab
-```
-artifact: /home/debian/bip39lab/.agents/artifacts/NIGHT_SHIFT_REPORT.md
-artifact: /home/debian/bip39lab/.agents/artifacts/NIGHT_SHIFT_TODO.md
-vault log: /opt/second-brain/vault/01-Projects/bip39lab/night-shift-log.md
-vault TODO: /opt/second-brain/vault/01-Projects/bip39lab/TODO.md
-kanban: skip (not PASS)
-✅ vault note prepended (newest-first): /opt/second-brain/vault/01-Projects/bip39lab/dev-log.md
-❌ night_shift readiness bip39lab FAIL (4/6)
-
-```
-
+_All products green._
 
 ## Recommendations
 
