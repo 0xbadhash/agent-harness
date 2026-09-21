@@ -272,14 +272,69 @@ def run_gates(
         vmode = str(ns.get("validate_mode") or "full").strip().lower()
         if vmode not in {"full", "night", "hygiene"}:
             vmode = "full"
-        results.append(
-            _run(
-                "validate_full",
-                [py, str(SCRIPTS / "validate.py"), vmode],
-                # Large products (e.g. ocr-ledger full mypy+pytest cov) need >10m
-                timeout=int(ns.get("validate_timeout", 1800 if vmode == "full" else 300)),
-            )
+        # When night_shift_all sets NIGHT_SHIFT_SOT_LINT, skip product-local
+        # vault_schema_lint (often stale) and run harness SoT lint instead.
+        sot_lint = (os.environ.get("NIGHT_SHIFT_SOT_LINT") or "").strip()
+        sot_lint_path = Path(sot_lint) if sot_lint else None
+        use_sot_lint = bool(sot_lint_path and sot_lint_path.is_file())
+        vcmd = [py, str(SCRIPTS / "validate.py"), vmode]
+        if use_sot_lint:
+            vcmd.append("--skip-vault-schema")
+        v_timeout = int(ns.get("validate_timeout", 1800 if vmode == "full" else 300))
+        v_result = _run(
+            "validate_full",
+            vcmd,
+            # Large products (e.g. ocr-ledger full mypy+pytest cov) need >10m
+            timeout=v_timeout,
         )
+        if use_sot_lint:
+            vault = None
+            try:
+                from vault_resolve import resolve_vault_root  # type: ignore
+
+                vault = resolve_vault_root(
+                    cli_vault=None, product_root=ROOT, require_enabled=False
+                )
+            except Exception:
+                vault = None
+            if vault is None:
+                raw = (os.environ.get("PRODUCT_VAULT_ROOT") or "").strip()
+                if raw:
+                    vault = Path(raw)
+            if vault is not None and Path(vault).is_dir():
+                lint_r = _run(
+                    "vault_schema_lint_sot",
+                    [py, str(sot_lint_path), "--vault", str(vault)],
+                    timeout=120,
+                )
+                # Fold SoT lint into validate_full gate (same ship bar).
+                sot_hdr = "\n── vault_schema_lint (harness SoT) ──\n"
+                if not lint_r.get("ok"):
+                    v_result = {
+                        **v_result,
+                        "ok": False,
+                        "exit": lint_r.get("exit") or 1,
+                        "stdout_tail": (
+                            (v_result.get("stdout_tail") or "")
+                            + sot_hdr
+                            + (lint_r.get("stdout_tail") or "")
+                        )[-4000:],
+                        "stderr_tail": (
+                            (v_result.get("stderr_tail") or "")
+                            + "\n"
+                            + (lint_r.get("stderr_tail") or "")
+                        )[-4000:],
+                    }
+                else:
+                    v_result = {
+                        **v_result,
+                        "stdout_tail": (
+                            (v_result.get("stdout_tail") or "")
+                            + sot_hdr
+                            + "✅ vault_schema_lint passed (SoT)\n"
+                        )[-4000:],
+                    }
+        results.append(v_result)
     if (SCRIPTS / "product_smoke.py").is_file():
         ns = plugin.get("night_shift") or {}
         # Full smoke can exceed 15m on zk (playwright + circuits). Override via

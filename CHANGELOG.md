@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.45 — 2026-09-22
+
+### Night: harness SoT vault_schema_lint + mypy fix for surface-alias test
+
+- `night_shift_all_products`: always run harness SoT `night_shift_readiness` with
+  `--root` (do not prefer lagging product copies)
+- Set `NIGHT_SHIFT_SOT_LINT` so readiness skips product-local `vault_schema_lint`
+  and runs harness SoT (clears ui→catalyxt-ds strict-warn on unported products)
+- `tests/test_vault_schema_lint_surface_alias.py`: import via `sys.path` scripts/
+  (not `from scripts import …`) — fixes mypy "source file found twice" exit 2
+- `config/critical_sot_scripts.txt`: add `vault_schema_lint.py`
+
 ## v1.4.44 — 2026-09-21
 
 ### Night validate_full: surface alias ui→catalyxt-ds is not strict-warn
