@@ -19,3 +19,4 @@ scripts/scaffold_web_e2e.py
 scripts/check_property_tests.py
 scripts/test_trigger_schedule.py
 scripts/ops_dashboard.py
+scripts/vault_schema_lint.py

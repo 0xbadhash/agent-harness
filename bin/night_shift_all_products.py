@@ -168,16 +168,12 @@ def run_one(
             "preflight": pre,
         }
 
-    script = root / "scripts" / "night_shift_readiness.py"
+    # Always use harness SoT readiness so gate behavior (incl. vault_schema_lint
+    # surface-alias fix) is not blocked on lagging per-product script ports.
     py = pre.get("python") or _product_python(root)
-    # Prefer product copy; fall back to harness SoT with --root
-    if script.is_file():
-        cmd = [py, str(script), "--vault", str(vault)]
-        cwd = root
-    else:
-        sot = HARNESS_ROOT / "scripts" / "night_shift_readiness.py"
-        cmd = [py, str(sot), "--root", str(root), "--vault", str(vault)]
-        cwd = root
+    sot = HARNESS_ROOT / "scripts" / "night_shift_readiness.py"
+    cmd = [py, str(sot), "--root", str(root), "--vault", str(vault)]
+    cwd = root
     if quick:
         cmd.append("--quick")
     if skip_live:
@@ -185,6 +181,7 @@ def run_one(
     if dry_run:
         cmd.append("--dry-run")
 
+    sot_lint = HARNESS_ROOT / "scripts" / "vault_schema_lint.py"
     try:
         r = subprocess.run(
             cmd,
@@ -196,6 +193,9 @@ def run_one(
                 **os.environ,
                 "PRODUCT_VAULT_ROOT": str(vault),
                 "WATCHLIST_VAULT_ROOT": str(vault),
+                # Product validate.py still runs from product scripts/; skip its
+                # possibly-stale vault_schema_lint and use harness SoT instead.
+                "NIGHT_SHIFT_SOT_LINT": str(sot_lint) if sot_lint.is_file() else "",
             },
         )
         out = (r.stdout or "") + (r.stderr or "")
