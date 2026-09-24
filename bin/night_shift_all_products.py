@@ -12,17 +12,35 @@ Writes multi-product summary:
   - vault agent-tasks/night-shift/SUMMARY.md (latest)
   - vault agent-tasks/night-shift/log.md (append)
   - <harness>/.agents/artifacts/NIGHT_SHIFT_ALL_REPORT.md
+
+Per-product runtime (Ops-430, ``config/night_shift_runtime.yaml``):
+  - Interpreter: each product's gates run with that product's own venv
+    (``<repo>/.venv/bin/python``). A missing venv FAILS that product loudly
+    (exit 3) unless the product is explicitly declared ``python=harness``.
+  - Ports: harness-assigned e2e port exported as ``NIGHT_SHIFT_E2E_PORT`` /
+    ``PLAYWRIGHT_PORT``; products that hardcode a port (``binds=``) hold an
+    exclusive port lock so two products on the same port never run at once.
+  - ``--plan`` prints the interpreter + port map without running gates.
 """
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, Iterator
+
+try:  # POSIX cross-process port locks; Windows falls back to in-process locks
+    import fcntl
+except ImportError:  # pragma: no cover
+    fcntl = None  # type: ignore[assignment]
 
 
 def _vw(path: Path, text: str) -> None:
@@ -86,6 +104,303 @@ def _load_products(path: Path | None) -> list[tuple[str, Path]]:
         if proot_p.is_dir():
             rows.append((pid, proot_p))
     return rows or [(n, p) for n, p in DEFAULT_PRODUCTS if p.is_dir()]
+
+
+RUNTIME_DEFAULT: dict[str, Any] = {
+    "python": "venv",
+    "port": None,
+    "binds": [],
+    "port_env": [],
+}
+PYTHON_POLICIES = ("venv", "harness")
+EXIT_INTERPRETER_MISSING = 3
+EXIT_PORT_LOCK_TIMEOUT = 125
+PORT_LOCK_TIMEOUT_S = int(os.environ.get("NIGHT_SHIFT_PORT_LOCK_TIMEOUT", "5400"))
+
+
+def _load_runtime(path: Path | None = None) -> dict[str, dict[str, Any]]:
+    """Parse ``config/night_shift_runtime.yaml`` (``id: key=value ...`` lines).
+
+    Raises ValueError on unknown keys / bad values (fail loud, never guess).
+    """
+    if path is None:
+        env = os.environ.get("NIGHT_SHIFT_RUNTIME_FILE")
+        path = Path(env) if env else HARNESS_ROOT / "config" / "night_shift_runtime.yaml"
+    out: dict[str, dict[str, Any]] = {}
+    if not path.is_file():
+        return out
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.split("#", 1)[0].strip()
+        if not line or ":" not in line:
+            continue
+        line = line.lstrip("-").strip()
+        pid, rest = line.split(":", 1)
+        pid = pid.strip()
+        cfg: dict[str, Any] = {k: (list(v) if isinstance(v, list) else v) for k, v in RUNTIME_DEFAULT.items()}
+        for tok in rest.split():
+            if "=" not in tok:
+                raise ValueError(f"{path}:{lineno}: {pid}: expected key=value, got {tok!r}")
+            key, val = tok.split("=", 1)
+            try:
+                if key == "python":
+                    if val not in PYTHON_POLICIES:
+                        raise ValueError(f"python must be one of {PYTHON_POLICIES}")
+                    cfg["python"] = val
+                elif key == "port":
+                    cfg["port"] = int(val)
+                elif key == "binds":
+                    cfg["binds"] = [int(x) for x in val.split(",") if x.strip()]
+                elif key == "port_env":
+                    cfg["port_env"] = [x.strip() for x in val.split(",") if x.strip()]
+                else:
+                    raise ValueError(f"unknown key {key!r}")
+            except ValueError as exc:
+                raise ValueError(f"{path}:{lineno}: {pid}: {exc}") from exc
+        out[pid] = cfg
+    return out
+
+
+def runtime_for(name: str, runtime: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    cfg = runtime.get(name)
+    if cfg is None:
+        return {k: (list(v) if isinstance(v, list) else v) for k, v in RUNTIME_DEFAULT.items()}
+    return cfg
+
+
+def product_lock_ports(cfg: dict[str, Any]) -> list[int]:
+    ports = set(cfg.get("binds") or [])
+    if cfg.get("port") is not None:
+        ports.add(int(cfg["port"]))
+    return sorted(ports)
+
+
+def check_port_map(
+    products: list[tuple[str, Path]], runtime: dict[str, dict[str, Any]]
+) -> tuple[list[str], dict[int, list[str]]]:
+    """Return (errors, shared) — errors: duplicate *assigned* ports (fatal);
+    shared: port -> products that will contend for it (serialized by lock)."""
+    errors: list[str] = []
+    assigned: dict[int, str] = {}
+    contenders: dict[int, list[str]] = {}
+    for name, _ in products:
+        cfg = runtime_for(name, runtime)
+        port = cfg.get("port")
+        if port is not None:
+            if port in assigned:
+                errors.append(f"port {port} assigned to both {assigned[port]} and {name}")
+            else:
+                assigned[port] = name
+        for p in product_lock_ports(cfg):
+            contenders.setdefault(p, []).append(name)
+    shared = {p: names for p, names in sorted(contenders.items()) if len(names) > 1}
+    return errors, shared
+
+
+def _product_venv(root: Path) -> str | None:
+    """Product venv interpreter (absolute, symlinks kept) or None. No fallback."""
+    helper = HARNESS_ROOT / "scripts" / "product_venv.py"
+    if helper.is_file():
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("product_venv", helper)
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            vpy = mod.product_venv_python(root)
+            return str(vpy) if vpy is not None else None
+    for rel in (".venv/bin/python", ".venv/bin/python3", "venv/bin/python", "venv/bin/python3"):
+        p = root / rel
+        if p.is_file() and os.access(p, os.X_OK):
+            return str(p.absolute())
+    return None
+
+
+def resolve_product_python(
+    name: str, root: Path, runtime: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Per-product interpreter. Order: product venv -> explicit python=harness -> FAIL.
+
+    Returns {ok, python, source, error}. Never silently returns the harness python.
+    """
+    cfg = runtime_for(name, runtime)
+    vpy = _product_venv(root)
+    if vpy:
+        return {"ok": True, "python": vpy, "source": "product-venv", "error": ""}
+    if cfg.get("python") == "harness":
+        return {
+            "ok": True,
+            "python": sys.executable,
+            "source": "harness-fallback (explicit python=harness; product has no venv)",
+            "error": "",
+        }
+    return {
+        "ok": False,
+        "python": None,
+        "source": "missing",
+        "error": (
+            f"INTERPRETER FAIL: {name}: product venv missing under {root} "
+            "(looked for .venv/bin/python[3], venv/bin/python[3]). Refusing to run "
+            f"product gates with the harness interpreter {sys.executable}. Fix: "
+            f"python3 -m venv {root}/.venv && {root}/.venv/bin/pip install -r "
+            f"{root}/requirements-dev.txt — or, for a product with no Python deps, "
+            f"declare '{name}: python=harness' in config/night_shift_runtime.yaml."
+        ),
+    }
+
+
+def product_env(
+    name: str, interp: dict[str, Any], cfg: dict[str, Any], base: dict[str, str] | None = None
+) -> dict[str, str]:
+    """Child env: product venv first on PATH + assigned port vars."""
+    env = dict(os.environ if base is None else base)
+    py = str(interp.get("python") or "")
+    env["NIGHT_SHIFT_PRODUCT_ID"] = name
+    env["NIGHT_SHIFT_PRODUCT_PYTHON"] = py
+    if interp.get("source") == "product-venv" and py:
+        venv_bin = Path(py).parent
+        env["VIRTUAL_ENV"] = str(venv_bin.parent)
+        env["PATH"] = str(venv_bin) + os.pathsep + env.get("PATH", "")
+        env.pop("PYTHONHOME", None)
+    port = cfg.get("port")
+    if port is not None:
+        for var in ("NIGHT_SHIFT_E2E_PORT", "PLAYWRIGHT_PORT", *(cfg.get("port_env") or [])):
+            env[var] = str(port)
+    return env
+
+
+_THREAD_PORT_LOCKS: dict[int, threading.Lock] = {}
+_THREAD_PORT_LOCKS_GUARD = threading.Lock()
+
+
+def _lock_dir() -> Path:
+    return Path(os.environ.get("NIGHT_SHIFT_LOCK_DIR") or tempfile.gettempdir())
+
+
+@contextlib.contextmanager
+def port_locks(
+    name: str,
+    ports: list[int],
+    *,
+    timeout_s: int = PORT_LOCK_TIMEOUT_S,
+    poll_s: float = 1.0,
+) -> Iterator[dict[str, Any]]:
+    """Hold exclusive locks on ``ports`` (sorted order => no deadlock).
+
+    Uses flock on ``<lockdir>/night-shift-port-<n>.lock`` so parallel workers
+    *and* concurrent manual runs never share a port. Yields {wait_s, waited_on}.
+    """
+    held: list[Any] = []
+    waited_on: list[str] = []
+    t0 = time.monotonic()
+    try:
+        for port in sorted(set(ports)):
+            if fcntl is None:  # pragma: no cover - Windows
+                with _THREAD_PORT_LOCKS_GUARD:
+                    lk = _THREAD_PORT_LOCKS.setdefault(port, threading.Lock())
+                if not lk.acquire(timeout=timeout_s):
+                    raise TimeoutError(f"port lock :{port} timeout after {timeout_s}s")
+                held.append(lk)
+                continue
+            path = _lock_dir() / f"night-shift-port-{port}.lock"
+            fh = open(path, "a+", encoding="utf-8")  # noqa: SIM115
+            announced = False
+            while True:
+                try:
+                    fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    holder = ""
+                    try:
+                        holder = path.read_text(encoding="utf-8").strip()
+                    except OSError:
+                        pass
+                    if not announced:
+                        print(
+                            f"   {name}: waiting for port :{port} (held by {holder or '?'})",
+                            flush=True,
+                        )
+                        waited_on.append(f":{port} held by {holder or '?'}")
+                        announced = True
+                    if time.monotonic() - t0 > timeout_s:
+                        fh.close()
+                        raise TimeoutError(
+                            f"port lock :{port} timeout after {timeout_s}s (held by {holder or '?'})"
+                        ) from None
+                    time.sleep(poll_s)
+            fh.seek(0)
+            fh.truncate()
+            fh.write(f"{name} pid={os.getpid()}\n")
+            fh.flush()
+            held.append(fh)
+        yield {"wait_s": time.monotonic() - t0, "waited_on": waited_on}
+    finally:
+        for h in reversed(held):
+            if not hasattr(h, "fileno"):  # in-process threading lock (no fcntl)
+                try:
+                    h.release()
+                except RuntimeError:
+                    pass
+                continue
+            try:
+                if fcntl is not None:
+                    fcntl.flock(h.fileno(), fcntl.LOCK_UN)
+            except OSError:
+                pass
+            h.close()
+
+
+def build_plan(
+    products: list[tuple[str, Path]], runtime: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Interpreter + port map per product (no gates run)."""
+    plan: list[dict[str, Any]] = []
+    for name, root in products:
+        cfg = runtime_for(name, runtime)
+        interp = resolve_product_python(name, root, runtime)
+        plan.append(
+            {
+                "name": name,
+                "root": str(root),
+                "python": interp.get("python"),
+                "source": interp.get("source"),
+                "ok": interp.get("ok"),
+                "error": interp.get("error"),
+                "port": cfg.get("port"),
+                "lock_ports": product_lock_ports(cfg),
+            }
+        )
+    return plan
+
+
+def port_listening(port: int, host: str = "127.0.0.1") -> bool:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.3)
+        return s.connect_ex((host, port)) == 0
+
+
+def format_plan(plan: list[dict[str, Any]], shared: dict[int, list[str]]) -> str:
+    lines = [
+        "| Product | Python | Source | Assigned port | Locked ports | Listening now |",
+        "|---------|--------|--------|---------------|--------------|---------------|",
+    ]
+    for p in plan:
+        py = p["python"] or "**MISSING**"
+        port = p["port"] if p["port"] is not None else "-"
+        locks = ",".join(str(x) for x in p["lock_ports"]) or "-"
+        busy = [str(x) for x in p["lock_ports"] if port_listening(x)]
+        lines.append(
+            f"| {p['name']} | `{py}` | {p['source']} | {port} | {locks} | "
+            f"{','.join(busy) or '-'} |"
+        )
+    if shared:
+        lines.append("")
+        for port, names in shared.items():
+            lines.append(
+                f"- port :{port} contended by {', '.join(names)} → serialized by harness port lock"
+            )
+    return "\n".join(lines)
 
 
 def _product_python(root: Path) -> str:
@@ -156,7 +471,11 @@ def run_one(
     quick: bool,
     skip_live: bool,
     dry_run: bool,
+    runtime: dict[str, dict[str, Any]] | None = None,
 ) -> dict:
+    if runtime is None:
+        runtime = _load_runtime()
+    cfg = runtime_for(name, runtime)
     pre = _preflight_dev_env(root, dry_run=dry_run)
     if not pre.get("ok"):
         return {
@@ -168,9 +487,30 @@ def run_one(
             "preflight": pre,
         }
 
+    # Per-product interpreter (Ops-430): resolved *after* preflight so a venv it
+    # just created is used. Never fall back to harness python silently.
+    interp = resolve_product_python(name, root, runtime)
+    base_row: dict[str, Any] = {
+        "name": name,
+        "root": str(root),
+        "preflight": pre,
+        "python": interp.get("python"),
+        "python_source": interp.get("source"),
+        "port": cfg.get("port"),
+        "lock_ports": product_lock_ports(cfg),
+    }
+    if not interp.get("ok"):
+        print(f"❌ {interp['error']}", file=sys.stderr, flush=True)
+        return {
+            **base_row,
+            "exit": EXIT_INTERPRETER_MISSING,
+            "ok": False,
+            "tail": interp["error"],
+        }
+
     # Always use harness SoT readiness so gate behavior (incl. vault_schema_lint
     # surface-alias fix) is not blocked on lagging per-product script ports.
-    py = pre.get("python") or _product_python(root)
+    py = str(interp["python"])
     sot = HARNESS_ROOT / "scripts" / "night_shift_readiness.py"
     cmd = [py, str(sot), "--root", str(root), "--vault", str(vault)]
     cwd = root
@@ -182,52 +522,52 @@ def run_one(
         cmd.append("--dry-run")
 
     sot_lint = HARNESS_ROOT / "scripts" / "vault_schema_lint.py"
+    env = product_env(name, interp, cfg)
+    env.update(
+        {
+            "PRODUCT_VAULT_ROOT": str(vault),
+            "WATCHLIST_VAULT_ROOT": str(vault),
+            # Product validate.py still runs from product scripts/; skip its
+            # possibly-stale vault_schema_lint and use harness SoT instead.
+            "NIGHT_SHIFT_SOT_LINT": str(sot_lint) if sot_lint.is_file() else "",
+        }
+    )
     try:
-        r = subprocess.run(
-            cmd,
-            cwd=str(cwd),
-            capture_output=True,
-            text=True,
-            timeout=3600,
-            env={
-                **os.environ,
-                "PRODUCT_VAULT_ROOT": str(vault),
-                "WATCHLIST_VAULT_ROOT": str(vault),
-                # Product validate.py still runs from product scripts/; skip its
-                # possibly-stale vault_schema_lint and use harness SoT instead.
-                "NIGHT_SHIFT_SOT_LINT": str(sot_lint) if sot_lint.is_file() else "",
-            },
-        )
+        with port_locks(name, product_lock_ports(cfg)) as lk:
+            base_row["lock_wait_s"] = round(lk["wait_s"], 1)
+            base_row["lock_waited_on"] = lk["waited_on"]
+            t_run = time.perf_counter()
+            r = subprocess.run(
+                cmd,
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                timeout=3600,
+                env=env,
+            )
+            base_row["run_s"] = round(time.perf_counter() - t_run, 1)
         out = (r.stdout or "") + (r.stderr or "")
         return {
-            "name": name,
-            "root": str(root),
+            **base_row,
             "exit": r.returncode,
             "ok": r.returncode == 0,
             "tail": out[-2000:],
-            "preflight": pre,
         }
+    except TimeoutError as exc:
+        return {**base_row, "exit": EXIT_PORT_LOCK_TIMEOUT, "ok": False, "tail": str(exc)}
     except subprocess.TimeoutExpired:
-        return {
-            "name": name,
-            "root": str(root),
-            "exit": 124,
-            "ok": False,
-            "tail": "timeout 3600s",
-            "preflight": pre,
-        }
+        return {**base_row, "exit": 124, "ok": False, "tail": "timeout 3600s"}
     except Exception as exc:
-        return {
-            "name": name,
-            "root": str(root),
-            "exit": 1,
-            "ok": False,
-            "tail": str(exc),
-            "preflight": pre,
-        }
+        return {**base_row, "exit": 1, "ok": False, "tail": str(exc)}
 
 
-def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) -> list[str]:
+def write_summary(
+    vault: Path,
+    when: datetime,
+    rows: list[dict],
+    dry_run: bool,
+    extra_sections: list[str] | None = None,
+) -> list[str]:
     notes: list[str] = []
     passed = sum(1 for r in rows if r["ok"])
     total = len(rows)
@@ -245,6 +585,26 @@ def write_summary(vault: Path, when: datetime, rows: list[dict], dry_run: bool) 
     for r in rows:
         tag = "✅" if r["ok"] else "❌"
         lines.append(f"| {r['name']} | {tag} | {r['exit']} | `{r['root']}` |")
+    if any("python" in r for r in rows):
+        lines.extend(
+            [
+                "",
+                "## Runtime (interpreter · port)",
+                "",
+                "| Product | Python | Source | Port | Locked ports | Lock wait s |",
+                "|---------|--------|--------|------|--------------|-------------|",
+            ]
+        )
+        for r in rows:
+            locks = ",".join(str(x) for x in (r.get("lock_ports") or [])) or "-"
+            port = r.get("port") if r.get("port") is not None else "-"
+            lines.append(
+                f"| {r['name']} | `{r.get('python') or 'MISSING'}` | "
+                f"{r.get('python_source') or '-'} | {port} | {locks} | "
+                f"{r.get('lock_wait_s', '-')} |"
+            )
+    for sec in extra_sections or []:
+        lines.extend(["", sec.rstrip()])
     lines.extend(["", "## Per-product failures (tails)", ""])
     fails = [r for r in rows if not r["ok"]]
     if not fails:
@@ -357,6 +717,17 @@ def main() -> int:
         help="Run only this product id (repeatable)",
     )
     ap.add_argument(
+        "--runtime-file",
+        type=Path,
+        default=None,
+        help="Per-product interpreter/port config (default config/night_shift_runtime.yaml)",
+    )
+    ap.add_argument(
+        "--plan",
+        action="store_true",
+        help="Print interpreter + port map per product and exit (no gates)",
+    )
+    ap.add_argument(
         "--jobs",
         type=int,
         default=0,
@@ -368,6 +739,27 @@ def main() -> int:
     if args.only:
         allow = set(args.only)
         products = [(n, p) for n, p in products if n in allow]
+
+    try:
+        runtime = _load_runtime(args.runtime_file)
+    except ValueError as exc:
+        print(f"❌ night_shift_runtime config invalid: {exc}")
+        return 2
+    port_errors, shared_ports = check_port_map(products, runtime)
+    plan = build_plan(products, runtime)
+    print("--- per-product runtime (interpreter · port) ---")
+    print(format_plan(plan, shared_ports))
+    if port_errors:
+        for e in port_errors:
+            print(f"❌ port map: {e}")
+        print("❌ night_shift_all FAIL (duplicate assigned ports in night_shift_runtime.yaml)")
+        return 2
+    if args.plan:
+        missing = [p["name"] for p in plan if not p["ok"]]
+        for p in plan:
+            if not p["ok"]:
+                print(f"❌ {p['error']}")
+        return 1 if missing else 0
 
     when = datetime.now(UTC)
     n_prod = len(products)
@@ -397,6 +789,24 @@ def main() -> int:
         print(f"{'✅' if grc == 0 else '❌'} {gate_name} exit={grc}")
         if grc != 0:
             path_gate_failed = True
+
+    # vault_schema_lint drift (report-only): product copies vs harness SoT.
+    lint_sections: list[str] = []
+    sync_lint = HARNESS_ROOT / "scripts" / "sync_vault_schema_lint.py"
+    if sync_lint.is_file():
+        scmd = [sys.executable, str(sync_lint), "--check"]
+        if args.products_file:
+            scmd.extend(["--products-file", str(args.products_file)])
+        print("--- harness check: vault_schema_lint drift (report-only) ---")
+        sr = subprocess.run(
+            scmd, cwd=str(HARNESS_ROOT), capture_output=True, text=True, check=False
+        )
+        sout = (sr.stdout or "") + (sr.stderr or "")
+        print(sout.rstrip())
+        lint_sections.append(
+            "## vault_schema_lint drift vs harness SoT (report-only)\n\n"
+            + ("_All copies byte-identical._" if sr.returncode == 0 else "```\n" + sout.strip()[-3000:] + "\n```")
+        )
 
     vault_resolved = args.vault.expanduser().resolve()
     wall0 = time.perf_counter()
@@ -431,6 +841,7 @@ def main() -> int:
             quick=args.quick,
             skip_live=args.skip_live,
             dry_run=args.dry_run,
+            runtime=runtime,
         )
         pf = row.get("preflight") or {}
         if pf:
@@ -439,6 +850,13 @@ def main() -> int:
                 f"{str(pf.get('message', ''))[:120]}",
                 flush=True,
             )
+        print(
+            f"   {name} python={row.get('python') or 'MISSING'} "
+            f"[{row.get('python_source') or '-'}] port={row.get('port')} "
+            f"locks={row.get('lock_ports')} lock_wait={row.get('lock_wait_s', '-')}s "
+            f"run={row.get('run_s', '-')}s",
+            flush=True,
+        )
         print(
             f"{'✅' if row['ok'] else '❌'} {name} exit={row['exit']}",
             flush=True,
@@ -468,7 +886,9 @@ def main() -> int:
         f"(parallel: wall→~slowest product, not sum)"
     )
 
-    for n in write_summary(vault_resolved, when, rows, args.dry_run):
+    for n in write_summary(
+        vault_resolved, when, rows, args.dry_run, extra_sections=lint_sections
+    ):
         print(n)
 
     passed = sum(1 for r in rows if r["ok"])

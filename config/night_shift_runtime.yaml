@@ -1,0 +1,37 @@
+# Per-product night runtime: interpreter policy + e2e port assignment (Ops-430).
+# Read by bin/night_shift_all_products.py. Keys match config/night_shift_products.yaml.
+# Override file: $NIGHT_SHIFT_RUNTIME_FILE
+#
+# Format (one line per product, space-separated key=value):
+#   <product_id>: [python=venv|harness] [port=<n>] [binds=<n>[,<n>...]] [port_env=<VAR>[,<VAR>...]]
+#
+# python=venv    (default) gates run with <repo>/.venv/bin/python (or venv/, python3).
+#                Missing venv => product FAILS loudly (exit 3). Never a silent harness fallback.
+# python=harness explicit, logged fallback to the harness interpreter. Only for
+#                products with no Python deps of their own (node/static products).
+# port=<n>       harness-assigned e2e/preview port, unique across products (checked at start).
+#                Exported to the product as NIGHT_SHIFT_E2E_PORT and PLAYWRIGHT_PORT
+#                (+ any names in port_env=). Products that honor it can run in parallel.
+# binds=<n>,...  ports the product binds today regardless of env (hardcoded in the repo).
+#                The harness holds an exclusive lock on every port in {port} + binds while
+#                the product runs, so two products that hardcode the same port are
+#                serialized instead of killing each other's server.
+# Unlisted products: python=venv, no port.
+
+watchlist: python=venv port=8765 binds=8765
+email-detach: python=venv
+substack-push: python=venv
+second-brain: python=venv
+# catalyxt-website hardcodes :4173 (playwright.config.ts webServer + scripts/night_e2e.sh).
+# Assigned 4178 (4174-4177 are taken: figure server, artauthenticity meta host, zk, ui).
+# Until the repo reads NIGHT_SHIFT_E2E_PORT it is serialized with bip39lab on :4173.
+catalyxt: python=venv port=4178 binds=4173
+agent-harness: python=venv
+zk-business-card: python=venv port=5175 binds=5175,8788
+# bip39lab hardcodes :4173 (playwright.config.ts + scripts/run_e2e_smoke.py).
+bip39lab: python=venv port=4173 binds=4173
+figure-it-out: python=venv port=4176 binds=4176
+# jasmine honors JASMINE_PORT (default 18273); no product .venv (node product).
+jasmine: python=harness port=18273 port_env=JASMINE_PORT
+# ui = catalyxt-ds (static DS, no product .venv).
+ui: python=harness port=4177 binds=4177
