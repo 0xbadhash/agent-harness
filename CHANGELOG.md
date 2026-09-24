@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.4.46 — 2026-09-25
+
+### Night (Ops-430): per-product interpreter, port locks, vault_schema_lint sync
+
+- `night_shift_readiness._venv_python`: resolve at call time (was `root=ROOT`
+  bound at import → `--root <product>` used the *harness* venv since 0d79c05;
+  bip39lab validate_full `ModuleNotFoundError: shamir_mnemonic`). Honors
+  `NIGHT_SHIFT_PRODUCT_PYTHON`; loud stderr WARN on any current-interpreter
+  fallback; report shows `**Interpreter:**`.
+- `night_shift_all_products`: per-product interpreter resolution
+  (product venv → explicit `python=harness` → **FAIL exit 3**, never silent);
+  child env gets product venv first on `PATH` + `VIRTUAL_ENV`.
+- New `config/night_shift_runtime.yaml`: per-product `python=`, `port=`
+  (unique, exported as `NIGHT_SHIFT_E2E_PORT` / `PLAYWRIGHT_PORT`), `binds=`
+  (hardcoded ports) → exclusive flock port locks, so bip39lab and
+  catalyxt-website (both hardcode :4173) are serialized instead of killing
+  each other's server. Duplicate assigned ports fail the run at start.
+- `--plan` prints the interpreter + port map; SUMMARY gets a Runtime section.
+- New `scripts/sync_vault_schema_lint.py` (`--check` default / `--write`
+  idempotent / `--commit` lint-file-only, refuses staged/merge/lock repos,
+  `--skip`). Night job runs `--check` report-only and adds a drift section.
+- Tests: `tests/test_night_shift_runtime_ops430.py`
+
 ## v1.4.45 — 2026-09-22
 
 ### Night: harness SoT vault_schema_lint + mypy fix for surface-alias test

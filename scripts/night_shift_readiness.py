@@ -96,8 +96,26 @@ def _run(
         }
 
 
-def _venv_python(root: Path = ROOT) -> str:
-    """Prefer project virtualenv (``.venv`` or ``venv``), else current interpreter."""
+_WARNED_FALLBACK: set[str] = set()
+
+
+def _venv_python(root: Path | None = None) -> str:
+    """Interpreter for this product's gates, resolved at *call* time.
+
+    Order (Ops-430):
+      1. ``NIGHT_SHIFT_PRODUCT_PYTHON`` — explicit per-product interpreter set by
+         ``bin/night_shift_all_products.py`` (product venv, or declared fallback).
+      2. Product virtualenv under the current ``ROOT`` (``.venv`` / ``venv``).
+      3. Current interpreter, with a loud stderr WARNING (standalone runs only).
+
+    The old signature ``root: Path = ROOT`` bound the default at import time, so
+    ``--root <product>`` still resolved the *harness* venv (bip39lab
+    ``ModuleNotFoundError: shamir_mnemonic`` since 0d79c05).
+    """
+    explicit = (os.environ.get("NIGHT_SHIFT_PRODUCT_PYTHON") or "").strip()
+    if explicit:
+        return explicit
+    root = ROOT if root is None else root
     for candidate in (
         root / ".venv" / "bin" / "python",
         root / "venv" / "bin" / "python",
@@ -106,10 +124,20 @@ def _venv_python(root: Path = ROOT) -> str:
     ):
         if candidate.is_file():
             return str(candidate)
+    key = str(root)
+    if key not in _WARNED_FALLBACK:
+        _WARNED_FALLBACK.add(key)
+        print(
+            f"⚠️  night_shift_readiness: NO product venv under {root}; "
+            f"falling back to current interpreter {sys.executable} "
+            "(product deps may be missing — create <repo>/.venv)",
+            file=sys.stderr,
+        )
     return sys.executable
 
 
-def _load_plugin(root: Path = ROOT) -> dict[str, Any]:
+def _load_plugin(root: Path | None = None) -> dict[str, Any]:
+    root = ROOT if root is None else root
     path = root / ".agents" / "product_plugin.yaml"
     if not path.is_file():
         return {}
@@ -612,6 +640,7 @@ def build_report_md(
         f"**When:** {when_s}",
         f"**Overall:** {overall} ({passed}/{total} gates) · mode=`{mode}` · product=`{product_id}`",
         f"**Repo:** `{ROOT}`",
+        f"**Interpreter:** `{_venv_python()}`",
         "**Hard-stops:** no release/tag/force-push; autofix is mechanical only (deps/format)",
         "**SoT:** agent-harness `scripts/night_shift_readiness.py`",
         "",
@@ -827,6 +856,10 @@ def main(argv: list[str] | None = None) -> int:
         product_id = ROOT.name
     when = _now()
     mode = "quick" if args.quick else ("full-no-live" if args.skip_live else "full")
+    print(
+        f"night_shift_readiness: product={product_id} root={ROOT} python={_venv_python()}",
+        file=sys.stderr,
+    )
     results = run_gates(quick=args.quick, skip_live=args.skip_live, plugin=plugin)
 
     autofix_attempts: list[dict[str, Any]] = []
