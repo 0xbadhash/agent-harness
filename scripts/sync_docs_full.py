@@ -15,11 +15,13 @@ Does **not** invent product feature docs. Mirrors are copies of repo truth.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Callable
 
 def _vw(path: Path, text: str) -> None:
     try:
@@ -344,6 +346,124 @@ def run_release_devlog(vault: Path, *, dry_run: bool = False, force: bool = Fals
     return out.strip() or f"devlog exit={r.returncode}"
 
 
+# --- Optional product post-hook (harness 1.4.47+). Contract: run_post_hook docstring.
+# Kept out of the module docstring so ``--help`` output stays byte-identical.
+POST_HOOK_REL = Path("scripts") / "sync_docs_product.py"
+POST_HOOK_FLAG = "--post-hook"
+POST_HOOK_ENV = "SYNC_DOCS_POST_HOOK"
+POST_HOOK_TIMEOUT_ENV = "SYNC_DOCS_POST_HOOK_TIMEOUT"
+POST_HOOK_TIMEOUT_DEFAULT_S = 600
+
+
+def _post_hook_python(root: Path) -> tuple[str, str]:
+    """Product interpreter for the post-hook: product venv, else current python."""
+    vpy: Path | None = None
+    try:
+        if str(SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(SCRIPTS))
+        from product_venv import product_venv_python  # type: ignore
+
+        vpy = product_venv_python(root)
+    except ImportError:
+        for rel in (".venv/bin/python", ".venv/bin/python3", "venv/bin/python", "venv/bin/python3"):
+            cand = root / rel
+            if cand.is_file():
+                vpy = cand.absolute()
+                break
+    if vpy is not None:
+        return str(vpy), "product venv"
+    return sys.executable, "no product .venv; current interpreter"
+
+
+def run_post_hook(
+    root: Path | None = None,
+    *,
+    version: str,
+    dry_run: bool = False,
+    skip_repo: bool = False,
+    runner: Callable[..., Any] = subprocess.run,
+) -> int | None:
+    """Run the optional product post-hook ``scripts/sync_docs_product.py``.
+
+    Product post-hook contract (harness 1.4.47+)
+    --------------------------------------------
+    If the repo being synced (the repo this script lives in) contains
+    ``scripts/sync_docs_product.py``, it is called **after** a successful docs sync::
+
+        <product python> scripts/sync_docs_product.py --post-hook
+        env: SYNC_DOCS_POST_HOOK=1  SYNC_DOCS_VERSION=<tag>  SYNC_DOCS_ROOT=<repo root>
+        cwd: <repo root>   stdout/stderr: inherited   timeout: 600s
+             (override: SYNC_DOCS_POST_HOOK_TIMEOUT seconds)
+
+    * **Absent file** → nothing happens: no output, no error, exit code unchanged
+      (byte-identical to <= 1.4.46).
+    * **Runs only when** the docs sync completed (exit 0) **and** none of
+      ``--dry-run`` / ``--skip-repo`` were given. ``-h/--help`` exits before any
+      sync, so the hook never runs there either. ``--skip-vault`` does not suppress it.
+    * **Recursion guard:** if ``SYNC_DOCS_POST_HOOK=1`` is already set in the
+      environment, the hook is never run (prints ``post-hook: skipped``). A product
+      wrapper that itself calls ``sync_docs_full.py`` therefore cannot loop.
+    * **Python:** the product's own venv (``product_venv.product_venv_python``:
+      ``.venv/bin/python`` → ``.venv/bin/python3`` → ``venv/…``), the same resolution
+      the 1.4.46 night job uses. No product venv → the interpreter running this
+      script (``sys.executable``), announced on stdout (never silent).
+    * **Exit codes:** hook exit 0 → ``sync_docs_full`` exits 0. Non-zero hook exit N →
+      ``sync_docs_full`` exits N and prints ``❌ post-hook failed`` to stderr (the
+      docs sync itself has already been written; it is not rolled back). Hook
+      timeout → 124. Hook could not be started (OSError) → 127.
+    * **Product module obligations:** with ``--post-hook`` (or
+      ``SYNC_DOCS_POST_HOOK=1``) the product script must do only its product-specific
+      post-sync steps (e.g. version stamping) and must **not** invoke
+      ``sync_docs_full.py`` again. It returns 0 on success.
+
+    Returns ``None`` when no hook ran (absent / guarded / dry-run / skip-repo),
+    otherwise the hook's exit code (124 timeout, 127 could not start).
+    Absent hook → returns None with **no output** (byte-identical legacy path).
+    """
+    root = ROOT if root is None else root
+    hook = root / POST_HOOK_REL
+    if not hook.is_file():
+        return None
+    if os.environ.get(POST_HOOK_ENV) == "1":
+        print(f"post-hook: skipped ({POST_HOOK_ENV}=1 — already inside a post-hook)")
+        return None
+    if dry_run or skip_repo:
+        why = "--dry-run" if dry_run else "--skip-repo"
+        print(f"post-hook: skipped ({why}) — would run {POST_HOOK_REL} {POST_HOOK_FLAG}")
+        return None
+    py, py_src = _post_hook_python(root)
+    cmd = [py, str(hook), POST_HOOK_FLAG]
+    env = {
+        **os.environ,
+        POST_HOOK_ENV: "1",
+        "SYNC_DOCS_VERSION": version,
+        "SYNC_DOCS_ROOT": str(root),
+    }
+    try:
+        timeout = int(os.environ.get(POST_HOOK_TIMEOUT_ENV) or POST_HOOK_TIMEOUT_DEFAULT_S)
+    except ValueError:
+        timeout = POST_HOOK_TIMEOUT_DEFAULT_S
+    print(f"post-hook: {' '.join(cmd)} (python: {py_src})", flush=True)
+    sys.stderr.flush()
+    try:
+        rc = int(runner(cmd, cwd=str(root), env=env, check=False, timeout=timeout).returncode)
+    except subprocess.TimeoutExpired:
+        print(f"❌ post-hook timeout after {timeout}s: {POST_HOOK_REL}", file=sys.stderr)
+        return 124
+    except OSError as exc:
+        print(f"❌ post-hook could not start: {exc}", file=sys.stderr)
+        return 127
+    if rc != 0:
+        print(
+            f"❌ post-hook failed: {POST_HOOK_REL} exit {rc} "
+            "(docs sync already written; not rolled back)",
+            file=sys.stderr,
+        )
+        return rc
+    print("post-hook: ok")
+    return 0
+
+
 def run_full_sync(
     *,
     vault: Path | None,
@@ -406,6 +526,9 @@ def run_full_sync(
     for n in notes:
         print(n)
     print(f"✅ sync_docs_full complete ({version})")
+    hook_rc = run_post_hook(ROOT, version=version, dry_run=dry_run, skip_repo=skip_repo)
+    if hook_rc:
+        return hook_rc
     return 0
 
 

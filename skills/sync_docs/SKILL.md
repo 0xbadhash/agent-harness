@@ -30,6 +30,13 @@ timeout-seconds: 600
    ```
    - Stamp README / PRODUCT markers when present  
    - Update WORKFLOW_DOCUMENTATION Last Release when present  
+   - **Product post-hook (optional, harness ≥1.4.47):** if the optional product hook
+     `scripts/sync_docs_product.py` exists, `sync_docs_full.py` runs it as
+     `<product .venv python> <hook> --post-hook` with `SYNC_DOCS_POST_HOOK=1` after a successful
+     sync (not on `--dry-run` / `--skip-repo` / `--help`). Hook exit ≠ 0 → sync_docs exits with
+     that code. The hook must never call sync_docs_full again; `SYNC_DOCS_POST_HOOK=1` already
+     set → hook skipped (recursion guard). Contract: `run_post_hook` docstring in
+     sync_docs_full. No hook file → behavior unchanged.
 4. **Vault side (optional — only if enabled):**
    - `product_plugin.yaml` → `vault.enabled: true` **and**  
    - env `$PRODUCT_VAULT_ROOT` (or name in `vault.root_env`) points at a real directory  
