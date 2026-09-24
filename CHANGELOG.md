@@ -1,5 +1,43 @@
 # Changelog
 
+## v1.4.47 — 2026-09-25
+
+### sync_docs_full: optional product post-hook (Ops-430)
+
+- `scripts/sync_docs_full.py` calls the product's `scripts/sync_docs_product.py`
+  after a successful docs sync, when that file exists. **Absent file → no output,
+  no error, same exit code:** old and new give byte-identical stdout, stderr,
+  exit code, repo tree and (timestamp-normalized) vault tree on temp clones of
+  email-detach and figure-it-out.
+- **Hook contract** (also in the `run_post_hook` docstring):
+  - Command: `<product python> scripts/sync_docs_product.py --post-hook`,
+    cwd = repo root, stdout/stderr inherited, timeout 600s
+    (`SYNC_DOCS_POST_HOOK_TIMEOUT` to override).
+  - Env: `SYNC_DOCS_POST_HOOK=1`, `SYNC_DOCS_VERSION=<tag>`, `SYNC_DOCS_ROOT=<repo root>`.
+  - Runs only after the docs sync completed (exit 0). Never on `--dry-run`,
+    `--skip-repo` or `-h/--help`; `--skip-vault` still runs it.
+  - Recursion guard: if `SYNC_DOCS_POST_HOOK=1` is already set, the hook is
+    never run (`post-hook: skipped` is printed). A product wrapper that calls
+    `sync_docs_full.py` itself cannot loop.
+  - Python: the product venv via `product_venv.product_venv_python`
+    (`.venv/bin/python` → `.venv/bin/python3` → `venv/…`), the same resolution
+    the 1.4.46 night job uses. With no product venv it uses the interpreter
+    running `sync_docs_full` and names it on stdout.
+  - Exit: hook 0 → 0. Hook N≠0 → `sync_docs_full` exits N with
+    `❌ post-hook failed` on stderr; the docs sync is not rolled back.
+    Timeout → 124. Could not start → 127.
+  - Product obligations: in `--post-hook` mode (or with `SYNC_DOCS_POST_HOOK=1`),
+    run only the product-specific post steps and do **not** call
+    `sync_docs_full.py` again. Return 0 on success.
+- Migration note for catalyxt-ds (w9): today's wrapper forwards its argv to
+  `sync_docs_full.py`. Under this harness that turns the hook into
+  `sync_docs_full.py --post-hook` (unknown flag, exit 2). This does not loop,
+  thanks to the guard, but it fails until the module adopts the contract.
+- `skills/sync_docs/SKILL.md`: one bullet on the hook.
+- Tests: `tests/test_sync_docs_post_hook.py` (hook present, absent, failing hook,
+  recursion guard via wrapper and preset env, dry-run / skip-repo / help skip,
+  venv python, timeout).
+
 ## v1.4.46 — 2026-09-25
 
 ### Night (Ops-430): per-product interpreter, port locks, vault_schema_lint sync
