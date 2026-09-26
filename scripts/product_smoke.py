@@ -143,6 +143,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{tag} smoke:{r['name']} exit={r['exit']} cmd={r['cmd']} cwd={r['cwd']}")
         if r["exit"] != 0:
             failed += 1
+            # pytest and most unit runners put failure detail on stdout
+            if r.get("stdout"):
+                print(r["stdout"][-1500:])
             if r.get("stderr"):
                 print(r["stderr"][-500:])
     if failed:

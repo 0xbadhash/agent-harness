@@ -91,6 +91,9 @@ def test_night_shift_venv_python_keeps_symlink(
     import night_shift_readiness as nsr  # type: ignore
 
     monkeypatch.setattr(sys, "platform", "linux")
+    # Night sets NIGHT_SHIFT_PRODUCT_PYTHON for the product under test; clear it
+    # so this unit asserts .venv symlink retention, not the ambient override.
+    monkeypatch.delenv("NIGHT_SHIFT_PRODUCT_PYTHON", raising=False)
     vbin = tmp_path / ".venv" / "bin"
     vbin.mkdir(parents=True)
     base = tmp_path / "base_python"
