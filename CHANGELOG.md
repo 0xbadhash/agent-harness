@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.4.48 — 2026-09-26
+
+### fix(night): isolate _venv_python symlink test from NIGHT_SHIFT_PRODUCT_PYTHON
+
+- Night `night_shift_all` exports `NIGHT_SHIFT_PRODUCT_PYTHON` for every product.
+  `tests/test_product_venv.py::test_night_shift_venv_python_keeps_symlink` did not
+  clear that env, so under the night job (and only then) it asserted against the
+  ambient harness interpreter and failed — failing both `validate_full`
+  (test_runner/compliance_engine) and `product_smoke` (smoke:unit) at 1.4.47.
+- Clear `NIGHT_SHIFT_PRODUCT_PYTHON` in the unit test (same pattern as Ops-430
+  readiness interpreter tests). Override behavior remains covered by
+  `TestReadinessInterpreter.test_env_override_wins`.
+- `product_smoke` now prints stdout (not only stderr) on failed smoke steps so
+  pytest failure tails are visible in night reports.
+
 ## v1.4.47 — 2026-09-25
 
 ### sync_docs_full: optional product post-hook (Ops-430)
