@@ -6,10 +6,10 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-WAIVER_RE = re.compile(r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b", re.I)
+WAIVER_RE = re.compile(r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b", re.IGNORECASE)
 DEFAULT_MAX = 8
 DEFAULT_DAYS = 30
 
@@ -32,7 +32,7 @@ def check(
         if not WAIVER_RE.search(text):
             return True, ["ok: feature Spec (not a waiver ship)"]
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(UTC) - timedelta(days=days)
     count = 0
     for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
         line = line.strip()
@@ -48,7 +48,7 @@ def check(
         except ValueError:
             continue
         if when.tzinfo is None:
-            when = when.replace(tzinfo=timezone.utc)
+            when = when.replace(tzinfo=UTC)
         if when >= cutoff:
             wtype = str(row.get("waiver_type") or "")
             if wtype in {"hotfix", "chore", "docs-only", "prose-only"}:

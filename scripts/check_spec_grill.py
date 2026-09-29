@@ -17,25 +17,25 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.I)
+SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
 WAIVER_RE = re.compile(
     r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.I,
+    re.IGNORECASE,
 )
-GRILL_HEADER_RE = re.compile(r"^##\s+Grill-me\b", re.I | re.M)
+GRILL_HEADER_RE = re.compile(r"^##\s+Grill-me\b", re.IGNORECASE | re.MULTILINE)
 STATUS_RE = re.compile(
     r"\*\*Status:\*\*\s*(complete|done|ok|spike-skipped|skipped)\b",
-    re.I,
+    re.IGNORECASE,
 )
-REASON_RE = re.compile(r"\*\*Reason:\*\*\s*(.+)", re.I)
+REASON_RE = re.compile(r"\*\*Reason:\*\*\s*(.+)", re.IGNORECASE)
 # Q/A pair: line with Q: and later A: in section
 QA_RE = re.compile(
     r"^\s*[-*]?\s*Q:\s*\S.+$",
-    re.I | re.M,
+    re.IGNORECASE | re.MULTILINE,
 )
 ANS_RE = re.compile(
     r"^\s*[-*]?\s*A:\s*\S.+$",
-    re.I | re.M,
+    re.IGNORECASE | re.MULTILINE,
 )
 
 
@@ -43,7 +43,7 @@ def _grill_section(text: str) -> str:
     m = re.search(
         r"^##\s+Grill-me\b(.*?)(?=^##\s|\Z)",
         text,
-        re.I | re.M | re.S,
+        re.IGNORECASE | re.MULTILINE | re.DOTALL,
     )
     return m.group(1) if m else ""
 

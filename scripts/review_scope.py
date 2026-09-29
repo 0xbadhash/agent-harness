@@ -31,13 +31,13 @@ class ScopeBaseline:
 
 _TEST_PATH = re.compile(
     r"(^|/)(tests?|__tests__|spec)(/|$)|_test\.|\.test\.|\.spec\.|test_",
-    re.I,
+    re.IGNORECASE,
 )
 _PROSE_EXT = {".md", ".txt", ".rst", ".adoc"}
 # Paths that are NOT "prose-only exception" even if .md
 _USER_FACING_DOC = re.compile(
     r"(^|/)(README|CHANGELOG|INSTALL|USAGE|docs/PRODUCT|docs/SECURITY)",
-    re.I,
+    re.IGNORECASE,
 )
 
 
@@ -154,7 +154,7 @@ def load_large_thresholds(
     if product_root is None:
         return files, lines, ntl, ppaths
     try:
-        from product_plugin import load_plugin  # noqa: E402
+        from product_plugin import load_plugin
     except ImportError:  # pragma: no cover
         return files, lines, ntl, ppaths
     plugin = load_plugin(Path(product_root))

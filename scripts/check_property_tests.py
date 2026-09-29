@@ -61,14 +61,14 @@ def check(root: Path) -> tuple[bool, list[str]]:
     for mod in modules:
         stem = Path(mod.replace(".", "/")).name
         token = re.escape(stem)
-        if not re.search(token, blob, re.I) and mod not in blob:
+        if not re.search(token, blob, re.IGNORECASE) and mod not in blob:
             # also hypothesis/fast-check markers for that module
-            if not re.search(r"hypothesis|fast.check|@given|property", blob, re.I):
+            if not re.search(r"hypothesis|fast.check|@given|property", blob, re.IGNORECASE):
                 missing.append(
                     f"{mod}: no test reference — add tests/test_* mentioning "
                     f"'{stem}' (prefer Hypothesis/fast-check)"
                 )
-            elif not re.search(token, blob, re.I):
+            elif not re.search(token, blob, re.IGNORECASE):
                 missing.append(f"{mod}: property tests exist but module stem not referenced")
     if missing:
         return False, missing

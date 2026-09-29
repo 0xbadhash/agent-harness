@@ -5,18 +5,18 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 _SECRETISH = re.compile(
     r"(-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36,}"
     r"|xox[baprs]-[A-Za-z0-9-]{10,}|api[_-]?key\s*[:=]\s*['\"][^'\"]{16,})",
-    re.I,
+    re.IGNORECASE,
 )
 _DROP_LINE = re.compile(
     r"(system prompt|developer message|tool_result|authorization:\s*bearer|"
     r"cookie:|set-cookie:|/home/[a-z0-9]+/\.ssh)",
-    re.I,
+    re.IGNORECASE,
 )
 
 
@@ -27,7 +27,7 @@ def _iter_candidate_logs(cwd: Path, since_days: int) -> list[Path]:
         Path.home() / ".grok" / "sessions",
         Path.home() / ".claude" / "projects",
     ]
-    cutoff = datetime.now(timezone.utc) - timedelta(days=since_days)
+    cutoff = datetime.now(UTC) - timedelta(days=since_days)
     found: list[Path] = []
     for root in roots:
         if not root.is_dir():
@@ -38,7 +38,7 @@ def _iter_candidate_logs(cwd: Path, since_days: int) -> list[Path]:
             if p.suffix.lower() not in {".jsonl", ".json", ".log", ".txt", ".md"}:
                 continue
             try:
-                mtime = datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc)
+                mtime = datetime.fromtimestamp(p.stat().st_mtime, tz=UTC)
             except OSError:
                 continue
             if mtime >= cutoff:
@@ -72,7 +72,7 @@ def cmd_find(args: argparse.Namespace) -> int:
         return 0
     print("file\tscore\tmtime")
     for score, p in scored[:15]:
-        print(f"{p}\t{score}\t{datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc).isoformat()}")
+        print(f"{p}\t{score}\t{datetime.fromtimestamp(p.stat().st_mtime, tz=UTC).isoformat()}")
     return 0
 
 

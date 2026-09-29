@@ -17,14 +17,14 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HARNESS / "scripts"))
 DEFAULT_PRODUCTS = HARNESS / "config" / "night_shift_products.yaml"
-OVERALL_RE = re.compile(r"Overall:\s*\**\s*(PASS|FAIL)\b", re.I)
-FAIL_GATE = re.compile(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", re.M)
+OVERALL_RE = re.compile(r"Overall:\s*\**\s*(PASS|FAIL)\b", re.IGNORECASE)
+FAIL_GATE = re.compile(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", re.MULTILINE)
 
 
 @dataclass
@@ -136,7 +136,7 @@ def remediate_product(
 
 def write_tickets(results: list[RemediateResult], out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# NIGHT_FAIL_TICKETS",
         "",

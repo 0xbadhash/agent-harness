@@ -20,7 +20,7 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from product_trait_contract import evaluate_categories, infer_traits  # noqa: E402
+from product_trait_contract import evaluate_categories, infer_traits
 
 
 def check(root: Path) -> tuple[bool, list[str]]:

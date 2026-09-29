@@ -102,14 +102,14 @@ def _merge_targets(zap_cfg: Path) -> list[dict[str, str]]:
 def _probe(url: str, timeout: float = 12.0) -> tuple[str, str]:
     req = urllib.request.Request(url, method="HEAD")
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return str(getattr(resp, "status", 200)), "ok"
     except urllib.error.HTTPError as e:
         return str(e.code), "http_error"
     except Exception as e:  # noqa: BLE001
         try:
             req2 = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req2, timeout=timeout) as resp:  # noqa: S310
+            with urllib.request.urlopen(req2, timeout=timeout) as resp:
                 return str(getattr(resp, "status", 200)), "ok_get"
         except Exception as e2:  # noqa: BLE001
             return "000", f"{type(e).__name__}/{type(e2).__name__}"

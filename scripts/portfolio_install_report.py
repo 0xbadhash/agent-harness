@@ -17,7 +17,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parents[1]
@@ -130,7 +130,7 @@ def protect_drift_for(root: Path) -> list[str]:
 
 def write_report(rows: list[ProductRow], sot: str, out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lag_n = sum(1 for r in rows if r.lagging)
     drift_n = sum(1 for r in rows if r.protect_drift)
     lines = [

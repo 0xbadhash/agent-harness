@@ -800,14 +800,14 @@ def propose_roadmap_items(
             text = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        opens = re.findall(r"^\s*- \[ \] (.+)$", text, re.M)
+        opens = re.findall(r"^\s*- \[ \] (.+)$", text, re.MULTILINE)
         for item in opens[:5]:
             item = item.strip()
             if len(item) < 8:
                 continue
             conf = 0.90
             if failed_names & {"product_smoke", "validate_full"} and re.search(
-                r"build|smoke|test|type", item, re.I
+                r"build|smoke|test|type", item, re.IGNORECASE
             ):
                 conf = 0.95
             proposals.append(

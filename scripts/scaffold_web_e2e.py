@@ -11,14 +11,14 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from product_plugin import load_plugin  # noqa: E402
-from product_trait_contract import (  # noqa: E402
+from product_plugin import load_plugin
+from product_trait_contract import (
     ISO_RE,
     SECRET_WALL_RE,
     ensure_trait_scenarios,
     infer_traits,
 )
-from web_e2e_contract import (  # noqa: E402
+from web_e2e_contract import (
     DEFAULT_E2E_DIR,
     allocate_scenario_ids,
     comet_doc_path,

@@ -20,7 +20,7 @@ import json
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,10 +37,10 @@ def _project_label() -> str:
     except Exception:
         plugin = ROOT / ".agents" / "product_plugin.yaml"
         if plugin.is_file():
-            m = re.search(r"^\s*project_label:\s*(.+)$", plugin.read_text(), re.M)
+            m = re.search(r"^\s*project_label:\s*(.+)$", plugin.read_text(), re.MULTILINE)
             if m:
                 return m.group(1).strip().strip("\"'")
-            m = re.search(r"^\s*product_id:\s*(.+)$", plugin.read_text(), re.M)
+            m = re.search(r"^\s*product_id:\s*(.+)$", plugin.read_text(), re.MULTILINE)
             if m:
                 return m.group(1).strip().strip("\"'")
         return "product"
@@ -147,9 +147,9 @@ def _parse_release_runbook(path: Path) -> dict[str, str]:
             # row like | PHPUnit | 286 / 0 failures |
             if "phpunit" in (line.split("|")[1].strip().lower() if "|" in line else ""):
                 phpunit = _smoke_cell(line)
-        if re.search(r"\|\s*pytest\s*\|", line, re.I):
+        if re.search(r"\|\s*pytest\s*\|", line, re.IGNORECASE):
             pytest = _smoke_cell(line)
-        if re.search(r"\|\s*validate", line, re.I) or (
+        if re.search(r"\|\s*validate", line, re.IGNORECASE) or (
             "compliance" in low and "validate" in low
         ):
             validate = _smoke_cell(line)
@@ -214,7 +214,7 @@ def _open_bullets(body: str, limit: int = SHAPING_MAX) -> list[str]:
         # skip done checkboxes / checkmarks
         if re.search(r"\[x\]|\[X\]|✅", s):
             continue
-        if s.startswith("|") and re.search(r"shipped|done|✅", s, re.I):
+        if s.startswith("|") and re.search(r"shipped|done|✅", s, re.IGNORECASE):
             continue
         m = re.match(r"^[-*]\s+(?:\[\s\]\s+)?(.+)$", s)
         if m:
@@ -256,7 +256,7 @@ def _parse_roadmap_open(path: Path, limit: int = SHAPING_MAX) -> list[str]:
     items: list[str] = []
     for m in re.finditer(r"^####\s+(.+)$", body, re.MULTILINE):
         title = m.group(1).strip()
-        if "✅" in title or re.search(r"\[✅\]|\[x\]", title, re.I):
+        if "✅" in title or re.search(r"\[✅\]|\[x\]", title, re.IGNORECASE):
             continue
         # skip if next few lines only say Done with checkmark-only archive
         items.append(re.sub(r"\s+", " ", title))
@@ -270,9 +270,9 @@ def _parse_roadmap_open(path: Path, limit: int = SHAPING_MAX) -> list[str]:
                 continue
             if re.search(r"\|\s*#\s*\|", line) or "---" in line:
                 continue
-            if re.search(r"shipped|✅|\*\*✅\*\*", line, re.I):
+            if re.search(r"shipped|✅|\*\*✅\*\*", line, re.IGNORECASE):
                 continue
-            if re.search(r"\bopen\b|\bpartial\b|\bbacklog\b|\bdeferred\b", line, re.I):
+            if re.search(r"\bopen\b|\bpartial\b|\bbacklog\b|\bdeferred\b", line, re.IGNORECASE):
                 cells = [c.strip() for c in line.strip().strip("|").split("|")]
                 label = " — ".join(c for c in cells[:3] if c)
                 if label:
@@ -321,10 +321,10 @@ def _pipeline_task(path: Path) -> str:
 
 
 def _as_utc(when: datetime | None) -> datetime:
-    dt = when or datetime.now(timezone.utc)
+    dt = when or datetime.now(UTC)
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 def format_when_line(when: datetime | None = None) -> str:
@@ -502,12 +502,12 @@ def night_shift_day_marker(
     so dedupe works when vault ``project_label`` differs from plugin ``product_id``.
     """
     t = (title or "").strip()
-    if not re.search(r"night\s*shift\s*readiness", t, re.I):
+    if not re.search(r"night\s*shift\s*readiness", t, re.IGNORECASE):
         return None
     embedded = re.search(
         r"night\s*shift\s*readiness\s+(\S+)",
         t,
-        re.I,
+        re.IGNORECASE,
     )
     label = (embedded.group(1) if embedded else None) or product_id or _project_label()
     # Title form often continues with the day token; don't treat YYYY-MM-DD as label
@@ -537,12 +537,12 @@ def build_note_entry(
     if not t:
         raise ValueError("note title required")
     # Forbid release-like headers so freeform never looks like /sync_docs
-    if re.search(r"\bsynced\b", t, re.I):
+    if re.search(r"\bsynced\b", t, re.IGNORECASE):
         raise ValueError(
             "ad-hoc note title must not contain 'synced' "
             "(use scripts/sync_vault_devlog.py without --note for releases)"
         )
-    if re.match(r"^v?\d+\.\d+\.\d+", t, re.I):
+    if re.match(r"^v?\d+\.\d+\.\d+", t, re.IGNORECASE):
         raise ValueError(
             "ad-hoc note title must not start with a semver release id "
             "(that shape is reserved for /sync_docs release entries)"

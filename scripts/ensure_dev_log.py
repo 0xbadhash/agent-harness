@@ -37,10 +37,10 @@ def _label_from_plugin(product_root: Path) -> str:
     if not plugin.is_file():
         return "product"
     text = plugin.read_text(encoding="utf-8", errors="replace")
-    m = re.search(r"^\s*project_label:\s*(.+)$", text, re.M)
+    m = re.search(r"^\s*project_label:\s*(.+)$", text, re.MULTILINE)
     if m:
         return m.group(1).strip().strip("\"'")
-    m = re.search(r"^\s*product_id:\s*(.+)$", text, re.M)
+    m = re.search(r"^\s*product_id:\s*(.+)$", text, re.MULTILINE)
     if m:
         return m.group(1).strip().strip("\"'")
     return "product"
@@ -150,7 +150,7 @@ def main() -> int:
         rel = f"01-Projects/{label}/dev-log.md"
         plugin = args.product_root / ".agents" / "product_plugin.yaml"
         if plugin.is_file():
-            m = re.search(r"^\s*dev_log_rel:\s*(.+)$", plugin.read_text(), re.M)
+            m = re.search(r"^\s*dev_log_rel:\s*(.+)$", plugin.read_text(), re.MULTILINE)
             if m:
                 rel = m.group(1).strip().strip("\"'")
         path = vault / rel

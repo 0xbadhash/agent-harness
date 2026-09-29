@@ -8,9 +8,9 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.I)
-SHA_RE = re.compile(r"\*\*spec_sha256:\*\*\s*([a-fA-F0-9]{64})\b|spec_sha256:\s*([a-fA-F0-9]{64})\b", re.I)
-WAIVER_RE = re.compile(r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b", re.I)
+SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
+SHA_RE = re.compile(r"\*\*spec_sha256:\*\*\s*([a-fA-F0-9]{64})\b|spec_sha256:\s*([a-fA-F0-9]{64})\b", re.IGNORECASE)
+WAIVER_RE = re.compile(r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b", re.IGNORECASE)
 
 
 def file_sha256(path: Path) -> str:

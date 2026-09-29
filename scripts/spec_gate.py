@@ -14,13 +14,13 @@ import json
 import os
 import re
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.I)
+SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
 WAIVER_RE = re.compile(
     r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.I,
+    re.IGNORECASE,
 )
 WAIVERS = frozenset({"hotfix", "chore", "docs-only", "prose-only"})
 
@@ -67,14 +67,14 @@ def append_waiver_log(
     pipe = _pipeline(root)
     product_id = ""
     try:
-        from product_plugin import load_plugin  # noqa: E402
+        from product_plugin import load_plugin
 
         plugin = load_plugin(root)
         product_id = str(plugin.get("product_id") or root.name)
     except Exception:  # noqa: BLE001
         product_id = root.name
     row = {
-        "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "product_id": product_id,
         "waiver_type": waiver_type,
         "spec_id": spec_id or None,

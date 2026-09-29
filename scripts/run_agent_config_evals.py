@@ -15,8 +15,8 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-import check_edit_guard as eg  # noqa: E402
-import check_stale_agent_config as sac  # noqa: E402
+import check_edit_guard as eg
+import check_stale_agent_config as sac
 
 
 def run_evals(harness: Path) -> tuple[bool, list[str]]:

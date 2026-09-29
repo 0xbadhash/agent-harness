@@ -7,8 +7,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
-GATE_FAIL = re.compile(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", re.M)
-OVERALL = re.compile(r"\*\*Overall:\*\*\s*(FAIL|PASS)", re.I)
+GATE_FAIL = re.compile(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", re.MULTILINE)
+OVERALL = re.compile(r"\*\*Overall:\*\*\s*(FAIL|PASS)", re.IGNORECASE)
 
 
 def scan_report(path: Path) -> list[str]:

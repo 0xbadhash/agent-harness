@@ -78,7 +78,7 @@ def _untested_waivers(draft: str) -> set[str]:
     m = re.search(
         r"##\s+Untested paths\b(.*?)(?=\n## |\Z)",
         draft,
-        re.I | re.S,
+        re.IGNORECASE | re.DOTALL,
     )
     if not m:
         return set()
@@ -109,7 +109,7 @@ def check(
     draft = ""
     if pr_draft and pr_draft.is_file():
         draft = pr_draft.read_text(encoding="utf-8", errors="replace")
-    if re.search(r"\*\*Spec waiver:\*\*\s*(docs-only|prose-only)\b", draft, re.I):
+    if re.search(r"\*\*Spec waiver:\*\*\s*(docs-only|prose-only)\b", draft, re.IGNORECASE):
         return True, ["ok: docs/prose waiver — path tests skipped"]
 
     waivers = _untested_waivers(draft)
@@ -123,7 +123,7 @@ def check(
         hit = stem in tests or rel in tests
         if not hit:
             for t in tokens:
-                if re.search(rf"\b{re.escape(t)}\b", tests, re.I):
+                if re.search(rf"\b{re.escape(t)}\b", tests, re.IGNORECASE):
                     hit = True
                     break
         if not hit:

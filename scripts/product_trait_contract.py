@@ -28,8 +28,8 @@ from typing import Any
 
 from product_plugin import load_plugin
 from web_e2e_contract import (
-    _SCENARIO_ID,
     _PLAYWRIGHT_TEST_TITLE,
+    _SCENARIO_ID,
     comet_doc_path,
     detect_website,
     find_e2e_specs,
@@ -482,8 +482,8 @@ def evaluate_categories(root: Path) -> tuple[bool, list[str], dict[str, Any]]:
     # client_secrets — property_tests + secret-wall S-id
     if traits["client_secrets"]["active"]:
         try:
-            from check_property_tests import check as _prop  # type: ignore
             from check_property_tests import _load_modules  # type: ignore
+            from check_property_tests import check as _prop  # type: ignore
 
             enabled, modules = _load_modules(root)
         except Exception as e:  # noqa: BLE001

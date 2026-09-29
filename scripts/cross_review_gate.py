@@ -85,7 +85,7 @@ def has_cross_review_evidence(
         return True
     if pr_draft.is_file():
         text = pr_draft.read_text(encoding="utf-8")
-        if re.search(r"CROSS-REVIEW|##\s*Cross-review", text, re.I):
+        if re.search(r"CROSS-REVIEW|##\s*Cross-review", text, re.IGNORECASE):
             return True
     return False
 

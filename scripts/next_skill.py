@@ -22,7 +22,7 @@ from pathlib import Path
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
 
-from review_scope import (  # noqa: E402
+from review_scope import (
     build_baseline,
     is_large_baseline,
     should_skip_heavy_review,
@@ -249,7 +249,7 @@ def decide(
                 # ignore Plan: none
                 import re as _re
 
-                m = _re.search(r"\*\*Plan:\*\*\s*(\S+)", text, _re.I)
+                m = _re.search(r"\*\*Plan:\*\*\s*(\S+)", text, _re.IGNORECASE)
                 if m:
                     tok = m.group(1).strip().strip("`")
                     low = tok.lower()

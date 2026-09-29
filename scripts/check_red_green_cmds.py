@@ -17,15 +17,15 @@ from pathlib import Path
 
 NA_RE = re.compile(
     r"TDD\s*N/?A|docs-only.*TDD|TDD.*docs-only|prose-only",
-    re.I,
+    re.IGNORECASE,
 )
 RED_RE = re.compile(
     r"red_cmd\s*[:=]\s*`([^`]+)`|red_cmd\s*[:=]\s*([^\n]+)",
-    re.I,
+    re.IGNORECASE,
 )
 GREEN_RE = re.compile(
     r"green_cmd\s*[:=]\s*`([^`]+)`|green_cmd\s*[:=]\s*([^\n]+)",
-    re.I,
+    re.IGNORECASE,
 )
 
 
@@ -70,7 +70,7 @@ def check(repo: Path, pr_draft: Path) -> tuple[bool, list[str]]:
     green = _extract(GREEN_RE, text)
     if not red and not green:
         # hard_gates still requires red-proof wording; we only execute when cmds present
-        if re.search(r"red.?proof|TDD", text, re.I):
+        if re.search(r"red.?proof|TDD", text, re.IGNORECASE):
             return True, ["ok: red-proof narrative without executable cmds"]
         return False, ["need red_cmd/green_cmd or TDD N/A"]
 

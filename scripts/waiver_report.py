@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
@@ -23,7 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     if not log.is_file():
         print(f"no waiver log at {log}")
         return 0
-    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, args.days))
+    cutoff = datetime.now(UTC) - timedelta(days=max(1, args.days))
     by_type: Counter[str] = Counter()
     by_product: Counter[str] = Counter()
     n = 0
@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError:
             when = cutoff  # include unparseable in window
         if when.tzinfo is None:
-            when = when.replace(tzinfo=timezone.utc)
+            when = when.replace(tzinfo=UTC)
         if when < cutoff:
             continue
         n += 1

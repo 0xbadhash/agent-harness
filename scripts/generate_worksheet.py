@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -82,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"⏭️  SKIP exists: {path}")
         return 0
 
-    created = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     body = TEMPLATE.format(
         title=args.title.strip(),
         task_id=task_id,
