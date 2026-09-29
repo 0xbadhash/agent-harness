@@ -23,7 +23,7 @@ TAGS = (
     "rce",
     "idor",
 )
-THREAT_RE = re.compile(r"##\s+Threat notes\b(.*?)(?=\n## |\Z)", re.I | re.S)
+THREAT_RE = re.compile(r"##\s+Threat notes\b(.*?)(?=\n## |\Z)", re.IGNORECASE | re.DOTALL)
 
 
 def check(draft_text: str, *, runtime: bool) -> tuple[bool, list[str]]:

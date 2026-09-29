@@ -11,12 +11,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 OPEN_RE = re.compile(
     r"^### \[OPEN\][^\n]*\n(.*?)(?=^### |\Z)",
-    re.M | re.S,
+    re.MULTILINE | re.DOTALL,
 )
 
 
@@ -42,7 +42,7 @@ def _open_items(roadmap: Path) -> list[str]:
         return []
     text = roadmap.read_text(encoding="utf-8", errors="replace")
     items: list[str] = []
-    for m in re.finditer(r"^### \[OPEN\]\s*(.+)$", text, re.M):
+    for m in re.finditer(r"^### \[OPEN\]\s*(.+)$", text, re.MULTILINE):
         items.append(m.group(1).strip())
     return items
 
@@ -85,7 +85,7 @@ def write_board(root: Path, out: Path | None = None) -> Path:
     phase = _phase(root)
     opens = _open_items(roadmap)
     night = _night_summary(root)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
     lines = [
         "# REMAINING",

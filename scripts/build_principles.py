@@ -5,9 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,7 +67,7 @@ def main() -> int:
 
     files = _collect(args.mode)
     parts = [f"# 🧬 ALL PRINCIPLES — mode={args.mode}\n",
-             f"_Generated {datetime.now(timezone.utc).isoformat()}_\n\n"]
+             f"_Generated {datetime.now(UTC).isoformat()}_\n\n"]
     total_bytes = 0
     for p in files:
         try:
@@ -85,7 +84,7 @@ def main() -> int:
     AUDIT.parent.mkdir(parents=True, exist_ok=True)
     with AUDIT.open("a", encoding="utf-8") as f:
         f.write(json.dumps({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "mode": args.mode, "bytes": total_bytes, "est_tokens": est_tokens,
         }) + "\n")
 

@@ -19,7 +19,7 @@ import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parents[1]
@@ -73,7 +73,7 @@ def _open_roadmap(root: Path) -> list[str]:
         for m in re.finditer(
             r"^### \[OPEN\]\s*(.+)$",
             roadmap.read_text(encoding="utf-8", errors="replace"),
-            re.M,
+            re.MULTILINE,
         )
     ]
 
@@ -197,7 +197,7 @@ def build(root: Path) -> SessionContext:
         hints.append("Local ahead of origin — git push")
 
     return SessionContext(
-        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         root=str(root),
         phase=phase,
         score=score_f,

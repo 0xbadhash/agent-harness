@@ -15,7 +15,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parents[1]
@@ -23,12 +23,12 @@ DEFAULT_PRODUCTS = HARNESS / "config" / "night_shift_products.yaml"
 # Matches both `**Overall:** **PASS**` and prose `Overall: **PASS**.`
 OVERALL_RE = re.compile(
     r"\**Overall:\**\s*\**\s*(PASS|FAIL)\b",
-    re.I,
+    re.IGNORECASE,
 )
 FAIL_GATE = re.compile(
     r"^\s*-\s*\[\s*\]\s*`([a-zA-Z0-9_]+)`|"  # unchecked gate checkbox
     r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌",
-    re.M,
+    re.MULTILINE,
 )
 
 @dataclass
@@ -76,7 +76,7 @@ def _read_overall(root: Path) -> tuple[str, list[str]]:
         else:
             gates.append(g)
     # Only treat explicit ❌ table fails as override; unchecked optional recs are not FAIL
-    table_fails = re.findall(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", text, re.M)
+    table_fails = re.findall(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", text, re.MULTILINE)
     if overall == "PASS" and table_fails:
         overall = "FAIL"
         gates = table_fails
@@ -136,7 +136,7 @@ def evaluate(
 
 def write_artifact(results: list[ProductResult], out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     any_fail = any(r.overall != "PASS" for r in results)
     lines = [
         "# MORNING_TRIAGE",

@@ -23,8 +23,8 @@ def summarize(report_dir: Path) -> str:
     for log in logs:
         text = log.read_text(encoding="utf-8", errors="replace")
         # ZAP baseline often prints WARN-NEW / FAIL-NEW counts
-        highs = len(re.findall(r"FAIL-NEW|High\b", text, re.I))
-        meds = len(re.findall(r"WARN-NEW|Medium\b", text, re.I))
+        highs = len(re.findall(r"FAIL-NEW|High\b", text, re.IGNORECASE))
+        meds = len(re.findall(r"WARN-NEW|Medium\b", text, re.IGNORECASE))
         html = log.with_suffix(".html")
         # name pattern zap-https___host.html
         hsize = html.stat().st_size if html.is_file() else 0

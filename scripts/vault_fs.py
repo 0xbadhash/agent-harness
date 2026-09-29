@@ -162,7 +162,7 @@ def _load_label_extras() -> dict[str, set[str]]:
             text,
         )
         if block:
-            extras = set(re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", block.group(1), re.M))
+            extras = set(re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", block.group(1), re.MULTILINE))
         out[label] = extras | out.get(label, set())
     return out
 

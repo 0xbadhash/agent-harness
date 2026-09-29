@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from check_night_shift_product_paths import (  # noqa: E402
+from check_night_shift_product_paths import (
     check_products,
     is_non_portable_abs_home,
     parse_products_yaml,

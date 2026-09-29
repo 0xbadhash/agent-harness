@@ -6,30 +6,30 @@ Shared by night_shift_readiness (prepend) and rotate_night_shift_logs (compact).
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 READINESS_HEADER_RE = re.compile(
     r"^# Night shift readiness — (\S+) — (.+)$",
-    re.M,
+    re.MULTILINE,
 )
 OVERALL_RE = re.compile(
     r"^\*\*Overall:\*\*\s*(PASS|FAIL)\b",
-    re.M,
+    re.MULTILINE,
 )
 TIMELINE_ROW_RE = re.compile(
     r"^\|\s*(.+?)\s*\|\s*(PASS|FAIL)\s*\|\s*$",
-    re.M,
+    re.MULTILINE,
 )
 
 
 def format_when_dual(when: datetime | None = None) -> str:
     """UTC + Asia/Hong_Kong wall times for operators."""
-    when = when or datetime.now(timezone.utc)
+    when = when or datetime.now(UTC)
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
     else:
-        when = when.astimezone(timezone.utc)
+        when = when.astimezone(UTC)
     utc_s = when.strftime("%Y-%m-%d %H:%M UTC")
     try:
         from zoneinfo import ZoneInfo
@@ -44,7 +44,7 @@ def format_when_dual(when: datetime | None = None) -> str:
 
 def parse_reports(text: str) -> list[dict[str, str]]:
     """Split log into readiness report chunks (document order = newest-first when well-formed)."""
-    parts = re.split(r"(?=^# Night shift readiness — )", text, flags=re.M)
+    parts = re.split(r"(?=^# Night shift readiness — )", text, flags=re.MULTILINE)
     out: list[dict[str, str]] = []
     for part in parts:
         part = part.strip()
@@ -69,7 +69,7 @@ def parse_timeline_rows(text: str) -> list[tuple[str, str]]:
     m = re.search(
         r"## Timeline\s*\n(.*?)(?:\n---\s*\n|\n# Night shift readiness)",
         text,
-        re.S,
+        re.DOTALL,
     )
     if not m:
         return []
@@ -111,17 +111,17 @@ _ACT_MAP_BLOCK_RE = re.compile(
     r"(?:^|\n)##\s+When tests run[^\n]*\n"
     r"(?:.*?\n)*?"
     r"(?=^##\s+Gates\b|^##\s+(?!When)|^# Night shift readiness|\Z)",
-    re.M | re.S,
+    re.MULTILINE | re.DOTALL,
 )
 _COMPACT_SCHEDULE_RE = re.compile(
     r"(?:^|\n)_SoT: `scripts/test_trigger_schedule\.py`[^\n]*\n"
     r"(?:\|[^\n]*\n)+"
     r"(?:###[^\n]*\n(?:[-*][^\n]*\n|\n)*)*",
-    re.M,
+    re.MULTILINE,
 )
 _SCHEDULE_SOT_DUP_RE = re.compile(
     r"(?:^|\n)_Schedule SoT:[^\n]*\n",
-    re.M,
+    re.MULTILINE,
 )
 
 

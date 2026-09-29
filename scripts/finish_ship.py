@@ -18,7 +18,7 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
@@ -202,7 +202,7 @@ def evaluate(
 def write_artifact(root: Path, proof: PushProof) -> Path:
     out = root / ".agents" / "artifacts" / "PUSH_PROOF.md"
     out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# PUSH_PROOF",
         "",

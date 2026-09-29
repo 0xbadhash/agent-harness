@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -12,7 +12,7 @@ def build_pack(root: Path) -> str:
     lines = [
         "# CONTEXT_PACK",
         "",
-        f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
+        f"**Generated:** {datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')}",
         f"**Root:** `{root}`",
         "",
         "## Constitution / constraints",

@@ -21,7 +21,7 @@ def main() -> int:
             text = p.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        if re.search(r"^from unittest\.mock import MagicMock", text, re.M):
+        if re.search(r"^from unittest\.mock import MagicMock", text, re.MULTILINE):
             print(f"❌ {p.relative_to(ROOT)}: MagicMock import in non-test code")
             fails += 1
 

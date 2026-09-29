@@ -26,7 +26,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 # High-signal only (avoid password-like false positives). HSQ-3 P0 G5: expand.
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("aws_access_key", re.compile(r"AKIA[0-9A-Z]{16}")),

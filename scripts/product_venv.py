@@ -16,18 +16,18 @@ Shared by ``product_smoke``, ``night_shift_readiness``, and
 from __future__ import annotations
 
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Optional, Sequence
 
 
-def product_venv_python(product_root: Path) -> Optional[Path]:
+def product_venv_python(product_root: Path) -> Path | None:
     """Return path to product venv interpreter, or None if missing."""
     root = product_root.expanduser()
     if not root.is_absolute():
         root = root.absolute()
 
     if sys.platform == "win32":
-        candidates: List[Path] = [
+        candidates: list[Path] = [
             Path(".venv") / "Scripts" / "python.exe",
             Path("venv") / "Scripts" / "python.exe",
             Path(".venv") / "bin" / "python.exe",
@@ -56,7 +56,7 @@ def product_venv_python(product_root: Path) -> Optional[Path]:
     return None
 
 
-def rewrite_smoke_python(cmd: Sequence[str], product_root: Path) -> List[str]:
+def rewrite_smoke_python(cmd: Sequence[str], product_root: Path) -> list[str]:
     """Replace bare python/python3/py with product venv interpreter when present."""
     if not cmd or cmd[0] not in ("python", "python3", "py"):
         return list(cmd)

@@ -14,14 +14,14 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.I)
+SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
 WAIVER_RE = re.compile(
     r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.I,
+    re.IGNORECASE,
 )
-AC_RE = re.compile(r"\bAC-(\d+)\b", re.I)
-TRACE_HEADER_RE = re.compile(r"^##\s+Traceability\b", re.I | re.M)
-NA_RE = re.compile(r"AC-(\d+)\s*[:|].*\bN/?A\b", re.I)
+AC_RE = re.compile(r"\bAC-(\d+)\b", re.IGNORECASE)
+TRACE_HEADER_RE = re.compile(r"^##\s+Traceability\b", re.IGNORECASE | re.MULTILINE)
+NA_RE = re.compile(r"AC-(\d+)\s*[:|].*\bN/?A\b", re.IGNORECASE)
 
 
 def _acs_from_text(text: str) -> set[int]:
@@ -29,7 +29,7 @@ def _acs_from_text(text: str) -> set[int]:
 
 
 def _trace_body(draft: str) -> str:
-    m = re.search(r"##\s+Traceability\b(.*?)(?=\n## |\Z)", draft, re.I | re.S)
+    m = re.search(r"##\s+Traceability\b(.*?)(?=\n## |\Z)", draft, re.IGNORECASE | re.DOTALL)
     return m.group(1) if m else ""
 
 
@@ -86,15 +86,15 @@ def check(root: Path, pr_draft: Path) -> tuple[bool, list[str]]:
     missing: list[str] = []
     for n in sorted(acs):
         ac = f"AC-{n}"
-        in_trace = bool(re.search(rf"\bAC-{n}\b", trace, re.I))
-        na = bool(NA_RE.search(trace) and re.search(rf"AC-{n}", trace, re.I) and re.search(
-            rf"AC-{n}[^\n]*N/?A", trace, re.I
+        in_trace = bool(re.search(rf"\bAC-{n}\b", trace, re.IGNORECASE))
+        na = bool(NA_RE.search(trace) and re.search(rf"AC-{n}", trace, re.IGNORECASE) and re.search(
+            rf"AC-{n}[^\n]*N/?A", trace, re.IGNORECASE
         ))
         # test reference: AC-n string, test_ac_n, test_acn, mark ac-n
         in_test = bool(
-            re.search(rf"\bAC-{n}\b", tests, re.I)
-            or re.search(rf"\btest_ac_?{n}\b", tests, re.I)
-            or re.search(rf"ac[_-]?{n}\b", tests, re.I)
+            re.search(rf"\bAC-{n}\b", tests, re.IGNORECASE)
+            or re.search(rf"\btest_ac_?{n}\b", tests, re.IGNORECASE)
+            or re.search(rf"ac[_-]?{n}\b", tests, re.IGNORECASE)
         )
         if na:
             continue

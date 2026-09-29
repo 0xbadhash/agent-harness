@@ -41,12 +41,12 @@ def load_vault_config(product_root: Path | None = None) -> dict:
         return cfg
     text = plugin.read_text(encoding="utf-8")
     # enabled
-    m = re.search(r"^\s*enabled:\s*(true|false|yes|no|1|0)\s*$", text, re.M | re.I)
+    m = re.search(r"^\s*enabled:\s*(true|false|yes|no|1|0)\s*$", text, re.MULTILINE | re.IGNORECASE)
     if m:
         cfg["enabled"] = m.group(1).lower() in ("true", "yes", "1")
     # simple keys
     for key in ("root_env", "default_root", "project_label", "dev_log_rel", "product_id"):
-        m = re.search(rf"^\s*{key}:\s*(.+)$", text, re.M)
+        m = re.search(rf"^\s*{key}:\s*(.+)$", text, re.MULTILINE)
         if m:
             val = m.group(1).strip().strip("\"'")
             # strip inline comments
@@ -66,7 +66,7 @@ def load_vault_config(product_root: Path | None = None) -> dict:
     if block:
         cfg["extra_dirs"] = [
             e.strip().strip("\"'")
-            for e in re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", block.group(1), re.M)
+            for e in re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", block.group(1), re.MULTILINE)
             if e.strip()
         ]
     # mirror_docs list under vault:

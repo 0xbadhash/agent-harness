@@ -15,14 +15,14 @@ import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 HARNESS = Path(__file__).resolve().parents[1]
 DEFAULT_PRODUCTS = HARNESS / "config" / "night_shift_products.yaml"
-FAIL_GATE = re.compile(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", re.M)
-OVERALL_FAIL = re.compile(r"Overall:\s*\**\s*FAIL\b", re.I)
-UNCHECKED_GATE = re.compile(r"^\s*-\s*\[\s*\]\s*`([a-zA-Z0-9_]+)`", re.M)
+FAIL_GATE = re.compile(r"^\|\s*`?([a-zA-Z0-9_]+)`?\s*\|\s*❌", re.MULTILINE)
+OVERALL_FAIL = re.compile(r"Overall:\s*\**\s*FAIL\b", re.IGNORECASE)
+UNCHECKED_GATE = re.compile(r"^\s*-\s*\[\s*\]\s*`([a-zA-Z0-9_]+)`", re.MULTILINE)
 
 
 @dataclass
@@ -100,7 +100,7 @@ def evaluate(
 
 def write_artifact(promos: list[Promotion], out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# NIGHT_FAIL_PROMOTIONS",
         "",

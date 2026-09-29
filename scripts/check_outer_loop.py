@@ -27,18 +27,18 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.I)
-PLAN_RE = re.compile(r"\*\*Plan:\*\*\s*(\S+)", re.I)
-TICKETS_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.I)
+SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
+PLAN_RE = re.compile(r"\*\*Plan:\*\*\s*(\S+)", re.IGNORECASE)
+TICKETS_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.IGNORECASE)
 WAIVER_RE = re.compile(
     r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.I,
+    re.IGNORECASE,
 )
 IMPL_SEQ_RE = re.compile(
     r"^##\s+Implementation sequence\b(.*?)(?=^##\s|\Z)",
-    re.I | re.M | re.S,
+    re.IGNORECASE | re.MULTILINE | re.DOTALL,
 )
-STEP_RE = re.compile(r"^\s*\d+\.\s+\S", re.M)
+STEP_RE = re.compile(r"^\s*\d+\.\s+\S", re.MULTILINE)
 PLAN_REVIEW_MARKER = "PLAN-REVIEW"
 PLAN_REVIEW_MIN = 160
 
@@ -89,7 +89,7 @@ def _plan_substance(plan_text: str) -> bool:
     if len(plan_text.strip()) < 200:
         return False
     return bool(
-        re.search(r"^##\s+(Approach|Architecture|Implementation)", plan_text, re.I | re.M)
+        re.search(r"^##\s+(Approach|Architecture|Implementation)", plan_text, re.IGNORECASE | re.MULTILINE)
     )
 
 
