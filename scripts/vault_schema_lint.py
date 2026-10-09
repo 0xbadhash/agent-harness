@@ -35,6 +35,8 @@ ROOT_ALLOW = frozenset(
         "_attachments",
         # stub pointers left by hygiene (not content dumps)
         "QA",
+        # CEO 2026-10-08 agent memory model (vault/agent-memory/)
+        "agent-memory",
     }
 )
 
