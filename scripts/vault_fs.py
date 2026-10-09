@@ -40,6 +40,7 @@ ROOT_ALLOW = frozenset(
         "_templates",
         "_attachments",
         "QA",
+        "agent-memory",
     }
 )
 

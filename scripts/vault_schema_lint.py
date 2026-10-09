@@ -103,10 +103,22 @@ def load_plugin_vault(product_root: Path) -> dict[str, Any]:
     }
 
 
+def _products_root() -> Path:
+    """Parent of product repos when a ~/ path does not expand to a directory.
+
+    VAULT_PRODUCTS_ROOT overrides. Default is Path.home() so no user name is hardcoded.
+    """
+    raw = (os.environ.get("VAULT_PRODUCTS_ROOT") or "").strip()
+    if raw:
+        return Path(raw).expanduser()
+    return Path.home()
+
+
 def load_night_shift_products(path: Path) -> dict[str, Path]:
     if not path.is_file():
         return {}
     out: dict[str, Path] = {}
+    root = _products_root()
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or ":" not in line:
@@ -115,6 +127,10 @@ def load_night_shift_products(path: Path) -> dict[str, Path]:
         pid = pid.strip()
         proot = proot.strip().strip("\"'")
         p = Path(proot).expanduser()
+        if not p.is_dir() and proot.startswith("~/"):
+            alt = root / proot[2:]
+            if alt.is_dir():
+                p = alt
         if p.is_dir():
             out[pid] = p
     return out
@@ -151,11 +167,13 @@ def main() -> int:
         return 2
 
     home = Path.home()
+    default_products = home / "agent-harness" / "config" / "night_shift_products.yaml"
+    if not default_products.is_file():
+        alt_products = _products_root() / "agent-harness" / "config" / "night_shift_products.yaml"
+        if alt_products.is_file():
+            default_products = alt_products
     products_file = args.products_file or Path(
-        os.environ.get(
-            "NIGHT_SHIFT_PRODUCTS_FILE",
-            str(home / "agent-harness" / "config" / "night_shift_products.yaml"),
-        )
+        os.environ.get("NIGHT_SHIFT_PRODUCTS_FILE", str(default_products))
     )
     products = load_night_shift_products(products_file)
 
