@@ -1,0 +1,21 @@
+{
+  "judge": "rubric",
+  "llm_judge": false,
+  "metrics": [
+    "outcome_correctness",
+    "tool_selection",
+    "tool_execution",
+    "logical_consistency",
+    "groundedness",
+    "policy_adherence"
+  ],
+  "suggestions": {
+    "policy_adherence": "Change the plan step so the work is built inside the live page before any preview proof.",
+    "logical_consistency": "Drop the plan step that contradicts the expected outcome and redo that step only.",
+    "outcome_correctness": "Re-score only the failed half of the outcome; do not reopen the passing half.",
+    "tool_selection": "Swap the tool that cannot observe the expected surface.",
+    "tool_execution": "Rerun the failed tool call and keep its redacted result in the trace.",
+    "groundedness": "Attach the scorecard path to the action that lacks evidence.",
+    "none": "No change. The trace matches the rubric."
+  }
+}
