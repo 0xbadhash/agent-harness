@@ -17,7 +17,7 @@ METRICS = (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-RUBRIC = ROOT / ".agents" / "skills" / "gpa_eval" / "references" / "rubric.json"
+RUBRIC = ROOT / "skills" / "gpa_eval" / "references" / "rubric.json"
 
 
 def _clamp(value: float) -> float:

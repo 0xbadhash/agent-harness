@@ -10,7 +10,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from gpa_eval import METRICS, score_trace  # noqa: E402
 
 RUBRIC = json.loads(
-    (ROOT / ".agents/skills/gpa_eval/references/rubric.json").read_text(encoding="utf-8")
+    (ROOT / "skills/gpa_eval/references/rubric.json").read_text(encoding="utf-8")
 )
 
 
