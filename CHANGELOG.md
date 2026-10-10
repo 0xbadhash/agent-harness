@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.49 — 2026-10-10
+
+### feat(eval): GPA trace fragment and deterministic gpa_eval
+
+- Add `gpa_trace` and `gpa_eval` skills. Six rubric scores, one localization, one suggestion.
+- No LLM judge.
+
 ## v1.4.48 — 2026-09-26
 
 ### fix(night): isolate _venv_python symlink test from NIGHT_SHIFT_PRODUCT_PYTHON
