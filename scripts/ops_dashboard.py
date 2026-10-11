@@ -31,7 +31,7 @@ import sys
 import tempfile
 import grp
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -663,79 +663,109 @@ def collect_waivers(harness: Path) -> tuple[list[Item], list[Item]]:
     return well, att
 
 
+def _restic_slot(now: datetime) -> tuple[datetime, bool]:
+    """Night timer is 19:40 UTC, which is 03:40 HKT the next calendar day.
+
+    Before today's 19:40 UTC, grade yesterday's slot. After it, grade today's
+    slot and keep DID-NOT-RUN only while that fire has not finished.
+    """
+    slot = now.astimezone(UTC).replace(hour=19, minute=40, second=0, microsecond=0)
+    if now < slot:
+        return slot - timedelta(days=1), False
+    return slot, now < slot + timedelta(hours=2)
+
+
 def collect_vault_restic(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]]:
     """Daily vault-restic-night + rclone pcloud:vault-restic. Does not run a backup."""
     del vault
     well: list[Item] = []
     att: list[Item] = []
     fail: list[Item] = []
-    today = datetime.now(HKT).strftime("%Y-%m-%d")
-    log = Path(f"/var/log/vault-restic-night/cleanup-{today}.log")
-    night = "DID-NOT-RUN"
+    now = datetime.now(UTC)
+    expected, slot_open = _restic_slot(now)
+    day = expected.strftime("%Y-%m-%d")
+    log = f"/var/log/vault-restic-night/cleanup-{day}.log"
+    log_mtime = ""
     try:
-        log_hit = log.is_file()
-    except OSError:
-        log_hit = False
-    if log_hit:
-        night = "PASS"
-    else:
-        try:
-            proc = subprocess.run(
-                [
-                    "journalctl",
-                    "-u",
-                    "vault-restic-night.service",
-                    "--since",
-                    f"{today} 00:00:00",
-                    "--no-pager",
-                    "-o",
-                    "cat",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=8,
-            )
-            text = proc.stdout or ""
-            if "vault-restic-night: OK" in text:
-                night = "PASS"
-            elif text.strip() and (
-                "CLEANUP SKIPPED" in text or "BLOCKED" in text or "error" in text.lower()
-            ):
-                night = "FAIL"
-        except (OSError, subprocess.TimeoutExpired):
-            night = "DID-NOT-RUN"
-
-    rclone_state = "DID-NOT-RUN"
-    try:
-        proc = subprocess.run(
-            ["rclone", "listremotes"],
+        st = subprocess.run(
+            ["sudo", "-n", "stat", "-c", "%y", log],
             capture_output=True,
             text=True,
             timeout=8,
         )
-        remotes = [ln.strip() for ln in (proc.stdout or "").splitlines() if ln.strip()]
-        if proc.returncode != 0 or "pcloud:" not in remotes:
-            rclone_state = "FAIL"
-        elif night == "PASS":
-            rclone_state = "PASS"
+        if st.returncode == 0:
+            log_mtime = (st.stdout or "").strip().split(".", 1)[0]
+    except (OSError, subprocess.TimeoutExpired):
+        log_mtime = ""
+
+    night = "DID-NOT-RUN"
+    ok_at = ""
+    try:
+        proc = subprocess.run(
+            [
+                "journalctl",
+                "-u",
+                "vault-restic-night.service",
+                "--since",
+                expected.strftime("%Y-%m-%d %H:%M:%S"),
+                "--no-pager",
+                "-o",
+                "cat",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        text = proc.stdout or ""
+        for line in text.splitlines():
+            if "vault-restic-night: OK" in line:
+                night = "PASS"
+                ok_at = line.strip()
+        if night != "PASS":
+            if "CLEANUP SKIPPED" in text or "BLOCKED" in text or "error" in text.lower():
+                night = "FAIL"
+            elif log_mtime and not slot_open:
+                night = "PASS"
+            elif slot_open:
+                night = "DID-NOT-RUN"
+            else:
+                night = "FAIL"
+    except (OSError, subprocess.TimeoutExpired):
+        if log_mtime and not slot_open:
+            night = "PASS"
+        elif slot_open:
+            night = "DID-NOT-RUN"
         else:
-            rclone_state = "DID-NOT-RUN"
+            night = "FAIL"
+
+    rclone_state = "FAIL"
+    try:
+        proc = subprocess.run(
+            ["sudo", "-n", "rclone", "lsd", "pcloud:vault-restic"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode == 0:
+            rclone_state = "PASS"
     except (OSError, subprocess.TimeoutExpired):
         rclone_state = "FAIL"
 
+    when = ok_at or (f"log {log} @ {log_mtime} UTC" if log_mtime else f"slot {day} 19:40 UTC")
     summary = (
-        f"vault-restic-night **{night}**; rclone pcloud:vault-restic **{rclone_state}** ({today} HKT)"
+        f"vault-restic-night **{night}** ({when}; timer 19:40 UTC / 03:40 HKT next day); "
+        f"rclone pcloud:vault-restic **{rclone_state}** (root lsd)"
     )
     item = Item(
         "info",
         "vault-restic",
         summary,
-        action="journalctl -u vault-restic-night.service --since today",
+        action="journalctl -u vault-restic-night.service --since 'yesterday 19:40 UTC'",
     )
     if night == "FAIL" or rclone_state == "FAIL":
         item.severity = "fail"
         fail.append(item)
-    elif night == "DID-NOT-RUN" or rclone_state == "DID-NOT-RUN":
+    elif night == "DID-NOT-RUN":
         item.severity = "attention"
         att.append(item)
     else:
