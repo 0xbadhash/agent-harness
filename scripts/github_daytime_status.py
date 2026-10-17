@@ -26,12 +26,12 @@ DEFAULT_REPOS: dict[str, str] = {
     "agent-harness": "0xbadhash/agent-harness",
     "email-detach": "0xbadhash/email-detach",
     "second-brain": "0xbadhash/second-brain",
-    "catalyxt": "0xbadhash/catalyxt.ltd",
+    "catalyxt": "0xbadhash/catalyxt-website",
     "buzz": "0xbadhash/buzz",
-    "zk": "0xbadhash/zk",
-    "bip39": "0xbadhash/bip39",
+    "zk": "0xbadhash/zk-business-card",
+    "bip39": "0xbadhash/bip39lab",
     "watchlist": "0xbadhash/watchlist",
-    "substack": "0xbadhash/substack",
+    "substack": "0xbadhash/substack-push",
 }
 
 
