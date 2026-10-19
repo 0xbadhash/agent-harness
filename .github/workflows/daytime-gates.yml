@@ -26,7 +26,7 @@ jobs:
       - name: J3 hardcodes
         run: python scripts/check_hardcodes.py
       - name: J7 secrets
-        run: python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD || true
+        run: python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD
       - name: J12 Semgrep
         run: |
           pip install -q semgrep
@@ -42,6 +42,6 @@ jobs:
           python-version: "3.12"
       - name: Checklist when skill paths change
         run: |
-          python scripts/agent_eval_checklist.py --root . --skip-tests || true
+          python scripts/agent_eval_checklist.py --root . --skip-tests
       - name: Agent-config evals (stale refs / edit guard)
         run: python scripts/run_agent_config_evals.py --root .
