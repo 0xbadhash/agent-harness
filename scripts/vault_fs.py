@@ -266,7 +266,27 @@ def _try_chmod_group_write(path: Path) -> None:
         pass
 
 
+def _under_detected_vault(path: Path) -> bool:
+    """True only when the resolved path sits inside a detected vault (no escape)."""
+    if ".." in Path(path).parts:
+        return False
+    try:
+        resolved = Path(path).expanduser().resolve()
+    except OSError:
+        return False
+    root = detect_vault_root(resolved)
+    if root is None:
+        return False
+    try:
+        resolved.relative_to(root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
 def _sudo_tee(path: Path, content: str, user: str) -> bool:
+    if not _under_detected_vault(path):
+        return False
     try:
         proc = subprocess.run(
             ["sudo", "-n", "-u", user, "tee", str(path)],
@@ -375,6 +395,8 @@ def append_text(
     except OSError as exc:
         if getattr(exc, "errno", None) not in (13, 1) and not isinstance(exc, PermissionError):
             raise
+    if not _under_detected_vault(path):
+        raise PermissionError(remediation_hint(path))
     for user in VAULT_USER_CANDIDATES:
         try:
             proc = subprocess.run(

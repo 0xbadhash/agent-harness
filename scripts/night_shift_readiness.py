@@ -28,6 +28,7 @@ import os
 import re
 import subprocess
 import sys
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -203,14 +204,30 @@ def _load_plugin(root: Path | None = None) -> dict[str, Any]:
     return data
 
 
+def _safe_label(raw: str) -> str:
+    """Single path segment. Reject absolute paths and '..' (AH-1)."""
+    label = str(raw).strip()
+    if (
+        not label
+        or label in {".", ".."}
+        or "/" in label
+        or "\\" in label
+        or label.startswith(".")
+    ):
+        return "product"
+    return label
+
+
 def _vault_project_rel(plugin: dict[str, Any]) -> Path:
     vault = plugin.get("vault") or {}
-    label = (
-        vault.get("project_label")
-        or plugin.get("product_id")
-        or ROOT.name
+    label = _safe_label(
+        str(
+            vault.get("project_label")
+            or plugin.get("product_id")
+            or ROOT.name
+        )
     )
-    return Path("01-Projects") / str(label)
+    return Path("01-Projects") / label
 
 
 def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
@@ -455,10 +472,29 @@ def run_gates(
                         timeout=120,
                     )
                 )
-        for i, url in enumerate(live_urls):
+        allowed_hosts = set()
+        host = (ns.get("default_host") or "").strip()
+        if host:
+            allowed_hosts.add(urlparse(host if "://" in host else "https://" + host).hostname or "")
+        allowed_hosts.discard("")
+
+        def _curl_https(name: str, url: str) -> None:
+            parsed = urlparse(url)
+            if parsed.scheme != "https" or (parsed.hostname or "") not in allowed_hosts:
+                results.append(
+                    {
+                        "name": name,
+                        "cmd": ["curl", url],
+                        "exit": 1,
+                        "ok": False,
+                        "stdout_tail": "",
+                        "stderr_tail": "live URL refused (https + default_host only)",
+                    }
+                )
+                return
             results.append(
                 _run(
-                    f"live_http_{i}",
+                    name,
                     [
                         "curl",
                         "-sS",
@@ -466,6 +502,10 @@ def run_gates(
                         "/dev/null",
                         "-w",
                         "%{http_code}",
+                        "--proto",
+                        "=https",
+                        "--max-redirs",
+                        "0",
                         "--max-time",
                         "20",
                         url,
@@ -473,6 +513,9 @@ def run_gates(
                     timeout=30,
                 )
             )
+
+        for i, url in enumerate(live_urls):
+            _curl_https(f"live_http_{i}", url)
             last = results[-1]
             if last["ok"]:
                 code = (last.get("stdout_tail") or "").strip()
@@ -488,23 +531,7 @@ def run_gates(
         path = (ns.get("live_path") or "").strip()
         if base and path and not live_urls:
             url = base.rstrip("/") + "/" + path.lstrip("/")
-            results.append(
-                _run(
-                    "live_http",
-                    [
-                        "curl",
-                        "-sS",
-                        "-o",
-                        "/dev/null",
-                        "-w",
-                        "%{http_code}",
-                        "--max-time",
-                        "20",
-                        url,
-                    ],
-                    timeout=30,
-                )
-            )
+            _curl_https("live_http", url)
             last = results[-1]
             if last["ok"]:
                 code = (last.get("stdout_tail") or "").strip()

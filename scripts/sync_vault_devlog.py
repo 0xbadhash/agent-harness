@@ -28,35 +28,52 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VAULT = None
 
 
+def _safe_label(raw: str) -> str:
+    label = str(raw).strip().strip("\"'")
+    if (
+        not label
+        or label in {".", ".."}
+        or "/" in label
+        or "\\" in label
+        or label.startswith(".")
+    ):
+        return "product"
+    return label
+
+
 def _project_label() -> str:
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from vault_resolve import load_vault_config
 
-        return load_vault_config(ROOT).get("project_label") or "product"
+        return _safe_label(load_vault_config(ROOT).get("project_label") or "product")
     except Exception:
         plugin = ROOT / ".agents" / "product_plugin.yaml"
         if plugin.is_file():
             m = re.search(r"^\s*project_label:\s*(.+)$", plugin.read_text(), re.MULTILINE)
             if m:
-                return m.group(1).strip().strip("\"'")
+                return _safe_label(m.group(1))
             m = re.search(r"^\s*product_id:\s*(.+)$", plugin.read_text(), re.MULTILINE)
             if m:
-                return m.group(1).strip().strip("\"'")
+                return _safe_label(m.group(1))
         return "product"
 
 
 def _dev_log_rel() -> Path:
+    fallback = Path(f"01-Projects/{_project_label()}/dev-log.md")
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from vault_resolve import load_vault_config
 
         rel = (load_vault_config(ROOT).get("dev_log_rel") or "").strip()
         if rel:
-            return Path(rel)
+            p = Path(rel)
+            if p.is_absolute() or ".." in p.parts or not p.parts:
+                return fallback
+            return p
     except Exception:
         pass
-    return Path(f"01-Projects/{_project_label()}/dev-log.md")
+    return fallback
 
 
 DEV_LOG_REL = _dev_log_rel()
