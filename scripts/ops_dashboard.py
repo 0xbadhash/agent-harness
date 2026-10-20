@@ -686,6 +686,59 @@ def append_ops_snapshot(d: Dashboard, vault: Path | None) -> None:
 
 
 
+
+def collect_ceo_waits(vault: Path | None) -> list[Item]:
+    """CEO 2026-09-08: Waiting-on CEO rows from agent-tasks/CEO-WAITS.md (not desk scrape)."""
+    todos: list[Item] = []
+    if not vault:
+        return todos
+    path = vault / "agent-tasks" / "CEO-WAITS.md"
+    text = _read(path)
+    if not text:
+        return todos
+    for line in text.splitlines():
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        summary, link_path, action = cells[0], cells[1], cells[2]
+        if summary.lower() == "summary" or set(summary) <= set("- "):
+            continue
+        link = ""
+        if link_path and link_path != "—":
+            rel = link_path.rstrip("/")
+            candidate = vault / rel
+            if candidate.is_dir():
+                readme = candidate / "README.md"
+                if readme.is_file():
+                    link = _wiki_link(vault, str(readme.relative_to(vault)), rel)
+                else:
+                    mds = sorted(candidate.glob("*.md"))
+                    if mds:
+                        link = _wiki_link(vault, str(mds[0].relative_to(vault)), rel)
+                    else:
+                        link = f"`{link_path}`"
+            elif candidate.is_file():
+                link = _wiki_link(vault, rel, Path(rel).name)
+            else:
+                if (vault / f"{rel}.md").is_file():
+                    link = _wiki_link(vault, f"{rel}.md", Path(rel).name)
+                else:
+                    link = f"`{link_path}`"
+        todos.append(
+            Item(
+                "attention",
+                "ceo",
+                summary,
+                link=link,
+                action=action or "Waiting-on CEO",
+            )
+        )
+    return todos
+
+
 def build(vault: Path | None, quick: bool) -> Dashboard:
     now = datetime.now(UTC)
     hkt = datetime.now(HKT)
@@ -726,6 +779,8 @@ def build(vault: Path | None, quick: bool) -> Dashboard:
     w, a = collect_waivers(HARNESS)
     d.went_well.extend(w)
     d.attention.extend(a)
+
+    d.todos.extend(collect_ceo_waits(vault))
 
     # Night fail tickets as todos — only if that product is still failing
     fail_ids = set()
@@ -803,6 +858,8 @@ def render(d: Dashboard, vault: Path | None) -> str:
         "",
         "## Watchlist notes",
         "![[agent-tasks/WATCHLIST-NOTES]]",
+        "",
+        "Archive (history + Action/Request): [[agent-tasks/WATCHLIST-NOTES-ARCHIVE|WATCHLIST-NOTES-ARCHIVE]]",
         "",
         "## Scout",
         "![[agent-tasks/SCOUT]]",

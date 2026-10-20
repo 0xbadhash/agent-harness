@@ -27,7 +27,6 @@ DEFAULT_REPOS: dict[str, str] = {
     "email-detach": "0xbadhash/email-detach",
     "second-brain": "0xbadhash/second-brain",
     "catalyxt": "0xbadhash/catalyxt.ltd",
-    "buzz": "0xbadhash/buzz",
     "zk": "0xbadhash/zk",
     "bip39": "0xbadhash/bip39",
     "watchlist": "0xbadhash/watchlist",
