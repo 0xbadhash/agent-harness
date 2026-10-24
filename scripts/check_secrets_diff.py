@@ -98,7 +98,6 @@ def run_trufflehog(repo: Path, base: str, head: str) -> tuple[int, str]:
             f"--since-commit={base}",
             f"--branch={head}",
             "--fail",
-            "--only-verified",
         ],
         cwd=str(repo),
         capture_output=True,
@@ -169,18 +168,17 @@ def main(argv: list[str] | None = None) -> int:
     require_scanner = bool(args.require_scanner or args.strict or env_strict)
     rng = _range_spec(args.base, args.head)
 
-    # Prefer external scanners
+    saw_scanner = False
     for name, runner in (("gitleaks", run_gitleaks), ("trufflehog", run_trufflehog)):
         code, out = runner(repo, args.base, args.head)
         if code < 0:
             continue
-        if code == 0:
-            print(f"✅ {name}: clean ({rng})")
-            return 0
-        print(f"❌ {name}: findings\n{out[:4000]}", file=sys.stderr)
-        return 1  # external scanner findings always fail closed
-
-    if require_scanner:
+        saw_scanner = True
+        if code != 0:
+            print(f"❌ {name}: findings\n{out[:4000]}", file=sys.stderr)
+            return 1
+        break
+    if not saw_scanner and require_scanner:
         print(
             "❌ neither gitleaks nor trufflehog on PATH "
             "(install one or omit --strict / --require-scanner)",
@@ -188,14 +186,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    print("⚠️  no gitleaks/trufflehog — falling back to regex scan of added lines")
     findings = scan_added_lines_regex(repo, args.base, args.head)
     if findings:
         print("❌ regex secret scan findings:", file=sys.stderr)
-        for f in findings[:50]:
-            print(f"  {f}", file=sys.stderr)
-        return 1  # high-signal patterns always fail closed
-    print(f"✅ regex secret scan clean ({rng})")
+        for item in findings[:50]:
+            print(f"  {item}", file=sys.stderr)
+        return 1
+    print(f"✅ secret scan clean ({rng})")
     return 0
 
 

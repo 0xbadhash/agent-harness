@@ -392,21 +392,8 @@ def _write_full(path: Path, content: str) -> None:
 
         _vault_write(path, content)
         return
-    except ImportError:
-        pass
-    try:
-        path.write_text(content, encoding="utf-8")
-    except PermissionError:
-        proc = subprocess.run(
-            ["sudo", "-n", "-u", "secondbrain", "tee", str(path)],
-            input=content.encode("utf-8"),
-            capture_output=True,
-            check=False,
-        )
-        if proc.returncode != 0:
-            raise PermissionError(
-                f"cannot write {path}: {proc.stderr.decode(errors='replace')}".strip()
-            )
+    except ImportError as exc:
+        raise RuntimeError("vault_fs required; refusing sudo tee") from exc
 
 
 def prepend_entry(dev_log: Path, content: str, *, init_header: bool = True) -> None:
@@ -489,17 +476,7 @@ def entry_exists(dev_log: Path, marker: str) -> bool:
 
 
 def _append_as_secondbrain(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    proc = subprocess.run(
-        ["sudo", "-u", "secondbrain", "tee", "-a", str(path)],
-        input=content.encode("utf-8"),
-        capture_output=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        raise PermissionError(
-            f"cannot write {path}: {proc.stderr.decode(errors='replace')}".strip()
-        )
+    raise PermissionError(f"refusing sudo tee outside vault gateway: {path}")
 
 
 def append_entry(dev_log: Path, content: str, *, init_header: bool = True) -> None:

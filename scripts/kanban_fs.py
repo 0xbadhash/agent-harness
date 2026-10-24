@@ -52,24 +52,9 @@ def write_text(path: Path, text: str, *, user: str = "secondbrain") -> None:
     """Prefer vault_fs write-gateway; fall back to direct/sudo tee."""
     try:
         from vault_fs import write_text as _vault_write  # type: ignore
-    except ImportError:
-        _vault_write = None  # type: ignore
-    if _vault_write is not None:
-        _vault_write(path, text)
-        return
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        path.write_text(text, encoding="utf-8")
-    except OSError:
-        r = subprocess.run(
-            ["sudo", "-u", user, "tee", str(path)],
-            input=text.encode("utf-8"),
-            capture_output=True,
-            check=False,
-        )
-        if r.returncode != 0:
-            raise PermissionError(r.stderr.decode(errors="replace")) from None
+    except ImportError as exc:
+        raise RuntimeError("vault_fs required; refusing sudo tee") from exc
+    _vault_write(path, text)
 
 
 def append_line(path: Path, line: str, *, user: str = "secondbrain") -> None:
@@ -77,25 +62,9 @@ def append_line(path: Path, line: str, *, user: str = "secondbrain") -> None:
         line = line + "\n"
     try:
         from vault_fs import append_text as _vault_append  # type: ignore
-    except ImportError:
-        _vault_append = None  # type: ignore
-    if _vault_append is not None:
-        _vault_append(path, line)
-        return
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with path.open("a", encoding="utf-8") as f:
-            f.write(line)
-    except OSError:
-        r = subprocess.run(
-            ["sudo", "-u", user, "tee", "-a", str(path)],
-            input=line.encode("utf-8"),
-            capture_output=True,
-            check=False,
-        )
-        if r.returncode != 0:
-            raise PermissionError(r.stderr.decode(errors="replace")) from None
+    except ImportError as exc:
+        raise RuntimeError("vault_fs required; refusing sudo tee") from exc
+    _vault_append(path, line)
 
 
 def append_log(vault: Path, name: str, msg: str, *, also_print: bool = True) -> None:
