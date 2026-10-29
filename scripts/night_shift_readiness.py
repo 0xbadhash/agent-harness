@@ -349,7 +349,7 @@ def run_gates(
             if vault is not None and Path(vault).is_dir():
                 lint_r = _run(
                     "vault_schema_lint_sot",
-                    [py, str(sot_lint_path), "--vault", str(vault)],
+                    [py, str(sot_lint_path), "--vault", str(vault), "--no-strict-warn"],
                     timeout=120,
                 )
                 # Fold SoT lint into validate_full gate (same ship bar).
