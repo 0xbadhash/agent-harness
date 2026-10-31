@@ -179,10 +179,23 @@ def check_write_allowed(
     Non-vault paths are always allowed (product repo files, /tmp, etc.).
     """
     path = Path(path).expanduser()
+    given = path if path.is_absolute() else (Path.cwd() / path)
     try:
-        resolved = path.resolve()
+        parent_real = given.parent.resolve()
     except OSError:
-        resolved = path.absolute()
+        parent_real = given.parent
+    try:
+        resolved = given.resolve()
+    except OSError:
+        resolved = given.absolute()
+    anchor = detect_vault_root(parent_real, vault_root=vault_root)
+    if anchor is not None:
+        try:
+            resolved.relative_to(Path(anchor).resolve())
+        except ValueError as exc:
+            raise VaultWriteDenied(
+                f"symlink escapes vault: {given} -> {resolved}"
+            ) from exc
 
     root = detect_vault_root(resolved, vault_root=vault_root)
     if root is None:
