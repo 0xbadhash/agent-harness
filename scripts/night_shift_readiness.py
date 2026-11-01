@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 from urllib.parse import urlparse
@@ -61,30 +62,35 @@ def _run(
     env: dict | None = None,
 ) -> dict[str, Any]:
     try:
-        r = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=str(cwd or ROOT),
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
             env=env or os.environ.copy(),
+            start_new_session=True,
         )
+        try:
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.communicate()
+            return {
+                "name": name,
+                "cmd": cmd,
+                "exit": 124,
+                "ok": False,
+                "stdout_tail": "",
+                "stderr_tail": f"timeout after {timeout}s",
+            }
         return {
             "name": name,
             "cmd": cmd,
-            "exit": r.returncode,
-            "ok": r.returncode == 0,
-            "stdout_tail": (r.stdout or "")[-1500:],
-            "stderr_tail": (r.stderr or "")[-800:],
-        }
-    except subprocess.TimeoutExpired:
-        return {
-            "name": name,
-            "cmd": cmd,
-            "exit": 124,
-            "ok": False,
-            "stdout_tail": "",
-            "stderr_tail": f"timeout after {timeout}s",
+            "exit": proc.returncode,
+            "ok": proc.returncode == 0,
+            "stdout_tail": (out or "")[-1500:],
+            "stderr_tail": (err or "")[-800:],
         }
     except FileNotFoundError as exc:
         return {

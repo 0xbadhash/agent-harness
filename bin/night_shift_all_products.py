@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -73,6 +74,23 @@ HARNESS_ROOT = Path(__file__).resolve().parent.parent
 # Prefer env; fall back next to harness sibling dirs under $HOME (no /home/<user> literals).
 _HOME = Path.home()
 DEFAULT_VAULT = Path(os.environ["PRODUCT_VAULT_ROOT"]) if os.environ.get("PRODUCT_VAULT_ROOT") else Path("")
+CANONICAL_VAULT = Path("/opt/second-brain/vault")
+
+
+def resolve_night_vault(vault: Path | None) -> tuple[Path | None, str]:
+    """Return (vault, "") or (None, reason). Never write into the harness checkout."""
+    raw = "" if vault is None else str(vault).strip()
+    chosen = CANONICAL_VAULT if raw in ("", ".") else Path(raw)
+    resolved = chosen.expanduser().resolve()
+    harness = HARNESS_ROOT.resolve()
+    if resolved == harness or harness in resolved.parents:
+        return None, (
+            f"REFUSING: vault {resolved} is inside the harness checkout {harness}. "
+            "Set PRODUCT_VAULT_ROOT=/opt/second-brain/vault"
+        )
+    if not resolved.is_dir():
+        return None, f"REFUSING: vault {resolved} is not a directory"
+    return resolved, ""
 DEFAULT_PRODUCTS = [
     ("watchlist", _HOME / "watchlist"),
     ("email-detach", _HOME / "email-detach"),
@@ -116,6 +134,13 @@ PYTHON_POLICIES = ("venv", "harness")
 EXIT_INTERPRETER_MISSING = 3
 EXIT_PORT_LOCK_TIMEOUT = 125
 PORT_LOCK_TIMEOUT_S = int(os.environ.get("NIGHT_SHIFT_PORT_LOCK_TIMEOUT", "5400"))
+# jobs=10 on 2026-11-01 left nine products past this wall (exit 124) while CPU
+# stayed ~10 min. Default workers stay at 2 so the timer unit, which passes no
+# --jobs, does not stampede. Override with NIGHT_SHIFT_JOBS or --jobs.
+DEFAULT_JOBS = int(os.environ.get("NIGHT_SHIFT_JOBS", "2"))
+# 3600 was shorter than validate_full + product_smoke + coverage on this host
+# (2026-11-01 agent-harness alone still exit 124). 7200 covers that sum.
+PRODUCT_TIMEOUT_S = int(os.environ.get("NIGHT_SHIFT_PRODUCT_TIMEOUT", "7200"))
 
 
 def _load_runtime(path: Path | None = None) -> dict[str, dict[str, Any]]:
@@ -537,26 +562,37 @@ def run_one(
             base_row["lock_wait_s"] = round(lk["wait_s"], 1)
             base_row["lock_waited_on"] = lk["waited_on"]
             t_run = time.perf_counter()
-            r = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
                 cwd=str(cwd),
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=3600,
                 env=env,
+                start_new_session=True,
             )
+            try:
+                stdout, stderr = proc.communicate(timeout=PRODUCT_TIMEOUT_S)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+                proc.communicate()
+                base_row["run_s"] = round(time.perf_counter() - t_run, 1)
+                return {
+                    **base_row,
+                    "exit": 124,
+                    "ok": False,
+                    "tail": f"timeout {PRODUCT_TIMEOUT_S}s",
+                }
             base_row["run_s"] = round(time.perf_counter() - t_run, 1)
-        out = (r.stdout or "") + (r.stderr or "")
+        out = (stdout or "") + (stderr or "")
         return {
             **base_row,
-            "exit": r.returncode,
-            "ok": r.returncode == 0,
+            "exit": proc.returncode,
+            "ok": proc.returncode == 0,
             "tail": out[-2000:],
         }
     except TimeoutError as exc:
         return {**base_row, "exit": EXIT_PORT_LOCK_TIMEOUT, "ok": False, "tail": str(exc)}
-    except subprocess.TimeoutExpired:
-        return {**base_row, "exit": 124, "ok": False, "tail": "timeout 3600s"}
     except Exception as exc:
         return {**base_row, "exit": 1, "ok": False, "tail": str(exc)}
 
@@ -734,6 +770,11 @@ def main() -> int:
         help="Parallel product workers (default: min(product count, 10); 1 = sequential)",
     )
     args = ap.parse_args()
+    vault_ok, vault_err = resolve_night_vault(args.vault)
+    if vault_ok is None:
+        print(vault_err, file=sys.stderr)
+        return 2
+    args.vault = vault_ok
 
     products = _load_products(args.products_file)
     if args.only:
@@ -763,7 +804,7 @@ def main() -> int:
 
     when = datetime.now(UTC)
     n_prod = len(products)
-    jobs = args.jobs if args.jobs > 0 else min(n_prod, 10)
+    jobs = args.jobs if args.jobs > 0 else min(n_prod, DEFAULT_JOBS)
     jobs = max(1, min(jobs, n_prod or 1))
     print(
         f"night_shift_all: {n_prod} product(s) jobs={jobs} @ {when.isoformat()}"

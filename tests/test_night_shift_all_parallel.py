@@ -18,6 +18,24 @@ def _load():
     return mod
 
 
+class TestNightVaultGuard(unittest.TestCase):
+    def test_unset_defaults_outside_harness(self):
+        mod = _load()
+        vault, err = mod.resolve_night_vault(Path(""))
+        self.assertEqual(err, "")
+        self.assertIsNotNone(vault)
+        assert vault is not None
+        self.assertEqual(vault, Path("/opt/second-brain/vault").resolve())
+        self.assertFalse(str(vault).startswith(str(ROOT.resolve())))
+
+    def test_harness_checkout_is_refused(self):
+        mod = _load()
+        vault, err = mod.resolve_night_vault(ROOT)
+        self.assertIsNone(vault)
+        self.assertIn("REFUSING", err)
+        self.assertIn("harness checkout", err)
+
+
 class TestNightShiftAllParallel(unittest.TestCase):
     def test_product_list_includes_jasmine(self):
         """Config lists all products (incl jasmine); runtime load filters to existing dirs.
@@ -73,6 +91,11 @@ class TestNightShiftAllParallel(unittest.TestCase):
         )
         self.assertIn("ok", row)
         self.assertEqual(row["name"], "agent-harness")
+
+    def test_default_jobs_is_two_and_timeout_is_env(self):
+        mod = _load()
+        self.assertEqual(mod.DEFAULT_JOBS, 2)
+        self.assertEqual(mod.PRODUCT_TIMEOUT_S, 7200)
 
 
 if __name__ == "__main__":
