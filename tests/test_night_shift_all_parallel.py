@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import unittest
 from pathlib import Path
 
@@ -93,9 +94,26 @@ class TestNightShiftAllParallel(unittest.TestCase):
         self.assertEqual(row["name"], "agent-harness")
 
     def test_default_jobs_is_two_and_timeout_is_env(self):
-        mod = _load()
-        self.assertEqual(mod.DEFAULT_JOBS, 2)
-        self.assertEqual(mod.PRODUCT_TIMEOUT_S, 7200)
+        """Unset default is 2. The night unit exports NIGHT_SHIFT_JOBS=1, so
+        the assertion must not read that ambient value as the code default.
+        """
+        saved_jobs = os.environ.pop("NIGHT_SHIFT_JOBS", None)
+        saved_timeout = os.environ.pop("NIGHT_SHIFT_PRODUCT_TIMEOUT", None)
+        try:
+            mod = _load()
+            self.assertEqual(mod.DEFAULT_JOBS, 2)
+            self.assertEqual(mod.PRODUCT_TIMEOUT_S, 7200)
+            os.environ["NIGHT_SHIFT_JOBS"] = "1"
+            self.assertEqual(_load().DEFAULT_JOBS, 1)
+        finally:
+            if saved_jobs is None:
+                os.environ.pop("NIGHT_SHIFT_JOBS", None)
+            else:
+                os.environ["NIGHT_SHIFT_JOBS"] = saved_jobs
+            if saved_timeout is None:
+                os.environ.pop("NIGHT_SHIFT_PRODUCT_TIMEOUT", None)
+            else:
+                os.environ["NIGHT_SHIFT_PRODUCT_TIMEOUT"] = saved_timeout
 
 
 if __name__ == "__main__":
