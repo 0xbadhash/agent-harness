@@ -188,14 +188,27 @@ def check_write_allowed(
         resolved = given.resolve()
     except OSError:
         resolved = given.absolute()
-    anchor = detect_vault_root(parent_real, vault_root=vault_root)
-    if anchor is not None:
-        try:
-            resolved.relative_to(Path(anchor).resolve())
-        except ValueError as exc:
-            raise VaultWriteDenied(
-                f"symlink escapes vault: {given} -> {resolved}"
-            ) from exc
+    # Logical ancestors decide the vault. Resolved parent and target must stay inside it.
+    logical_root = None
+    cursor = given
+    for _ in range(12):
+        probe = cursor if cursor.exists() and not cursor.is_symlink() else None
+        if probe is not None:
+            logical_root = detect_vault_root(probe, vault_root=vault_root)
+            if logical_root is not None:
+                break
+        if cursor.parent == cursor:
+            break
+        cursor = cursor.parent
+    if logical_root is not None:
+        root_real = Path(logical_root).resolve()
+        for candidate in (parent_real, resolved):
+            try:
+                Path(candidate).resolve().relative_to(root_real)
+            except ValueError as exc:
+                raise VaultWriteDenied(
+                    f"symlink escapes vault: {given} -> {candidate}"
+                ) from exc
 
     root = detect_vault_root(resolved, vault_root=vault_root)
     if root is None:
