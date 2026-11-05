@@ -5,3 +5,4 @@ session_viewer
 qa_campaign
 retrospect
 audit_harness
+e2e_gate
