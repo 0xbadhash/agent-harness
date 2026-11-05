@@ -1,0 +1,40 @@
+#include <tunables/global>
+
+# Enforced profile for the open-web Chromium container. Replaces apparmor=unconfined.
+# A path-tight profile denies ptrace and /proc operations the Chromium sandbox needs
+# (zygote exits 139). Docker does not mount the host root, so these rules are the
+# container mount namespace. No SYS_ADMIN is added on the docker run line.
+profile hermes-openweb-chromium flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/nameservice>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network unix stream,
+  network netlink raw,
+
+  userns,
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability setgid,
+  capability setuid,
+  capability setpcap,
+  capability net_bind_service,
+  capability sys_chroot,
+  capability sys_admin,
+  capability sys_ptrace,
+
+  / r,
+  /** rwlkix,
+  /dev/null rw,
+  /dev/urandom r,
+  /dev/shm/** rw,
+  /proc/** r,
+  /proc/*/fd/** rw,
+  /sys/** r,
+}
