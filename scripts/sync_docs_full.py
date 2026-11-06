@@ -33,7 +33,25 @@ def _vw(path: Path, text: str) -> None:
     _w(path, text)
 
 
-ROOT = Path(__file__).resolve().parent.parent
+def _resolve_root(explicit=None):
+    """Repo being shipped: --root, then $PRODUCT_ROOT, else this script's repo.
+
+    Opt-in by design: the scripts are copied into products as single files, so a
+    shared module cannot be assumed, and changing the default would silently
+    re-score every existing caller.
+    """
+    import os
+    from pathlib import Path as _P
+
+    if explicit:
+        return _P(explicit).expanduser().resolve()
+    env = os.environ.get("PRODUCT_ROOT")
+    if env:
+        return _P(env).expanduser().resolve()
+    return _P(__file__).resolve().parent.parent
+
+
+ROOT = Path(__file__).resolve().parent.parent  # rebound in main() to the shipped repo
 SCRIPTS = ROOT / "scripts"
 DEFAULT_VAULT = None
 
@@ -64,7 +82,8 @@ PRODUCT_MD = ROOT / "docs" / "PRODUCT.md"
 README_PATH = ROOT / "README.md"
 
 
-def _git_tag(cwd: Path = ROOT) -> str:
+def _git_tag(cwd: Path | None = None) -> str:
+    cwd = cwd or ROOT
     r = subprocess.run(
         ["git", "describe", "--tags", "--abbrev=0"],
         cwd=cwd,
@@ -75,7 +94,8 @@ def _git_tag(cwd: Path = ROOT) -> str:
     return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "unknown"
 
 
-def _git_head_short(cwd: Path = ROOT) -> str:
+def _git_head_short(cwd: Path | None = None) -> str:
+    cwd = cwd or ROOT
     r = subprocess.run(
         ["git", "rev-parse", "--short", "HEAD"],
         cwd=cwd,
@@ -540,11 +560,15 @@ def main() -> int:
         default=None,
         help="Optional vault root; default off unless PRODUCT_VAULT_ROOT / plugin enabled",
     )
+    ap.add_argument("--root", default=None, help="repo being shipped (default: git toplevel of cwd)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force-devlog", action="store_true", help="Force release entry append")
     ap.add_argument("--skip-vault", action="store_true")
     ap.add_argument("--skip-repo", action="store_true")
     args = ap.parse_args()
+
+    global ROOT
+    ROOT = _resolve_root(args.root)
     vault = args.vault
     skip_vault = args.skip_vault
     if vault is not None:

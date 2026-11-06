@@ -9,7 +9,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+def _resolve_root(explicit=None):
+    """Repo being shipped: --root, then $PRODUCT_ROOT, else this script's repo.
+
+    Opt-in by design: the scripts are copied into products as single files, so a
+    shared module cannot be assumed, and changing the default would silently
+    re-score every existing caller.
+    """
+    import os
+    from pathlib import Path as _P
+
+    if explicit:
+        return _P(explicit).expanduser().resolve()
+    env = os.environ.get("PRODUCT_ROOT")
+    if env:
+        return _P(env).expanduser().resolve()
+    return _P(__file__).resolve().parent.parent
+
+
+ROOT = Path(__file__).resolve().parent.parent  # rebound in main() to the shipped repo
 SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
@@ -170,7 +188,8 @@ def score(
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--diff", help="Git range")
-    ap.add_argument("--pr-draft", default=str(ROOT / "PR_DRAFT.md"))
+    ap.add_argument("--root", default=None, help="repo being shipped (default: git toplevel of cwd)")
+    ap.add_argument("--pr-draft", default=None)
     ap.add_argument("--write-pr-draft", action="store_true")
     ap.add_argument("--update-pipeline", action="store_true")
     ap.add_argument(
@@ -184,6 +203,11 @@ def main() -> int:
         help="Emergency only: requires ALLOW_SKIP_HARD_GATES=1; always logs skip",
     )
     args = ap.parse_args()
+
+    global ROOT
+    ROOT = _resolve_root(args.root)
+    if args.pr_draft is None:
+        args.pr_draft = str(ROOT / "PR_DRAFT.md")
 
     skip_hg = bool(args.skip_hard_gates)
     if skip_hg:

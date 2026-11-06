@@ -14,6 +14,7 @@ import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+
 from typing import Any
 
 try:
@@ -37,8 +38,29 @@ ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
 }
 
 
+_ROOT_OVERRIDE: Path | None = None
+
+
+def _resolve_root(explicit=None):
+    """Repo being shipped: --root, then $PRODUCT_ROOT, else this script's repo.
+
+    Opt-in by design: the scripts are copied into products as single files, so a
+    shared module cannot be assumed, and changing the default would silently
+    re-score every existing caller.
+    """
+    import os
+    from pathlib import Path as _P
+
+    if explicit:
+        return _P(explicit).expanduser().resolve()
+    env = os.environ.get("PRODUCT_ROOT")
+    if env:
+        return _P(env).expanduser().resolve()
+    return _P(__file__).resolve().parent.parent
+
+
 def _state_path() -> Path:
-    root = Path(__file__).resolve().parent.parent
+    root = _ROOT_OVERRIDE or Path(__file__).resolve().parent.parent
     return root / ".agents" / "state" / "pipeline.json"
 
 
@@ -47,7 +69,7 @@ def _lock_path() -> Path:
 
 
 def _root() -> Path:
-    return Path(__file__).resolve().parent.parent
+    return _ROOT_OVERRIDE or Path(__file__).resolve().parent.parent
 
 
 def _atomic_write(path: Path, data: dict[str, Any]) -> None:
@@ -194,9 +216,11 @@ def set_phase(
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("get")
+    gp = sub.add_parser("get")
+    gp.add_argument("--root", default=None)
     sp = sub.add_parser("set-phase")
     sp.add_argument("phase", choices=sorted(VALID_PHASES))
+    sp.add_argument("--root", default=None)
     sp.add_argument("--score", type=float)
     sp.add_argument("--task", type=str)
     sp.add_argument("--spec-id", type=str, dest="spec_id")
@@ -213,6 +237,8 @@ def main() -> int:
         help="Required in spirit when forcing; stored in force log",
     )
     args = ap.parse_args()
+    global _ROOT_OVERRIDE
+    _ROOT_OVERRIDE = _resolve_root(getattr(args, "root", None))
     if args.cmd == "get":
         print(json.dumps(get(), indent=2))
     else:

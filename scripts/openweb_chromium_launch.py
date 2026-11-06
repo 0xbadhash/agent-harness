@@ -10,7 +10,7 @@ from playwright_chromium_guard import main as guard_main
 
 PROFILE = "hermes-openweb-chromium"
 IMAGE = "hermes-openweb-chromium:t1400u"
-SECCOMP = "/home/debian/hermes/ops/chromium-container/seccomp_profile.json"
+SECCOMP = str(Path.home() / "hermes/ops/chromium-container/seccomp_profile.json")
 DROP = {"--no-sandbox", "--disable-setuid-sandbox"}
 
 

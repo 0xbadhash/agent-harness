@@ -15,6 +15,22 @@ def _default_root() -> Path:
 
 
 ROOT = _default_root()
+
+ALLOW_FILE = Path(__file__).resolve().parent.parent / ".hardcode-allow.json"
+
+
+def _allow_exact() -> set[str]:
+    """Exact-match exemptions from a config owned by the tool repo, never by the product."""
+    try:
+        import json
+
+        data = json.loads(ALLOW_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {v for v in (data.get("allow_exact") or []) if isinstance(v, str) and v}
+
+
+ALLOW = _allow_exact()
 SKIP_DIRS = {
     ".git",
     "node_modules",
@@ -30,6 +46,7 @@ SKIP_DIRS = {
     "infra",
     "cache",
     "var",
+    "evidence",  # local dumps; SoT is vault agent-tasks/evidence
     # Portable skill markdown often cites external docs URLs
     "skills",
     # Sample configs / fixtures (product-specific paths)
@@ -206,6 +223,9 @@ def scan_root(root: Path) -> int:
 
         for m in ABS_HOME.finditer(text):
             line = text[: m.start()].count("\n") + 1
+            if m.group(0)[:60] in ALLOW:
+                print(f"↷ allow {rel}:{line} [absolute_user_path] {m.group(0)[:60]} (container path)")
+                continue
             print(f"❌ {rel}:{line} [absolute_user_path] {m.group(0)[:60]}")
             hits += 1
         for m in WIN_HOME.finditer(text):
