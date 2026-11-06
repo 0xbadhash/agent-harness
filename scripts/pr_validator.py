@@ -247,6 +247,7 @@ def main() -> int:
                 if args.update_pipeline:
                     import pipeline_state  # type: ignore
 
+                    pipeline_state._ROOT_OVERRIDE = ROOT
                     pipeline_state.set_phase("blocked", score=result["score"])
                     print(f"✅ pipeline → blocked (score {result['score']})")
                 return 1
@@ -256,6 +257,7 @@ def main() -> int:
     if args.update_pipeline:
         import pipeline_state  # type: ignore
 
+        pipeline_state._ROOT_OVERRIDE = ROOT
         phase = "approved" if result["score"] >= 95 else "blocked"
         pipeline_state.set_phase(phase, score=result["score"])
         print(f"✅ pipeline → {phase} (score {result['score']})")
