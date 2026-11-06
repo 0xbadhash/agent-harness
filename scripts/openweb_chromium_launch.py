@@ -2,6 +2,7 @@
 """Plan a container Chromium launch. Refuse the known-bad build. Never pass --no-sandbox."""
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -49,11 +50,47 @@ def _cdp_wiring(browser_args: list[str]) -> tuple[list[str], list[str], bool]:
         elif arg.startswith(PROFILE_FLAG):
             profile = arg.split("=", 1)[1].strip()
             if profile:
-                Path(profile).mkdir(parents=True, exist_ok=True)
-                Path(profile).chmod(0o777)  # container user 10001 writes DevToolsActivePort
                 docker_opts += ["-v", f"{profile}:{profile}"]
         kept.append(arg)
     return kept, docker_opts, wants_cdp
+
+
+def _chown_container_user(path: str) -> bool:
+    """Give *path* to the container's uid so Chromium can write its profile and port file."""
+    import subprocess
+
+    try:
+        os.chown(path, 10001, 10001)
+        return True
+    except (OSError, AttributeError):
+        pass
+    # Absolute path: the launch may run with a sanitized PATH where "sudo" does not resolve.
+    for sudo in ("/usr/bin/sudo", "/bin/sudo"):
+        try:
+            done = subprocess.run([sudo, "-n", "chown", "10001:10001", path], timeout=10, check=False,
+                                  capture_output=True)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if done.returncode == 0:
+            return True
+        print(f"hermes-chromium: chown {path} -> 10001 failed: {done.stderr.decode(errors='replace').strip()}",
+              file=sys.stderr, flush=True)
+        return False
+    return False
+
+
+def _ensure_profile(profile: str, *, chown=None) -> None:
+    """Create the mounted profile directory the launch hands to Chromium.
+
+    Mode 0711, owned by the container's uid. Others may traverse (the host launcher has to read
+    ``DevToolsActivePort`` out of it) but may not write: a local user who can write there could spoof
+    the port — pointing the harness's CDP client at their own listener — or plant a preferences file.
+    If the ownership change is unavailable the container's Chromium cannot write either, and the
+    launch fails loudly on the missing port file.
+    """
+    os.makedirs(profile, exist_ok=True)
+    os.chmod(profile, 0o711)
+    (chown or _chown_container_user)(profile)
 
 
 def plan_launch(chromium_output: str, browser_args: list[str]) -> tuple[int, list[str]]:
@@ -88,16 +125,35 @@ def plan_launch(chromium_output: str, browser_args: list[str]) -> tuple[int, lis
     return 0, argv
 
 
+def _exec_as_container(argv: list[str]) -> int:
+    """Replace this process with docker (the container drops to uid 10001 itself)."""
+    os.execvp("sudo", ["sudo", "-n", *argv])
+    return 0  # unreachable
+
+
+def exec_launch(chromium_output: str, browser_args: list[str], *, run=_exec_as_container) -> int:
+    """Prepare the profile mount, then hand over to docker.
+
+    The profile must be prepared on the *executing* path, not while planning argv: Hermes creates the
+    host profile directory 0700 as its own user, and the container runs Chromium as uid 10001, which
+    cannot write a DevToolsActivePort (or even a SingletonLock) into it. Preparing it here keeps
+    ``plan_launch`` a pure function that tests can call.
+    """
+    code, argv = plan_launch(chromium_output, browser_args)
+    if code != 0:
+        print(f"refuse chromium {version_token(chromium_output)}", file=sys.stderr)
+        return code
+    for arg in browser_args:
+        if arg.startswith(PROFILE_FLAG) and (profile := arg.split("=", 1)[1].strip()):
+            _ensure_profile(profile)
+    return run(argv)
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print("usage: openweb_chromium_launch.py <chromium --version output> [browser args...]", file=sys.stderr)
         return 2
-    code, planned = plan_launch(argv[1], argv[2:])
-    if code != 0:
-        print(f"refuse chromium {version_token(argv[1])}", file=sys.stderr)
-        return code
-    print("\0".join(planned))
-    return 0
+    return exec_launch(argv[1], argv[2:])
 
 
 if __name__ == "__main__":
