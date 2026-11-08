@@ -331,6 +331,8 @@ def run_gates(
         vcmd = [py, str(SCRIPTS / "validate.py"), vmode]
         if use_sot_lint:
             vcmd.append("--skip-vault-schema")
+        # readiness runs check_hardcodes as its own gate (line ~304)
+        vcmd.append("--skip-hardcodes")
         v_timeout = int(ns.get("validate_timeout", 1800 if vmode == "full" else 300))
         v_result = _run(
             "validate_full",
@@ -358,33 +360,10 @@ def run_gates(
                     [py, str(sot_lint_path), "--vault", str(vault), "--no-strict-warn"],
                     timeout=120,
                 )
-                # Fold SoT lint into validate_full gate (same ship bar).
-                sot_hdr = "\n── vault_schema_lint (harness SoT) ──\n"
-                if not lint_r.get("ok"):
-                    v_result = {
-                        **v_result,
-                        "ok": False,
-                        "exit": lint_r.get("exit") or 1,
-                        "stdout_tail": (
-                            (v_result.get("stdout_tail") or "")
-                            + sot_hdr
-                            + (lint_r.get("stdout_tail") or "")
-                        )[-4000:],
-                        "stderr_tail": (
-                            (v_result.get("stderr_tail") or "")
-                            + "\n"
-                            + (lint_r.get("stderr_tail") or "")
-                        )[-4000:],
-                    }
-                else:
-                    v_result = {
-                        **v_result,
-                        "stdout_tail": (
-                            (v_result.get("stdout_tail") or "")
-                            + sot_hdr
-                            + "✅ vault_schema_lint passed (SoT)\n"
-                        )[-4000:],
-                    }
+                # Reported as its own fleet gate: one vault-wide error must not
+                # red a product that passes its own checks.
+                lint_r["name"] = "vault_schema_lint_sot"
+                results.append(lint_r)
         results.append(v_result)
     if (SCRIPTS / "product_smoke.py").is_file():
         ns = plugin.get("night_shift") or {}
@@ -796,6 +775,26 @@ def sync_kanban_readiness_file(
     return "kanban: no-op (night shift does not write agent-tasks/kanban.md)"
 
 
+def merge_human_backlog(path: Path, generated: str) -> str:
+    """Keep the operator's Human backlog; only the auto section is regenerated.
+
+    The nightly writer used to replace the whole file, so anything typed under
+    "## Human backlog" was destroyed every run.
+    """
+    header = "## Human backlog"
+    try:
+        old = path.read_text(encoding="utf-8") if path.is_file() else ""
+    except OSError:
+        old = ""
+    idx = old.find(header)
+    if idx < 0:
+        return generated
+    human = old[idx:].rstrip() + "\n"
+    if header in generated:
+        return generated[: generated.find(header)].rstrip() + "\n\n" + human
+    return generated.rstrip() + "\n\n" + human
+
+
 def write_vault(
     vault: Path,
     project_rel: Path,
@@ -825,11 +824,12 @@ def write_vault(
         notes.append(f"vault log: {log_path}")
 
         todo_path = proj / "TODO.md"
+        merged_todo = merge_human_backlog(todo_path, todo_md)
         try:
             from vault_fs import write_text as _vw  # type: ignore
-            _vw(todo_path, todo_md)
+            _vw(todo_path, merged_todo)
         except ImportError:
-            todo_path.write_text(todo_md, encoding="utf-8")
+            todo_path.write_text(merged_todo, encoding="utf-8")
         notes.append(f"vault TODO: {todo_path}")
 
         # Intentionally does NOT call sync_kanban_readiness_file / write kanban.md
