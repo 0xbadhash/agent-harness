@@ -1,20 +1,21 @@
 # CODE-REVIEW
 
 **Marker:** CODE-REVIEW
-**Base:** parent of this commit
-**Head:** night validate_full hotfix
+**Base:** 56a4b3c6ea620d8c637b165579f70a27825fbb85
+**Head:** 6ea5fb1
+**Command:** `python3 scripts/review_scope.py --base HEAD~1 --head HEAD --json`
 **Verdict:** approve
 **P0:** 0
 
 ## Scope
 
-In this ship: `config/night_shift_products.yaml`, `scripts/vault_schema_lint.py`, `scripts/vault_resolve.py`, `scripts/challenge.py`, `scripts/kanban_fs.py`, the new label and schema tests, `tests/test_challenge.py`, `tests/test_night_shift_all_parallel.py`, `CHANGELOG.md`, `PR_DRAFT.md`.
+In this ship: `scripts/security_root_ioc_scan.py`, `tests/test_security_root_ioc_scan.py`, `deploy/security-root-ioc.service` (comment only), `docs/ship-flow.md` (one sentence), the spec, `CHANGELOG.md`, and `PR_DRAFT.md`.
 
-Left unstaged on purpose: `scripts/ops_dashboard.py`, `tests/test_ops_dashboard.py`, `.gitignore`, `config/optional_skills.txt`, and untracked local files. They are not part of this hotfix.
+Left unstaged on purpose: `.gitignore`, `config/optional_skills.txt`, `scripts/ops_dashboard.py`, `tests/test_ops_dashboard.py`, and untracked local files. They are not this item. `pipeline.json` is assume-unchanged and was not committed.
 
 ## Secrets
 
-`python3 scripts/check_hardcodes.py` exit 0 during `validate.py full`. No new absolute user path. The challenge host fallback `/opt/second-brain/vault` was removed.
+`python3 scripts/check_secrets_diff.py --base HEAD~1 --head HEAD` clean. `check_hardcodes.py` exit 0. No username path was added. `/home` and `/root` are the process-home rule, not a home directory of a person.
 
 ## Findings
 
@@ -22,19 +23,21 @@ Left unstaged on purpose: `scripts/ops_dashboard.py`, `tests/test_ops_dashboard.
 |----|--------|---------|
 | P0 | none | approve |
 
-Checked:
+Checked against the diff:
 
-- `project_rel` no longer treats the default label `product` as a real plugin label. A directory with no plugin uses that directory's name. An explicit `project_label` still wins.
-- `challenge._vault_paths` raises when `--vault` and `PRODUCT_VAULT_ROOT` are both unset. It does not mkdir on the host vault.
-- Schema allow-list is narrow: `herm-config` is files-only and a subdirectory still fails. An unregistered project name still fails. `challenges/` and `INDEX.md` match files the live vault already has.
-- `mission-feeds: ~/.local/lib/mission-feeds` is a `~/` path, and the plugin `project_label` is `mission-feeds`.
-- `kanban_fs.py` only drops an unused import. Ruff on HEAD reported F401 and `--fix` is that deletion.
+- Process home `/root` with no `--home` puts `/home` in the required list and still walks `/root`. A clean `/root` cannot be `status=ok`.
+- `--home` replaces that list. It does not append to `/root`.
+- A non-root process home is not widened to every account under `/home`.
+- `status=ok` and the green artifact require every required home to be a directory that was entered. `PermissionError` on that walk leaves the home unscanned and yields `incomplete`, exit 2.
+- `--print-roots` returns before the walk and before vault writes, and its text does not include `status=ok`.
+- `--deep` still adds containerd. `--root` still appends. The timer's `SuccessExitStatus=0 1` does not treat exit 2 as success.
+- Tests build homes with `Path("/home") / "operator"` and temp dirs. They do not walk `/home` or `/opt`.
 
 ## Follow-ups (not in this diff)
 
-- `scripts/sync_docs_full.py`, `scripts/sync_vault_devlog.py`, and `night_shift_readiness._safe_label` still contain a `"product"` fallback for an empty label. This hotfix stops the challenge/project_rel writer that the vault folder came from. Those other fallbacks are pre-existing.
-- The night "replace absolute host paths" proposal matched `/home/browser` lines that `check_hardcodes` already allow-lists. Not changed.
+- `os.walk` still ignores permission errors on subdirectories (default `onerror`). A root scan of `/home` can skip an unreadable child and still look complete. That predates this change. Root on this host can read the product trees. Not an in-scope blocker.
+- `scripts/ops_dashboard.py` already shows non-ok, non-fail JSON as attention. The working tree has unrelated edits, so this ship does not touch it.
 
 ## Tests
 
-Focused pytest 17 passed. `validate.py full` 6/6 before the changelog edit. `ruff check scripts tests` exit 0.
+`TMPDIR=/tmp python3 -m pytest -q tests/test_security_root_ioc_scan.py` — 11 passed. `python3 scripts/validate.py full` — 6/6. Full pytest with `TMPDIR=/tmp` — 344 passed. With the session `TMPDIR` under `/home/.../cache`, two unrelated tests fail; that is the temp path, not this diff.

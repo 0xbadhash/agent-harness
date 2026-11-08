@@ -1,40 +1,38 @@
 # CROSS-REVIEW
 
 **Marker:** CROSS-REVIEW
-**Base:** HEAD~1
-**Head:** HEAD (`18c2674`)
+**Base:** 56a4b3c6ea620d8c637b165579f70a27825fbb85
+**Head:** 6ea5fb1
 **Blockers:** 0
 **Majors:** 0
-**Tier A obsolete:** 0
 
-## Security Guru
+## Security
 
-None. The diff deletes the hardcoded vault fallback in `scripts/challenge.py`. `check_secrets_diff.py --base HEAD~1 --head HEAD` printed `secret scan clean`. Schema lint still rejects an unregistered project and a `herm-config` subdirectory. No new network call, shell, or credential.
+None. The weekly unit is already `User=root`. This diff stops `status=ok` when that process home is `/root` and `/home` was not walked. `--home` and `--root` are local operator paths passed to `Path` and `os.walk` (`followlinks=False`), not a shell. Finding lines stay paths, not file bodies. No new credential, no new listener.
 
-## Maintainability Expert
+## Maintainability
 
-None. `project_rel` is the one label helper `challenge.py` calls. The new tests cover the missing-plugin path, the explicit plugin label, the portable `mission-feeds` row, and the schema allow/deny cases. The unused `subprocess` import in `kanban_fs.py` is gone.
+None. Home selection is `resolve_home_roots` / `assemble_roots`, covered by `tests/test_security_root_ioc_scan.py`. `scan_tree` now returns whether the walk entered the tree. The only caller is `run_scan` in the same file (`rg scan_tree` hits that file only).
 
 ### Obsolete / cleanup (scoped)
 
-| Item | Conf | Verdict | Evidence |
-|------|-----:|---------|----------|
-| Tier C — `sync_docs_full.py` `or "product"` and `sync_vault_devlog.py` `or "product"` | 0.2 | keep | Still the fallback when a plugin label is empty. Not referenced by the new tests. Not the writer that created `01-Projects/product/` via `challenge._vault_paths`. |
-| Tier C — `night_shift_readiness._safe_label` returns `product` for an empty or unsafe segment | 0.2 | keep | Call site passes `project_label or product_id or ROOT.name` before `_safe_label`. Invalid segments still need a single-segment substitute. |
-| Tier C — `vault_schema_lint` allow of `challenges/` and `INDEX.md` | 0.1 | keep | `challenge.py` writes `challenges/`. Live projects already have `INDEX.md`. Stranger folders still fail (`test_unregistered_project_and_unknown_root_still_fail`). |
+Touched paths: `scripts/security_root_ioc_scan.py`, `tests/test_security_root_ioc_scan.py`, `deploy/security-root-ioc.service`, `docs/ship-flow.md`, spec, changelog, PR draft.
 
-Out of scope for a repo-wide cruft pass — run `/sweep`.
+| Tier | Item | Conf | Verdict | Evidence |
+|------|------|------|---------|----------|
+| C | `Path.home()` default in `main` | 0.1 | keep | Still the process home for non-root runs. `--home` replaces it. `rg` shows the call at `security_root_ioc_scan.py` main. |
+| C | `--root` | 0.1 | keep | Still appended after the home. Test `test_deep_and_extra_root_still_append` asserts `/var/extra-ioc`. |
+| C | Walk of `/root` when process home is `/root` | 0.2 | keep | Not sufficient for `status=ok`. `/home` is the required root. Dropping `/root` would hide root-owned IoCs. |
+| A | none | | | No doc-only rot or unreferenced helper in this diff. |
 
-## Domain Specialist
+No Tier A deletions. Whole-repo cruft was not scanned.
 
-None. Domain hints are portable harness, no host-only defaults, no secret leakage. The registry row is `mission-feeds: ~/.local/lib/mission-feeds`. The plugin label is `mission-feeds`. `herm-config` stays a files-only stub and is not added to `night_shift_products.yaml`.
+## Domain
 
-## Things that look bad but are actually fine
+None. Plugin hints are a portable harness and no secret leakage. The scanner already names `/opt` and containerd. The header already named `/home`. This change matches that header and does not hardcode a username. `status=ok` now means the required home was entered.
 
-1. Widening `ROOT_ALLOW` and `PROJECT_DIR_ALLOW` looks like silencing the gate. Unregistered names and unknown roots still fail the new tests.
-2. Refusing the `/opt/second-brain/vault` fallback looks like it breaks challenge on this host. `PRODUCT_VAULT_ROOT` or `--vault` still selects the vault. Only the silent host default is gone.
-3. The night "absolute host paths" proposal looks like open work. It matched allow-listed `/home/browser` lines in the hardcodes printout. `check_hardcodes` was already green.
+## §9
 
-## Follow-ups
-
-- Empty-label `"product"` fallbacks in `sync_docs_full.py` and `sync_vault_devlog.py` remain. Not this diff.
+1. Exit 2 is outside `SuccessExitStatus` so a missed home fails the timer. Findings stay exit 1.
+2. `/root` is still walked. It does not make the scan green by itself.
+3. `--print-roots` exits 0 and must not print `status=ok`, because nothing was walked.
