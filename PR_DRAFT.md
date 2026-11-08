@@ -1,6 +1,7 @@
 # PR draft — root IoC scan covers the real home
 
 **Spec:** `.agents/specs/2026-11-08-security-root-ioc.md`
+**Plan:** `.agents/specs/2026-11-08-security-root-ioc-plan.md`
 
 edit_guard: allow_test_edits
 
@@ -33,10 +34,10 @@ green_cmd: python3 -m pytest -q tests/test_security_root_ioc_scan.py
 
 | Item | Result |
 |------|--------|
-| pytest | `tests/test_security_root_ioc_scan.py` 11 passed |
-| hardcodes | `python3 scripts/check_hardcodes.py` exit 0 |
-| mypy | scanner + test, no issues |
-| web_e2e | skipped, no website |
+| pytest | `tests/test_security_root_ioc_scan.py` 11 passed; full suite 344 passed with `TMPDIR=/tmp` |
+| validate | `python3 scripts/validate.py full` 6/6 |
+| smoke | `python3 scripts/check_hardcodes.py` exit 0; unit smoke is the pytest suite |
+| hard_gates | re-scored after the plan link |
 
 ## Traceability
 

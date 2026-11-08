@@ -5,7 +5,7 @@
 - **Status:** ready-for-agent
 - **Priority:** P1
 - **Roadmap:** CHANGELOG.md → Open work
-- **Plan:** none
+- **Plan:** `.agents/specs/2026-11-08-security-root-ioc-plan.md`
 - **Tracker:** local
 - **Constitution:** policy defaults (no `.agents/CONSTITUTION.md` or root `AGENTS.md`)
 - **Grill-me:** complete
