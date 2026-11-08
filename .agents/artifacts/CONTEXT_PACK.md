@@ -1,53 +1,53 @@
 # CONTEXT_PACK
 
-**Generated:** 2026-07-29T08:20:28Z
+**Generated:** 2026-11-08T10:07:49Z
 **Root:** `/home/debian/agent-harness`
 
 ## Constitution / constraints
 
-### AGENTS.md
+### .agents/policy/base_constraints.md
 
 ```
-# AGENTS.md — product + harness
+# Base Constraints (inherited by all skills)
 
-Contract for any coding agent (any LLM) working in this repo.
+## Product vs harness
+- **Product** = application code + roadmap + domain (see `.agents/product_plugin.yaml`).
+- **Harness** = skills, scripts, policy, pipeline FSM (this package / product `.agents/` install).
+- Do not mix harness backlog into the product roadmap. Stack is chosen only in the product plugin.
 
-## Product intent
+## Router & workflow
+- First action: product session policy (if any) + harness policy + skill for the task.
+- After significant product change: run **smoke** from `product_plugin.yaml` (and targeted tests).
+- Long tasks: optional worksheets under `.agents/traces/`.
 
-<!-- Replace with your product one-liner -->
-Describe what this product does and safe defaults.
+## Pipeline
+- State: `.agents/state/pipeline.json` via `scripts/pipeline_state.py` only (atomic).
+- Flow: init → ready_for_review → approved → shipped → init (see docs/ship-flow.md).
 
-## Agent harness (ship pipeline)
+## Handoff Discipline
+- Read only files declared in the skill's Reads line
+- Write only files declared in the skill's Writes line
+- Include §9 "Things that look bad but are actually fine" in reports
 
-Portable skills installed under `.agents/skills/` from **agent-harness**.
-
-```text
-init
-  → /spec (optional)      # acceptance + roadmap OPEN
-  → /execute_dev          # implement (TDD when code)
-  → /code_review          # structure closeout (non-prose)
-  → /cross_review         # if NEXT_SKILL says so (large/security)
-  → /behavior_validator   # if NEXT_SKILL says so (runtime surface)
-  → /pr_review --validate # score ≥ 95 → approved
-  → /release_mgmt         # smoke + tag → shipped
-  → /sync_docs            # docs stamps → init
+## §9 Schema
+Every completion report MUST include this section with **minimum 3 entries**:
+```yaml
+things_that_look_bad_but_are_fine:
+  - file: "path:line"
+    concern: "what looks wrong"
+    why_fine: "intentional reason"
+    validation: "command to verify"
 ```
 
-**Any LLM:** load `SKILL.md` from `.agents/skills/<name>/` when the user names `/name`.  
-**Do not invent the next step** — run:
+## TDD Boundary (enforced by `/execute_dev` step 3)
+- Red → Green → Refactor for every behavior/code change
+- New tests must fail before implementation lands
+- Docs-only: explicit TDD N/A in handoff
+- PR_DRAFT narrative (see `templates/PR_DRAFT.md`): **What Problem This Solves**, **Why This Change Was Made**, **User Impact**, **Evidence**
+- Optional **Red-proof** in PR_DRAFT: command that failed before green
 
-```bash
-python3 scripts/next_skill.py --after <skill_just_finished>
-```
-
-and follow the printed `NEXT_SKILL=…` line.
-
-Docs (installed): `.agents/docs/llm-bootstrap.md`, `.agents/docs/ship-flow.md`.
-
-| Check | Command |
-|-------|---------|
-| Phase | `python3 scripts/pipeline_state.py get` |
-| Skills | `python3 scripts/verify_skills.py` |
+## Anti-Patterns
+- Never skip validation gates
 ```
 
 ## Open risks / decisions
@@ -84,6 +84,7 @@ vault:
   root_env: PRODUCT_VAULT_ROOT
   default_root: ""
   project_label: agent-harness
+  extra_dirs: []
   dev_log_rel: 01-Projects/agent-harness/dev-log.md
   mirror_docs: []
 
@@ -95,6 +96,13 @@ product_path_prefixes:
 domain_review_hints:
   - portable harness (no host-only defaults)
   - no secret leakage
+
+# Harness SoT is not a web3/client_secrets product — traits stay off (auto).
+traits:
+  web: false
+  web3: false
+  client_secrets: false
+
 
 night_shift:
   default_host: ""

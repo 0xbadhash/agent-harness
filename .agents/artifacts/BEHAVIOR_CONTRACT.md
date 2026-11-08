@@ -1,15 +1,9 @@
-# Behavior contract — smoke_unit + vault group-write
+# Behavior contract — one nightly readiness timer
 
-- **Product:** agent-harness  
-- **Target:** CLI smoke + vault ensure script  
+**Marker:** BEHAVIOR-CONTRACT
 
-## User tasks
-
-1. Operator runs product smoke unit without bash -c in plugin.  
-   - **Expect:** `python3 scripts/product_smoke.py` unit step exit 0; cmd contains smoke_unit.sh  
-2. Operator can print resolved python: `bash scripts/smoke_unit.sh --print-python` exit 0.  
-3. Operator runs vault check on temp or live vault; after --apply --sudo (if needed), check exit 0.  
-4. Anti-cheat: plugin must not contain `bash", "-c"` unit smoke.  
-
-## Must not
-- Advance pipeline in these CLIs  
+1. `systemctl list-timers --all 'night-shift*'` shows `night-shift-all.timer` and does not show `night-shift-readiness.timer`.
+2. `night-shift-all.timer` is enabled.
+3. `night-shift-readiness.timer` is not installed.
+4. The product registry still contains a `watchlist` id.
+5. Running the retire command again does not remove `night-shift-all.timer`.
