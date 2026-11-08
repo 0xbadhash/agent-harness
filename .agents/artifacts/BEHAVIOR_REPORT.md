@@ -2,19 +2,23 @@
 
 **Marker:** BEHAVIOR-REPORT
 **Contract:** .agents/artifacts/BEHAVIOR_CONTRACT.md
-**Target:** `python3 scripts/security_root_ioc_scan.py` (CLI only, no host walk)
+**Target:** installed `ops-dashboard.service` / `ops-dashboard.timer` and the ops-dashboard rows in the systemd inventory
+
+Checked with `systemctl show`, `systemctl is-enabled`, `systemctl cat`, and a read of the inventory phrases. The writer was not run.
 
 ## Results
 
 | Clause | Status | Evidence |
 |--------|--------|----------|
-| 1 Process home `/root` plans a required `/home` and does not claim clean | pass | `HOME=/root python3 scripts/security_root_ioc_scan.py --print-roots` exit 0. Stdout: `required /home`, `root /home`, `root /root`, `root /opt`. No `status=ok` line. `PRODUCT_VAULT_ROOT` temp dir stayed at 0 files. |
-| 2 `--home` replaces the process home | pass | `HOME=/root ... --print-roots --home /tmp/ioc-home.nScv` exit 0. Stdout: `required /tmp/ioc-home.nScv` and `root /opt`. No `required /home`. |
-| 3 `--help` documents `--home` | pass | Help lists `--home HOME` as the operator home that replaces `Path.home()`, and says `/home` is required when the process home is `/root`. |
-| Deep plan still names containerd | pass | `--print-roots --deep` adds `root /var/lib/containerd`. |
-| Live walk of `/home` or `/opt` | out_of_scope | This check must not scan the host. Pin detection stays on temp trees in the unit test. |
+| 1 SuccessExitStatus=0 2 | pass | `systemctl show ops-dashboard.service -p SuccessExitStatus` → `SuccessExitStatus=0 2` |
+| 2 timer enabled | pass | `systemctl is-enabled ops-dashboard.timer` → `enabled` |
+| 3 four calendars | pass | `TimersCalendar` has `01:00:00 UTC`, `12:00:00 UTC`, `19:45:00 UTC`, and `23:45:00 UTC` (systemd prints the weekday set as `Mon..Thu,Sun`) |
+| 4 service text | pass | `systemctl cat ops-dashboard.service` contains `intentional RED` and `SuccessExitStatus=0 2` |
+| 5 timer text | pass | `systemctl cat ops-dashboard.timer` description contains `four` and names 01:00, 12:00, 19:45, and 23:45 UTC |
+| 6 registry row | pass | inventory contains `intentional RED` and `SuccessExitStatus=0 2` (4 times each) plus the four clock marks |
 
 ## Summary
 
-- pass: 4 · fail: 0 · blocked: 0 · out_of_scope: 1
+- pass: 6 · fail: 0 · blocked: 0
+- `systemd-analyze verify` on the service and timer exited 0 after daemon-reload
 - NEXT_SKILL=/pr_review --validate

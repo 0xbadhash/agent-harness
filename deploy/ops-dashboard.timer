@@ -1,9 +1,16 @@
 [Unit]
-Description=Refresh Obsidian OPS-DASHBOARD (morning + midday UTC)
+Description=Refresh Obsidian OPS-DASHBOARD (enabled; four calendars)
 
 [Timer]
 # 01:00 UTC ≈ after night-shift (19:15) + morning triage (00:30)
 # 12:00 UTC midday refresh for news ticks
+# Contract: this timer is enabled. Four calendars, do not drop any:
+#   *-*-* 01:00:00 UTC                         (this file)
+#   *-*-* 12:00:00 UTC                         (this file)
+#   *-*-* 19:45:00 UTC                         (timer.d/after-night.conf)
+#   Sun,Mon,Tue,Wed,Thu *-*-* 23:45:00 UTC     (timer.d/weekday-0745-hkt.conf)
+# The base file keeps only the 01:00 and 12:00 OnCalendar directives.
+# Exit 2 from the service is an intentional RED under SuccessExitStatus=0 2.
 OnCalendar=*-*-* 01:00:00 UTC
 OnCalendar=*-*-* 12:00:00 UTC
 Persistent=true

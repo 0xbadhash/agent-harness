@@ -1,27 +1,12 @@
-# Behavior contract — root IoC home
+# Behavior contract — ops-dashboard documentation
 
-- **Product:** agent-harness
-- **Target:** CLI `python3 scripts/security_root_ioc_scan.py`
-- **Setup:** no credentials. `HOME=/root` stands in for the systemd unit's process home. Do not walk `/home` or `/opt`.
+**Marker:** BEHAVIOR-CONTRACT
 
-## User tasks
+Operator-visible checks. Do not read the git diff to score these.
 
-1. As the operator, when the process home is `/root`, I can see the planned roots.  
-   - **Expect:** stdout contains `required /home`, `root /home`, and `root /root`. Exit 0.  
-   - **Anti-cheat:** stdout does not contain `status=ok`. A temp `PRODUCT_VAULT_ROOT` stays empty.
-
-2. As the operator, I can pass `--home` and that path replaces `/root` and `/home`.  
-   - **Expect:** `required <that path>`. Stdout does not contain `required /home`. Exit 0.
-
-3. As the operator, I can read `--help` and see `--home`.  
-   - **Expect:** help text contains `--home`.
-
-## Must not
-
-- Print `status=ok` from `--print-roots`.
-- Write `security-ioc-status.md` during `--print-roots`.
-- Walk the live host during this check.
-
-## Evidence
-
-- [x] CLI transcript (no secrets)
+1. `systemctl show ops-dashboard.service -p SuccessExitStatus` prints `SuccessExitStatus=0 2`.
+2. `systemctl is-enabled ops-dashboard.timer` prints `enabled`.
+3. `systemctl show ops-dashboard.timer -p TimersCalendar` lists four calendars: 01:00 UTC, 12:00 UTC, 19:45 UTC, and 23:45 UTC.
+4. `systemctl cat ops-dashboard.service` contains the phrase `intentional RED` and still contains `SuccessExitStatus=0 2`.
+5. `systemctl cat ops-dashboard.timer` contains `four` and the four clock times above.
+6. The registry file `agent-tasks/ops/SYSTEMD-TIMERS-INVENTORY.md` contains `intentional RED` and `SuccessExitStatus=0 2` on the ops-dashboard rows.
