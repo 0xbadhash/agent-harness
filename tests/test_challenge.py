@@ -13,7 +13,6 @@ import challenge  # noqa: E402
 
 class ChallengeTests(unittest.TestCase):
     def test_pass_writes_artifact_and_vault(self) -> None:
-        product = Path(self.id().replace(".", "_"))
         # isolate under tmp via TemporaryDirectory
         import tempfile
 
@@ -104,7 +103,8 @@ class ChallengeTests(unittest.TestCase):
             decision.write_text("Accept; keep {a,b} as literals.\n", encoding="utf-8")
 
             code = challenge.main(
-                ["--proposal", str(proposal), "--decision", str(decision), "--root", str(root)],
+                ["--proposal", str(proposal), "--decision", str(decision), "--root", str(root),
+                 "--vault", str(Path(tmp) / "vault")],
                 glm=lambda prompt: "glm says {x}",
                 deepseek=lambda prompt: "ds says {y}",
             )
