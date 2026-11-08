@@ -96,10 +96,13 @@ systemctl list-timers | grep night-shift-all
 # Expect Next: … 19:15:00 UTC
 ```
 
-Disable legacy watchlist-only timer if present:
+The watchlist-only unit `night-shift-readiness.timer` is retired. One nightly path remains: `night-shift-all.timer`. Watchlist stays in `config/night_shift_products.yaml`. Do not reinstall the duplicate unit.
 
 ```bash
-sudo systemctl disable --now night-shift-readiness.timer 2>/dev/null || true
+python3 scripts/retire_duplicate_night_shift_unit.py \
+  --unit-dir /etc/systemd/system \
+  --products-file config/night_shift_products.yaml \
+  --apply --systemd
 ```
 
 ## product_plugin optional knobs

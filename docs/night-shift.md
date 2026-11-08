@@ -288,10 +288,14 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now night-shift-all.timer
 ```
 
-Disable legacy single-product timer if present:
+The watchlist-only unit `night-shift-readiness.timer` is retired. It ran the same harness readiness script and wrote the same artifacts as `night-shift-all`. Do not install it again. Watchlist stays covered because it is listed in `config/night_shift_products.yaml`.
 
 ```bash
-sudo systemctl disable --now night-shift-readiness.timer 2>/dev/null || true
+python3 scripts/retire_duplicate_night_shift_unit.py \
+  --unit-dir /etc/systemd/system \
+  --products-file config/night_shift_products.yaml \
+  --archive-dir /var/tmp/night-shift-readiness-archive \
+  --apply --systemd
 ```
 
 ### Ops checks

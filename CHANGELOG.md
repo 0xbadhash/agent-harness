@@ -467,6 +467,19 @@ Agents were shipping web UI without updating Playwright or Comet/Perplexity scen
 
 ## Open work
 
+### [DONE] Retire duplicate night-shift-readiness unit
+- **Status:** done
+- **Priority:** P1
+- **Next:** false
+- **Spec:** `.agents/specs/2026-11-08-retire-night-shift-readiness-unit.md`
+- **Plan:** `.agents/specs/2026-11-08-retire-night-shift-readiness-unit-plan.md`
+- **Acceptance:**
+  - [x] AC-1 watchlist stays in the product registry
+  - [x] AC-2..AC-7 retirement plan removes only the duplicate unit
+  - [x] Host timer list keeps night-shift-all only
+- **Smoke:** hardcodes + scripts/smoke_unit.sh
+- **Notes:** grill-me complete
+
 ### [DONE] P0 unattended chain + night remediate + default portfolio push
 - **Status:** done (v1.4.13)
 - **Priority:** P0
