@@ -18,3 +18,5 @@ jasmine: ~/jasmine
 # ui.catalyxt.xyz design system (DS); path = catalyxt-ds repo
 # yaml key `ui` matches surface_inventory id; plugin product_id remains catalyxt-ds
 ui: ~/catalyxt-ds
+# Mission feeds dashboard (mission.catalyxt.xyz) — .local/lib checkout
+mission-feeds: ~/.local/lib/mission-feeds

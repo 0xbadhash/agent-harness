@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### fix(night): clear validate_full for the live vault
+
+- Register `mission-feeds` in `config/night_shift_products.yaml` with a `~/` path.
+- Allow the live vault layout in `vault_schema_lint`: `challenges/`, `INDEX.md`, root `instruction-versions/` and `rules/`, and the files-only `herm-config` stub.
+- Stop inventing the vault label `product` when a plugin label is missing. `challenge.py` no longer falls back to `/opt/second-brain/vault`.
+- Drop the unused `subprocess` import in `scripts/kanban_fs.py` (ruff F401).
+
 ## v1.4.49 — 2026-10-10
 
 ### feat(eval): GPA trace fragment and deterministic gpa_eval

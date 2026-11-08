@@ -37,6 +37,10 @@ ROOT_ALLOW = frozenset(
         "QA",
         # CEO 2026-10-08 agent memory model (vault/agent-memory/)
         "agent-memory",
+        # W1 operator adaptations lodge (2026-10-17/18) — vault-root instruction SoT
+        "instruction-versions",
+        # Standing RULE-* files lodged at vault root (e.g. RULE-HAGGLE-CADENCE)
+        "rules",
     }
 )
 
@@ -50,15 +54,21 @@ PROJECT_FILE_ALLOW = frozenset(
         "decisions.md",
         "README.md",
         ".gitkeep",
+        # Generated vault index (type: index) at each project root.
+        "INDEX.md",
     }
 )
 
 # Directories always allowed under every product
-PROJECT_DIR_ALLOW = frozenset({"docs", "_archive"})
+PROJECT_DIR_ALLOW = frozenset({"docs", "_archive", "challenges"})
 
 # Multi-product ops re-homed to agent-tasks/night-shift/ (2026-08-07).
 # No special 01-Projects folder.
-SPECIAL_PROJECTS: dict[str, set[str]] = {}
+SPECIAL_PROJECTS: dict[str, set[str]] = {
+    # Stub vault home for private hermes-config (vault plugin still disabled).
+    # Files-only; created W1 forensic 2026-10-20. Enable plugin only with CEO stamp.
+    "herm-config": {"README.md", "TODO.md", ".gitkeep", "INDEX.md"},
+}
 
 
 def _load_yamlish_list_block(text: str, key: str) -> list[str]:

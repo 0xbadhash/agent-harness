@@ -1,6 +1,7 @@
 """Challenge script: fake models, temporary vault. No live API."""
 from __future__ import annotations
 
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -115,6 +116,25 @@ class ChallengeTests(unittest.TestCase):
             self.assertIn("{a,b}", body)
             self.assertIn("glm says {x}", body)
             self.assertIn("ds says {y}", body)
+
+    def test_unset_vault_refuses_instead_of_host_default(self) -> None:
+        """No --vault and no PRODUCT_VAULT_ROOT must not fall back to /opt/second-brain.
+
+        That fallback, plus the label ``product``, is how a fixture wrote
+        ``01-Projects/product/`` into the live vault.
+        """
+        import tempfile
+
+        saved = os.environ.pop("PRODUCT_VAULT_ROOT", None)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp) / "widget"
+                root.mkdir()
+                with self.assertRaises(ValueError):
+                    challenge._vault_paths(root, "slug", None)
+        finally:
+            if saved is not None:
+                os.environ["PRODUCT_VAULT_ROOT"] = saved
 
 
 if __name__ == "__main__":

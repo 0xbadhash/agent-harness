@@ -149,7 +149,9 @@ def _vault_paths(product_root: Path, slug: str, vault: Path | None):
 
     root = vault or resolve_vault_root(product_root=product_root, require_enabled=False)
     if root is None:
-        root = Path(os.environ.get("PRODUCT_VAULT_ROOT", "/opt/second-brain/vault"))
+        raise ValueError(
+            "vault root is unset; pass --vault or set PRODUCT_VAULT_ROOT"
+        )
     day = datetime.now(UTC).strftime("%Y-%m-%d")
     note = root / project_rel(product_root, "challenges", f"{day}-{slug}.md")
     decisions = root / project_rel(product_root, "decisions.md")
@@ -205,7 +207,7 @@ def main(argv: list[str] | None = None, *, glm=call_glm, deepseek=call_deepseek)
     print(body)
     try:
         publish(body, product, slug, args.vault)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         print(f"vault write failed: {exc}", file=sys.stderr)
         return 1
     return 0

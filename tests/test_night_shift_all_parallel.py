@@ -59,6 +59,7 @@ class TestNightShiftAllParallel(unittest.TestCase):
             "figure-it-out",
             "jasmine",
             "ui",
+            "mission-feeds",
         )
         cfg_ids: list[str] = []
         for line in cfg.read_text(encoding="utf-8").splitlines():
@@ -69,7 +70,7 @@ class TestNightShiftAllParallel(unittest.TestCase):
             pid = line.split(":", 1)[0].strip()
             if pid:
                 cfg_ids.append(pid)
-        self.assertEqual(len(cfg_ids), 11, cfg_ids)
+        self.assertEqual(cfg_ids, list(expected), cfg_ids)
         for need in expected:
             self.assertIn(need, cfg_ids)
 

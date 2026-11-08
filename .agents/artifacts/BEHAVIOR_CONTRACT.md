@@ -1,9 +1,11 @@
-# Behavior contract — one nightly readiness timer
+# BEHAVIOR-CONTRACT
 
 **Marker:** BEHAVIOR-CONTRACT
+**Surface:** vault schema lint CLI and the night-shift product registry
 
-1. `systemctl list-timers --all 'night-shift*'` shows `night-shift-all.timer` and does not show `night-shift-readiness.timer`.
-2. `night-shift-all.timer` is enabled.
-3. `night-shift-readiness.timer` is not installed.
-4. The product registry still contains a `watchlist` id.
-5. Running the retire command again does not remove `night-shift-all.timer`.
+## Clauses
+
+1. `python3 scripts/vault_schema_lint.py --vault /opt/second-brain/vault --strict-warn` exits 0 and prints `0 error(s), 0 warning(s)`.
+2. `config/night_shift_products.yaml` has a `mission-feeds:` row whose path starts with `~/` and does not contain `/home/`.
+3. `01-Projects/product` is not a directory in the live vault.
+4. `ruff check scripts tests` exits 0.

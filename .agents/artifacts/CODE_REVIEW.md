@@ -1,29 +1,40 @@
 # CODE-REVIEW
 
 **Marker:** CODE-REVIEW
-**Base:** HEAD~1
-**Head:** HEAD (ae01b42)
-**Scope:** scripts/retire_duplicate_night_shift_unit.py, tests/test_retire_duplicate_night_shift_unit.py, docs/night-shift.md, skills/night_shift/SKILL.md, CHANGELOG.md, PR_DRAFT.md
-**Secrets:** check_secrets_diff.py HEAD~1...HEAD clean
+**Base:** parent of this commit
+**Head:** night validate_full hotfix
+**Verdict:** approve
+**P0:** 0
 
-## Verdict
+## Scope
 
-Approve. P0 count: 0. No in-scope blocker.
+In this ship: `config/night_shift_products.yaml`, `scripts/vault_schema_lint.py`, `scripts/vault_resolve.py`, `scripts/challenge.py`, `scripts/kanban_fs.py`, the new label and schema tests, `tests/test_challenge.py`, `tests/test_night_shift_all_parallel.py`, `CHANGELOG.md`, `PR_DRAFT.md`.
+
+Left unstaged on purpose: `scripts/ops_dashboard.py`, `tests/test_ops_dashboard.py`, `.gitignore`, `config/optional_skills.txt`, and untracked local files. They are not part of this hotfix.
+
+## Secrets
+
+`python3 scripts/check_hardcodes.py` exit 0 during `validate.py full`. No new absolute user path. The challenge host fallback `/opt/second-brain/vault` was removed.
 
 ## Findings
 
-- P0: none. `apply_retirement` unlinks a path only when `path.name` is `night-shift-readiness.service` or `night-shift-readiness.timer`. A forged plan that points at `night-shift-all.timer` raises `ValueError` and leaves the file. Covered by `test_apply_refuses_a_path_outside_the_duplicate_names`.
-- P0: none. `plan_retirement` returns `ok` false and an empty remove list when `night-shift-all.timer` is missing or the products text has no `watchlist` id. The CLI exits 2 before `--systemd` or unlink.
-- Follow-up: `scripts/kanban_fs.py` has an unused `subprocess` import on this branch. That file is not in this diff. A local uncommitted edit already removes it. Not this item.
-- Follow-up: vault schema lint reports pre-existing root and project errors, including `mission-feeds` missing from the committed registry. The registry line that adds it is an uncommitted edit outside this item. Do not edit the vault.
+| ID | Class | Verdict |
+|----|--------|---------|
+| P0 | none | approve |
 
-## Smoke / tests
+Checked:
 
-- Red: pytest of the new file failed 7 tests with FileNotFoundError before the script existed. AC-6 passed because deploy/ has no duplicate unit.
-- Green: `.venv/bin/python -m pytest -q tests/test_retire_duplicate_night_shift_unit.py` — 8 passed.
-- Host: `systemctl list-timers --all 'night-shift*'` lists only `night-shift-all.timer` (enabled). `night-shift-readiness.timer` is not-found. Second `--apply --systemd` removed nothing and exited 0.
-- Plugin smoke with `TMPDIR=/tmp`: hardcodes and unit smoke passed. The session `TMPDIR` is under `/home/debian/hermes/cache`, which makes two pre-existing tests fail; they pass under `/tmp`.
+- `project_rel` no longer treats the default label `product` as a real plugin label. A directory with no plugin uses that directory's name. An explicit `project_label` still wins.
+- `challenge._vault_paths` raises when `--vault` and `PRODUCT_VAULT_ROOT` are both unset. It does not mkdir on the host vault.
+- Schema allow-list is narrow: `herm-config` is files-only and a subdirectory still fails. An unregistered project name still fails. `challenges/` and `INDEX.md` match files the live vault already has.
+- `mission-feeds: ~/.local/lib/mission-feeds` is a `~/` path, and the plugin `project_label` is `mission-feeds`.
+- `kanban_fs.py` only drops an unused import. Ruff on HEAD reported F401 and `--fix` is that deletion.
 
-## Scope governor
+## Follow-ups (not in this diff)
 
-No accepted P0. No second fix cycle. Diff stayed on the retire command, its tests, and the operator note.
+- `scripts/sync_docs_full.py`, `scripts/sync_vault_devlog.py`, and `night_shift_readiness._safe_label` still contain a `"product"` fallback for an empty label. This hotfix stops the challenge/project_rel writer that the vault folder came from. Those other fallbacks are pre-existing.
+- The night "replace absolute host paths" proposal matched `/home/browser` lines that `check_hardcodes` already allow-lists. Not changed.
+
+## Tests
+
+Focused pytest 17 passed. `validate.py full` 6/6 before the changelog edit. `ruff check scripts tests` exit 0.
