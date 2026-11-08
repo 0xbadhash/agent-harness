@@ -4,7 +4,10 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-# Root required for /var/lib/containerd; script still works partially without it
+# Root required for /var/lib/containerd; script still works partially without it.
+# User=root makes Path.home()=/root. The script then requires /home (pass
+# --home to replace that). Exit 2 means the required home was not walked
+# and is intentionally absent from SuccessExitStatus.
 User=root
 Group=root
 WorkingDirectory=/home/debian/agent-harness

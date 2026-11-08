@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### fix(security): root IoC scan cannot go green from /root alone
+
+- When the process home is `/root`, `scripts/security_root_ioc_scan.py` scans `/home` and requires that walk. `--home` replaces the process home.
+- A required home that was missing or not walked is `status=incomplete` (exit 2), not a green artifact.
+- `--print-roots` prints the plan and does not claim `status=ok`.
+
 ### fix(night): clear validate_full for the live vault
 
 - Register `mission-feeds` in `config/night_shift_products.yaml` with a `~/` path.
@@ -475,6 +481,22 @@ Agents were shipping web UI without updating Playwright or Comet/Perplexity scen
 
 
 ## Open work
+
+### [DONE] Root IoC scan must cover the real home
+- **Status:** done
+- **Priority:** P1
+- **Next:** false
+- **Spec:** `.agents/specs/2026-11-08-security-root-ioc.md`
+- **Plan:** none
+- **Acceptance:**
+  - [x] AC-1 process home `/root` requires `/home`
+  - [x] AC-2 `--home` replaces the process home
+  - [x] AC-3 other process homes stay unchanged
+  - [x] AC-4 missed required home is incomplete, not green
+  - [x] AC-5 a pin or payload under the required home fails
+  - [x] AC-6 `--print-roots` shows the plan and does not claim ok
+- **Smoke:** hardcodes + `scripts/smoke_unit.sh` (unit smoke is the full pytest suite; run with `TMPDIR=/tmp` on this host)
+- **Notes:** grill-me complete
 
 ### [DONE] Retire duplicate night-shift-readiness unit
 - **Status:** done
