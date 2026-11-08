@@ -1,6 +1,7 @@
 # PR draft — document the ops-dashboard exit-2 contract
 
 **Spec:** `.agents/specs/2026-11-08-ops-dashboard-contract.md`
+**Plan:** `.agents/specs/2026-11-08-ops-dashboard-contract-plan.md`
 
 edit_guard: allow_test_edits
 

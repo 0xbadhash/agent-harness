@@ -5,7 +5,7 @@
 - **Status:** ready-for-agent
 - **Priority:** P1
 - **Roadmap:** CHANGELOG.md → this docs slice (no generator change)
-- **Plan:** none
+- **Plan:** `.agents/specs/2026-11-08-ops-dashboard-contract-plan.md`
 - **Tracker:** local
 - **Constitution:** AGENTS.md + `.agents/policy/base_constraints.md`
 - **Grill-me:** complete
