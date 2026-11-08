@@ -56,6 +56,24 @@ SCRIPTS = ROOT / "scripts"
 DEFAULT_VAULT = None
 
 
+def _apply_root(explicit=None) -> Path:
+    """Point ROOT at the shipped repo after argument parsing.
+
+    Derived paths stay on the import-time tree when ``--root`` is omitted, so
+    PRODUCT_ROOT and the no-flag path behave as before. Passing ``--root``
+    retargets the README, product doc, workflow doc, and scripts dir too.
+    """
+    global ROOT, SCRIPTS, WORKFLOW_PATH, PRODUCT_MD, README_PATH
+    root = _resolve_root(explicit)
+    ROOT = root
+    if explicit:
+        SCRIPTS = root / "scripts"
+        WORKFLOW_PATH = root / "WORKFLOW_DOCUMENTATION.md"
+        PRODUCT_MD = root / "docs" / "PRODUCT.md"
+        README_PATH = root / "README.md"
+    return root
+
+
 def _project_label() -> str:
     try:
         sys.path.insert(0, str(SCRIPTS))
@@ -567,8 +585,7 @@ def main() -> int:
     ap.add_argument("--skip-repo", action="store_true")
     args = ap.parse_args()
 
-    global ROOT
-    ROOT = _resolve_root(args.root)
+    _apply_root(args.root)
     vault = args.vault
     skip_vault = args.skip_vault
     if vault is not None:
