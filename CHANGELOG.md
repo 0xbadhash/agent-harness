@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v1.4.50 — 2026-11-08
+
 ### fix(security): root IoC scan cannot go green from /root alone
 
 - When the process home is `/root`, `scripts/security_root_ioc_scan.py` scans `/home` and requires that walk. `--home` replaces the process home.
