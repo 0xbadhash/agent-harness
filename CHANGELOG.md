@@ -1,3 +1,11 @@
+## v1.4.51 — 2026-11-09
+
+- **Vault completion writer (staging).** `hermes-done` records a run's verdict as one JSON event; `vault_writer.py`
+  drains it into an append-only vault note plus a per-day index rebuilt once per drain, then copies the event to
+  `processed/` as a read-only inode. Level-triggered unit (`DirectoryNotEmpty`, `StartLimitIntervalSec=0`),
+  resume-not-skip idempotence, quoted YAML, inert body rendering.
+- Live vault writes remain disabled: the replacement for `RULE-SINGLE-VAULT-WRITE-T1148U` is proposed, not stamped.
+
 # Changelog
 
 ## Unreleased
