@@ -6,10 +6,7 @@ environment-level (systemd unit text, vault autocommit) and are marked as such.
 from __future__ import annotations
 
 import json
-import os
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
