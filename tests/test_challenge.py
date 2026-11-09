@@ -1,8 +1,11 @@
 """Challenge script: fake models, temporary vault. No live API."""
 from __future__ import annotations
 
+import contextlib
+import io
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -139,3 +142,78 @@ class ChallengeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChallengePreflightTests(unittest.TestCase):
+    """A missing vault must cost zero model calls, not four."""
+
+    def test_unset_vault_calls_no_model(self) -> None:
+        import challenge
+
+        calls: list[str] = []
+
+        def glm(_prompt: str) -> str:
+            calls.append("glm")
+            raise AssertionError("glm must not be called during pre-flight")
+
+        def deepseek(_prompt: str) -> str:
+            calls.append("deepseek")
+            raise AssertionError("deepseek must not be called during pre-flight")
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            proposal = root / "p.md"
+            proposal.write_text("# proposal\n\nbody\n", encoding="utf-8")
+            decision = root / "d.md"
+            decision.write_text("# decision\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                rc = challenge.main(["--proposal", str(proposal), "--decision", str(decision),
+                                     "--root", str(root)], glm=glm, deepseek=deepseek)
+        self.assertEqual(rc, 1)
+        self.assertEqual(calls, [])
+
+    def test_check_flag_calls_no_model(self) -> None:
+        import challenge
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            proposal = root / "p.md"
+            proposal.write_text("# proposal\n", encoding="utf-8")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = challenge.main(["--proposal", str(proposal), "--root", str(root),
+                                     "--vault", str(root), "--check"],
+                                    glm=lambda _p: (_ for _ in ()).throw(AssertionError("no model")),
+                                    deepseek=lambda _p: (_ for _ in ()).throw(AssertionError("no model")))
+        self.assertEqual(rc, 0)
+        self.assertIn("note:", out.getvalue())
+
+
+class ChallengeVaultExistsTests(unittest.TestCase):
+    def test_nonexistent_vault_calls_no_model(self) -> None:
+        import challenge
+
+        calls: list[str] = []
+
+        def boom(_prompt: str) -> str:
+            calls.append("model")
+            raise AssertionError("no model call may happen when the vault path is wrong")
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            proposal = root / "p.md"
+            proposal.write_text("# proposal\n", encoding="utf-8")
+            decision = root / "d.md"
+            decision.write_text("# decision\n", encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()):
+                locked = root / "ro"
+                locked.mkdir()
+                locked.chmod(0o500)
+                try:
+                    rc = challenge.main(["--proposal", str(proposal), "--decision", str(decision),
+                                         "--root", str(root), "--vault", str(locked / "vault")],
+                                        glm=boom, deepseek=boom)
+                finally:
+                    locked.chmod(0o700)
+        self.assertEqual(rc, 1)
+        self.assertEqual(calls, [])

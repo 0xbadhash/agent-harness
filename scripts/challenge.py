@@ -152,6 +152,11 @@ def _vault_paths(product_root: Path, slug: str, vault: Path | None):
         raise ValueError(
             "vault root is unset; pass --vault or set PRODUCT_VAULT_ROOT"
         )
+    # A vault path we cannot create is a typo, not a new vault. Allow creation only when the
+    # parent exists and is writable (a fresh vault under tmp is fine; /nonexistent is not).
+    root_p = Path(root)
+    if not root_p.is_dir() and not (root_p.parent.is_dir() and os.access(root_p.parent, os.W_OK)):
+        raise ValueError(f"vault root is not creatable: {root}")
     day = datetime.now(UTC).strftime("%Y-%m-%d")
     note = root / project_rel(product_root, "challenges", f"{day}-{slug}.md")
     decisions = root / project_rel(product_root, "decisions.md")
@@ -177,6 +182,8 @@ def main(argv: list[str] | None = None, *, glm=call_glm, deepseek=call_deepseek)
     ap.add_argument("--decision")
     ap.add_argument("--root", type=Path, default=Path.cwd())
     ap.add_argument("--vault", type=Path, default=None)
+    ap.add_argument("--check", action="store_true",
+                    help="resolve the target note and exit; calls no model")
     args = ap.parse_args(argv)
 
     product = args.root.resolve()
@@ -186,6 +193,26 @@ def main(argv: list[str] | None = None, *, glm=call_glm, deepseek=call_deepseek)
         print("empty proposal", file=sys.stderr)
         return 1
     slug = _slug(proposal_path)
+
+    if args.check:
+        note, decisions = _vault_paths(product, slug, args.vault)
+        print(f"proposal: {proposal_path or '<stdin>'}\nnote: {note}\ndecisions: {decisions}")
+        return 0
+
+    # Pre-flight: everything cheap that can be fatal, before a single model call.
+    # Both rounds are paid for up front, so a missing vault or key found afterwards
+    # throws away work that was already bought.
+    if args.decision:
+        try:
+            _vault_paths(product, slug, args.vault)
+        except (OSError, ValueError, ImportError) as exc:
+            print(f"pre-flight failed, no model was called: {exc}", file=sys.stderr)
+            return 1
+        if not Path(args.decision).is_file():
+            print(f"pre-flight failed, no model was called: decision file not found: {args.decision}",
+                  file=sys.stderr)
+            return 1
+
     artifact = product / ".agents" / "artifacts" / "CHALLENGE.md"
     try:
         rounds = _rounds(proposal, glm, deepseek)
