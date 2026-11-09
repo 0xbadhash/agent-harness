@@ -1,0 +1,12 @@
+# Level-triggered on purpose: unlike PathChanged=, DirectoryNotEmpty= is re-checked
+# after the service exits, so a failed pass with a non-empty spool fires again.
+[Unit]
+Description=Hermes vault writer — fire while the completion spool is non-empty
+StartLimitIntervalSec=0
+
+[Path]
+DirectoryNotEmpty=%h/hermes/state/spool
+Unit=hermes-vault-writer.service
+
+[Install]
+WantedBy=default.target
