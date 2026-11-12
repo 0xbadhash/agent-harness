@@ -1,6 +1,7 @@
 """Unit tests: night_shift product path portability and existence."""
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
@@ -43,8 +44,17 @@ class TestPortable(unittest.TestCase):
         self.assertTrue(any("missing" in e for e in errs))
 
     def test_check_exists(self) -> None:
-        with tempfile.TemporaryDirectory() as td:
-            errs = check_products([("tmp", td)], require_exists=True)
+        """A portable ~/... path that exists passes — independent of where TMPDIR sits.
+
+        t1666u: the old fixture used tempfile.TemporaryDirectory() directly, so on a
+        host whose TMPDIR is an absolute /home/... path the checker (correctly)
+        flagged the fixture itself and the test failed. Build the fixture under
+        $HOME and pass it in ~/ form; the code under test is right, the test was not.
+        """
+        home = Path(os.path.expanduser("~"))
+        with tempfile.TemporaryDirectory(dir=home) as td:
+            portable = "~/" + os.path.relpath(td, home)
+            errs = check_products([("tmp", portable)], require_exists=True)
             self.assertEqual(errs, [])
 
     def test_nonportable_flagged(self) -> None:

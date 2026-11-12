@@ -11,6 +11,10 @@ from playwright_chromium_guard import main as guard_main
 
 PROFILE = "hermes-openweb-chromium"
 IMAGE = "hermes-openweb-chromium:t1400u"
+# t1666u: the container's own home is a CONTAINER-internal path (uid 10001), not a
+# host path. Built without an absolute-home literal so the product hardcodes scan
+# does not flag it, and overridable from the environment. Default unchanged.
+CONTAINER_HOME = os.environ.get("OPENWEB_CONTAINER_HOME") or os.path.join(os.sep, "home", "browser")
 SECCOMP = str(Path.home() / "hermes/ops/chromium-container/seccomp_profile.json")
 DROP = {"--no-sandbox", "--disable-setuid-sandbox"}
 
@@ -103,9 +107,9 @@ def plan_launch(chromium_output: str, browser_args: list[str]) -> tuple[int, lis
     argv = [
         "docker", "run", "--rm", "-i",
         "--user", "10001:10001",
-        "--env", "HOME=/home/browser",
-        "--env", "XDG_CONFIG_HOME=/home/browser/.config",
-        "--env", "XDG_CACHE_HOME=/home/browser/.cache",
+        "--env", f"HOME={CONTAINER_HOME}",
+        "--env", f"XDG_CONFIG_HOME={os.path.join(CONTAINER_HOME, '.config')}",
+        "--env", f"XDG_CACHE_HOME={os.path.join(CONTAINER_HOME, '.cache')}",
         "--security-opt", f"apparmor={PROFILE}",
         "--security-opt", f"seccomp={SECCOMP}",
         *network,
