@@ -35,3 +35,5 @@ figure-it-out: python=venv port=4176 binds=4176
 jasmine: python=harness port=18273 port_env=JASMINE_PORT
 # ui = catalyxt-ds (static DS, no product .venv).
 ui: python=harness port=4177 binds=4177
+# mission-feeds (t1659u): stdlib service, no product .venv; live reader binds 127.0.0.1:5672.
+mission-feeds: python=harness port=5672 binds=5672
