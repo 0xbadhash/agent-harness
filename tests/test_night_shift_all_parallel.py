@@ -2,9 +2,12 @@
 """Parallel night_shift_all: product list size + jobs wiring."""
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import os
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +38,30 @@ class TestNightVaultGuard(unittest.TestCase):
         self.assertIsNone(vault)
         self.assertIn("REFUSING", err)
         self.assertIn("harness checkout", err)
+
+
+class TestStrictVerdictLine(unittest.TestCase):
+    def test_dry_run_summary_names_pass_or_fail(self):
+        mod = _load()
+        when = datetime(2026, 11, 13, tzinfo=timezone.utc)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            mod.write_summary(
+                Path("/no/such-vault"),
+                when,
+                [{"name": "a", "ok": False, "exit": 1, "root": "/x"}],
+                True,
+            )
+        self.assertIn("=== DONE night-shift-all FAIL ===", buf.getvalue())
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            mod.write_summary(
+                Path("/no/such-vault"),
+                when,
+                [{"name": "a", "ok": True, "exit": 0, "root": "/x"}],
+                True,
+            )
+        self.assertIn("=== DONE night-shift-all PASS ===", buf.getvalue())
 
 
 class TestNightShiftAllParallel(unittest.TestCase):

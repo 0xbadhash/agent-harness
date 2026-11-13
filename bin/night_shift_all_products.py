@@ -612,6 +612,7 @@ def write_summary(
         f"# Multi-product night shift — {format_when_dual(when)}",
         "",
         f"**Overall:** {overall} ({passed}/{total} products)",
+        f"=== DONE night-shift-all {overall} ===",
         "**Schedule:** 03:15 Asia/Hong_Kong (harness timer)",
         f"**SoT:** `{HARNESS_ROOT}`",
         "",
