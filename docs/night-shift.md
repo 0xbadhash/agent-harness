@@ -113,6 +113,35 @@ After a **PASS** with FAIL history noise, `rotate_night_shift_logs.py` archives 
 
 
 
+## Watchlist golden-fixture re-export cadence (T1905U)
+
+SoT for the remedy: `~/watchlist/migration/tests/fixtures/golden/README.md`.
+Golden parity bands (price / RSI / SMA50) live in `ParityTest.php`; as the
+sliding window and live bars move, aged fixtures eventually breach. The night
+path re-exports **before** the nightly gate goes red:
+
+- Checker: `python3 scripts/watchlist_golden_drift.py` (dry report; exit 2 when
+  a band is breached). `--weekly` also flags <25% headroom; `--fix` runs the
+  README remedy (`php bin/refresh.php --export-golden=TICKER`, drop obsolete
+  same-ticker fixtures, phpunit `GoldenFixtureTest` + `ParityTest`, pytest
+  `test_golden_fixtures.py`). Tolerances are mirrored exactly, never widened.
+- Cadence: `bin/night_shift_all_products.py` runs the checker for `watchlist`
+  in `run_one` just before readiness (nightly: breach-only re-export; Sundays
+  UTC: adds the weekly headroom catch-up). No new timer, no new cron — the
+  check rides the existing night path only.
+
+## Shared test SoT (scripts/tests) — T1905U
+
+`scripts/tests/test_night_shift_product_paths.py` (and anything else under
+`scripts/tests/`) is owned by **agent-harness** — canonical since t1666u.
+New product copies must get shared tests from the harness SoT, never from a
+sibling product's copy (siblings go stale). `install_into_product.sh`
+force-refreshes `scripts/tests/` from the harness on every install, outside
+the fork-protect lists, and fails closed if the installed copy still differs.
+Do not hand-edit a product copy: change it in agent-harness and re-run the
+installer. If a product genuinely forked a shared test, the installer refuses
+until the fork is reconciled or the file is removed.
+
 ## Dev env preflight (multi-product)
 
 Before each product readiness run, `bin/night_shift_all_products.py` calls

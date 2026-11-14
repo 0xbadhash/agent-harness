@@ -488,6 +488,34 @@ def _preflight_dev_env(root: Path, *, dry_run: bool) -> dict:
     return mod.ensure_product_dev_env(root, dry_run=dry_run)
 
 
+def _watchlist_golden_precheck(*, dry_run: bool) -> str:
+    """Pre-night golden-drift check for the watchlist product (SoT: fixtures README).
+
+    Runs the harness checker before readiness so SMA50/RSI/price fixtures are
+    re-exported via `php bin/refresh.php --export-golden=TICKER` before the
+    nightly ParityTest gate goes red. Weekly catch-up (Sundays UTC) also
+    re-exports fixtures with <25% band headroom, just before they will breach.
+    Non-gating: a checker failure is reported, readiness still decides.
+    """
+    checker = HARNESS_ROOT / "scripts" / "watchlist_golden_drift.py"
+    if not checker.is_file():
+        return "skip: watchlist_golden_drift.py missing from harness"
+    cmd = [sys.executable, str(checker)]
+    if not dry_run:
+        cmd.append("--fix")
+        if datetime.now(UTC).weekday() == 6:  # Sunday UTC: weekly headroom catch-up
+            cmd.append("--weekly")
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        tail = (r.stdout or "").strip().splitlines()
+        keep = [ln for ln in tail if "BEYOND" in ln or "WOULD" in ln or "headroom" in ln
+                or "re-export" in ln or "all fixtures" in ln or "FAIL" in ln]
+        summary = " | ".join(keep[-6:]) or (tail[-1] if tail else "")
+        return f"exit={r.returncode} {summary}"
+    except Exception as exc:  # noqa: BLE001 — pre-step must never kill the night run
+        return f"skip: {exc}"
+
+
 def run_one(
     name: str,
     root: Path,
@@ -532,6 +560,14 @@ def run_one(
             "ok": False,
             "tail": interp["error"],
         }
+
+    # Pre-night golden-drift check (watchlist only, T1905U): re-export stale
+    # golden fixtures via the fixtures-README remedy BEFORE ParityTest runs.
+    golden = ""
+    if name == "watchlist" and (root / "tests" / "fixtures" / "golden").is_dir():
+        golden = _watchlist_golden_precheck(dry_run=dry_run)
+        base_row["golden_drift"] = golden
+        print(f"[{name}] golden precheck: {golden}", file=sys.stderr, flush=True)
 
     # Always use harness SoT readiness so gate behavior (incl. vault_schema_lint
     # surface-alias fix) is not blocked on lagging per-product script ports.

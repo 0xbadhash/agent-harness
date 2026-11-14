@@ -105,6 +105,33 @@ python3 scripts/retire_duplicate_night_shift_unit.py \
   --apply --systemd
 ```
 
+## Watchlist golden-fixture re-export cadence (T1905U)
+
+SoT for the remedy: `~/watchlist/migration/tests/fixtures/golden/README.md`.
+Golden parity (price / RSI / SMA50 bands in `ParityTest.php`) drifts as the
+sliding 50-day window and live bars move. The night path re-exports **before**
+the nightly gate goes red:
+
+```bash
+# Pre-night checker (harness SoT; default = dry report, exit 2 when a band is breached)
+python3 scripts/watchlist_golden_drift.py            # dry report
+python3 scripts/watchlist_golden_drift.py --weekly   # + flag <25% band headroom
+python3 scripts/watchlist_golden_drift.py --fix      # run the README remedy for breaching tickers
+```
+
+`--fix` runs the exact README remedy per ticker — `php bin/refresh.php
+--export-golden=TICKER` from `~/watchlist/migration`, drops obsolete
+same-ticker fixtures, then `vendor/bin/phpunit tests/GoldenFixtureTest.php
+tests/ParityTest.php` and `PYTHONPATH=. pytest
+tests/test_golden_fixtures.py`. It never widens tolerances.
+
+**Cadence (encoded in the existing night path, no new timer/cron):**
+`bin/night_shift_all_products.py` runs the checker for the `watchlist` product
+just before readiness (`run_one` → `_watchlist_golden_precheck`):
+nightly it re-exports only tickers already beyond tolerance; on Sundays (UTC)
+it adds the `--weekly` headroom catch-up so a fixture is refreshed just
+before it will breach. In `--dry-run` mode the pre-check reports only.
+
 ## product_plugin optional knobs
 
 ```yaml
@@ -125,7 +152,10 @@ Coverage config (product or harness): `config/coverage_config.json` (see `config
 
 ## Related
 
-- Install: `./install_into_product.sh /path/to/product`
+- Install: `./install_into_product.sh /path/to/product` — shared `scripts/tests/`
+  (incl. `test_night_shift_product_paths.py`, canonical since t1666u) always
+  refresh from the harness SoT; never copy them from a sibling product, and
+  never hand-edit a product copy (edit agent-harness, re-run the installer).
 - Hygiene: `/sweep`
 - Ship: `/execute_dev` → … → `/sync_docs` (night_shift is **off** the ship FSM)
 
