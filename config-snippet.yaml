@@ -1,0 +1,14 @@
+# STAGED. Do not paste into a live profile until a separate CEO stamp.
+# Allowlist values are placeholders. Copy the CEO DM id from the profile at enable time.
+# Do not commit a real number.
+busy_parallel:
+  profile: chief-of-staff
+  max_turns: 4
+  concurrency_cap: 2
+  per_minute_cap: 4
+  allow_senders: []
+  allow_chats: []
+# Plugin registration (enable runbook), not a shell hook:
+# plugins:
+#   enabled:
+#     - busy-parallel
