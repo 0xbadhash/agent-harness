@@ -701,6 +701,114 @@ def attach_fail_hints(row: dict, stdout_text: str = "") -> dict:
     return hinted
 
 
+def _atomic_write(final: Path, write_fn) -> None:
+    """Write via a sibling temp file and ``os.replace``. A failed write is not renamed."""
+    final.parent.mkdir(parents=True, exist_ok=True)
+    tmp = final.with_name(final.name + ".tmp")
+    try:
+        write_fn(tmp)
+        os.replace(tmp, final)
+    except BaseException:
+        if tmp.exists():
+            tmp.unlink()
+        raise
+
+
+def _alarm_call(fn, seconds: int) -> None:
+    if threading.current_thread() is not threading.main_thread():
+        fn()
+        return
+
+    def _handler(signum, frame):  # noqa: ARG001
+        raise TimeoutError(f"refresh_fail_learning exceeded {seconds}s")
+
+    previous = signal.signal(signal.SIGALRM, _handler)
+    signal.alarm(seconds)
+    try:
+        fn()
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
+def refresh_fail_learning(products: list[tuple[str, Path]], artifact_dir: Path) -> None:
+    """Read existing reports and rewrite the three learning artifacts. No autofix."""
+    scripts = HARNESS_ROOT / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    import night_shift_morning_triage as morning  # noqa: E402
+    import promote_night_fails as promote  # noqa: E402
+
+    results = morning.evaluate(list(products), recheck=False)
+    _atomic_write(
+        artifact_dir / "MORNING_TRIAGE.md",
+        lambda dest: morning.write_artifact(results, dest),
+    )
+    promos = promote.evaluate(list(products), min_count=2)
+    _atomic_write(
+        artifact_dir / "NIGHT_FAIL_PROMOTIONS.md",
+        lambda dest: promote.write_artifact(promos, dest),
+    )
+    ticket_rows: list[tuple[str, str, str]] = []
+    for product_id, root in products:
+        report = root / ".agents" / "artifacts" / "NIGHT_SHIFT_REPORT.md"
+        if not report.is_file():
+            continue
+        try:
+            text = report.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for hint in parse_fail_hints(text):
+            ticket_rows.append((product_id, hint["gate"], hint.get("fix") or ""))
+    _atomic_write(
+        artifact_dir / "NIGHT_FAIL_TICKETS.md",
+        lambda dest: promote.write_report_only_tickets(ticket_rows, dest),
+    )
+
+
+def exit_after_learning(
+    rows: list[dict],
+    products: list[tuple[str, Path]],
+    *,
+    promote: bool,
+    artifact_dir: Path,
+    path_gate_failed: bool = False,
+    timeout_s: int = 60,
+) -> int:
+    """Product-gate exit code. A refresh failure is printed and does not change it."""
+    code = 0 if all(r.get("ok") for r in rows) and not path_gate_failed else 1
+    if not promote:
+        return code
+    try:
+        _alarm_call(
+            lambda: refresh_fail_learning(products, artifact_dir),
+            timeout_s,
+        )
+    except Exception as exc:  # noqa: BLE001 — learning must not fail the night
+        print(f"refresh_fail_learning failed: {type(exc).__name__}")
+    return code
+
+
+def collect_and_learn(
+    products: list[tuple[str, Path]],
+    *,
+    artifact_dir: Path,
+    promote: bool = True,
+) -> int:
+    """Sequential stand-in used by tests: one ``run_one`` per product, then learn.
+
+    Tests replace ``run_one``. Production ``main`` calls ``run_one`` with the
+    real gate arguments, then ``refresh_fail_learning``.
+    """
+    rows = [run_one(name, root) for name, root in products]
+    return exit_after_learning(
+        rows,
+        products,
+        promote=promote,
+        artifact_dir=artifact_dir,
+    )
+
+
 def fail_action_lines(rows: list[dict]) -> list[str]:
     fails = [r for r in rows if not r.get("ok")]
     if not fails:
@@ -887,6 +995,11 @@ def main() -> int:
     ap.add_argument("--skip-live", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument(
+        "--no-promote",
+        action="store_true",
+        help="Skip the post-run refresh of triage, promotions, and report-only tickets",
+    )
+    ap.add_argument(
         "--only",
         action="append",
         default=[],
@@ -1071,6 +1184,18 @@ def main() -> int:
         vault_resolved, when, rows, args.dry_run, extra_sections=lint_sections
     ):
         print(n)
+
+    # Reports already exist. Learning failure must not change the gate exit below.
+    if not args.no_promote:
+        try:
+            _alarm_call(
+                lambda: refresh_fail_learning(
+                    products, HARNESS_ROOT / ".agents" / "artifacts"
+                ),
+                60,
+            )
+        except Exception as exc:  # noqa: BLE001 — learning must not fail the night
+            print(f"refresh_fail_learning failed: {type(exc).__name__}")
 
     passed = sum(1 for r in rows if r["ok"])
     total = len(rows)
