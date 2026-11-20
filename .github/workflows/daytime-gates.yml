@@ -31,6 +31,8 @@ jobs:
         run: |
           pip install -q semgrep
           semgrep --config .semgrep.yml --error --quiet .
+      - name: Import boundary
+        run: python scripts/check_import_boundaries.py
   skill-conformance:
     runs-on: ubuntu-latest
     steps:

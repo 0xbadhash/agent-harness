@@ -77,8 +77,8 @@ def evaluate(products: list[tuple[str, Path]], sot: str) -> list[ProductRow]:
             if pin:
                 pin_note = "SoT pin drift: " + ", ".join(pin)
                 notes = f"{notes}; {pin_note}" if notes else pin_note
-        except Exception:
-            pass
+        except Exception as exc:
+            print(type(exc).__name__, file=sys.stderr)
         rows.append(ProductRow(pid, root, ver, sot, lag, notes))
     return rows
 

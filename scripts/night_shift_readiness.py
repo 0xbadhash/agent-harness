@@ -246,8 +246,8 @@ def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
         r = resolve_vault_root(cli_vault=None, product_root=ROOT, require_enabled=False)
         if r is not None:
             return Path(r)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(type(exc).__name__, file=sys.stderr)
     vault = plugin.get("vault") or {}
     # Canonical first, then plugin root_env, then legacy aliases
     for key in (

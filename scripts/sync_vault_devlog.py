@@ -71,8 +71,8 @@ def _dev_log_rel() -> Path:
             if p.is_absolute() or ".." in p.parts or not p.parts:
                 return fallback
             return p
-    except Exception:
-        pass
+    except Exception as exc:
+        print(type(exc).__name__, file=sys.stderr)
     return fallback
 
 

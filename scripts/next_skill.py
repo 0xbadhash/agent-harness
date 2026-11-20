@@ -48,8 +48,8 @@ def _large(baseline, repo: Path | None = None) -> bool:
                     for f in baseline.files
                     if path_matches_product_prefixes(f, prefixes)
                 )
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            print(type(exc).__name__, file=sys.stderr)
     large, _ = is_large_baseline(
         baseline,
         product_path_count=product_n,
@@ -156,8 +156,8 @@ def _infra_required(repo: Path) -> bool:
                 return True
             if infra in (True, "true", "yes", "required"):
                 return True
-    except Exception:  # noqa: BLE001 — fall through to text scan
-        pass
+    except Exception as exc:  # noqa: BLE001 — fall through to text scan
+        print(type(exc).__name__, file=sys.stderr)
 
     # Text scan ignores comments so `# require_vps_infra: true` is not a hit
     low = _strip_yaml_comments(text).lower()

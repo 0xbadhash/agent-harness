@@ -36,8 +36,8 @@ def _project_label() -> str | None:
         cfg = load_vault_config(ROOT)
         label = (cfg.get("project_label") or cfg.get("product_id") or "").strip()
         return label or None
-    except Exception:
-        pass
+    except Exception as exc:
+        print(type(exc).__name__, file=sys.stderr)
     plugin = ROOT / ".agents" / "product_plugin.yaml"
     if plugin.is_file():
         text = plugin.read_text(encoding="utf-8")
@@ -59,8 +59,8 @@ def _resolve_vault() -> Path | None:
             p = Path(v).expanduser().resolve()
             if p.is_dir() and (p / "01-Projects").is_dir():
                 return p
-    except Exception:
-        pass
+    except Exception as exc:
+        print(type(exc).__name__, file=sys.stderr)
     raw = (os.environ.get("PRODUCT_VAULT_ROOT") or "").strip()
     if raw:
         p = Path(raw).expanduser().resolve()
