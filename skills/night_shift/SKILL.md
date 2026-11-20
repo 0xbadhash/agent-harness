@@ -83,6 +83,8 @@ Registry: `config/night_shift_products.yaml` (or `$NIGHT_SHIFT_PRODUCTS_FILE`).
 | `01-Projects/harness-night-shift/TODO.md` | Cross-product checkboxes |
 | `01-Projects/harness-night-shift/log.md` | Append-only |
 
+All-report tails name each failed gate, the first failing line (at most 120 characters), and a one-line fix. The writer stores that summary under `agent-tasks/night-shift/`. The paths in the table above stay as written.
+
 ## Schedule — **03:15 HKT** (wall clock)
 
 Host runs **UTC**. Timer fires **`19:15 UTC`** = **03:15 next calendar morning in Hong Kong** (HKT = UTC+8).

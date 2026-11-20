@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -621,16 +622,121 @@ def run_one(
                 }
             base_row["run_s"] = round(time.perf_counter() - t_run, 1)
         out = (stdout or "") + (stderr or "")
-        return {
-            **base_row,
-            "exit": proc.returncode,
-            "ok": proc.returncode == 0,
-            "tail": out[-2000:],
-        }
+        return attach_fail_hints(
+            {
+                **base_row,
+                "exit": proc.returncode,
+                "ok": proc.returncode == 0,
+                "tail": out[-2000:],
+            },
+            out,
+        )
     except TimeoutError as exc:
         return {**base_row, "exit": EXIT_PORT_LOCK_TIMEOUT, "ok": False, "tail": str(exc)}
     except Exception as exc:
         return {**base_row, "exit": 1, "ok": False, "tail": str(exc)}
+
+
+_FAIL_TABLE = re.compile(
+    r"^\|\s*`?([A-Za-z0-9_]+)`?\s*\|\s*❌\s*\|\s*([^|]*)\|",
+    re.MULTILINE,
+)
+_FAIL_HEADING = re.compile(r"^###\s+(\S+)\s*$")
+
+
+def parse_fail_hints(text: str) -> list[dict[str, str]]:
+    """One hint per ``Fix:`` line, in heading order. Does not invent gates."""
+    exits: dict[str, str] = {}
+    for match in _FAIL_TABLE.finditer(text or ""):
+        exits[match.group(1)] = match.group(2).strip()
+    hints: list[dict[str, str]] = []
+    lines = (text or "").splitlines()
+    index = 0
+    while index < len(lines):
+        heading = _FAIL_HEADING.match(lines[index])
+        if not heading:
+            index += 1
+            continue
+        gate = heading.group(1)
+        fix = ""
+        first = ""
+        index += 1
+        if index < len(lines) and lines[index].startswith("Fix:"):
+            fix = lines[index].split(":", 1)[1].strip()
+            index += 1
+        if index < len(lines) and lines[index].strip() == "```":
+            index += 1
+            while index < len(lines) and lines[index].strip() != "```":
+                if not first and lines[index].strip():
+                    first = lines[index].strip()[:120]
+                index += 1
+        if fix:
+            hints.append(
+                {
+                    "gate": gate,
+                    "exit": exits.get(gate, ""),
+                    "first": first,
+                    "fix": fix,
+                }
+            )
+    return hints
+
+
+def attach_fail_hints(row: dict, stdout_text: str = "") -> dict:
+    """Copy ``row`` and attach hints. Leaves ``exit`` untouched."""
+    if row.get("ok"):
+        return row
+    root = Path(str(row.get("root") or ""))
+    report = root / ".agents" / "artifacts" / "NIGHT_SHIFT_REPORT.md"
+    text = ""
+    if report.is_file():
+        try:
+            text = report.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            text = ""
+    if not text:
+        text = stdout_text or str(row.get("tail") or "")
+    hinted = dict(row)
+    hinted["fail_hints"] = parse_fail_hints(text)
+    return hinted
+
+
+def fail_action_lines(rows: list[dict]) -> list[str]:
+    fails = [r for r in rows if not r.get("ok")]
+    if not fails:
+        return [
+            "- [ ] All green — pick next product work from each roadmap Shaping section"
+        ]
+    lines: list[str] = []
+    for row in fails:
+        hints = row.get("fail_hints") or []
+        if not hints:
+            lines.append(f"- [ ] **{row['name']}** fix: open NIGHT_SHIFT_REPORT.md")
+            continue
+        for hint in hints:
+            fix = hint.get("fix") or "open NIGHT_SHIFT_REPORT.md"
+            lines.append(f"- [ ] **{row['name']}** gate `{hint['gate']}`: {fix}")
+    return lines
+
+
+def _gate_summary_lines(row: dict) -> list[str]:
+    hints = row.get("fail_hints") or []
+    if not hints:
+        return [
+            f"- gate `unknown` exit {row.get('exit')} — first:  — "
+            "fix: open NIGHT_SHIFT_REPORT.md"
+        ]
+    lines: list[str] = []
+    for hint in hints:
+        exit_n = hint.get("exit")
+        if exit_n in ("", None):
+            exit_n = row.get("exit")
+        first = (hint.get("first") or "")[:120]
+        fix = hint.get("fix") or "open NIGHT_SHIFT_REPORT.md"
+        lines.append(
+            f"- gate `{hint['gate']}` exit {exit_n} — first: {first} — fix: {fix}"
+        )
+    return lines
 
 
 def write_summary(
@@ -685,6 +791,7 @@ def write_summary(
     else:
         for r in fails:
             lines.append(f"### {r['name']}")
+            lines.extend(_gate_summary_lines(r))
             lines.append("```")
             lines.append(r.get("tail") or "")
             lines.append("```")
@@ -698,8 +805,12 @@ def write_summary(
             "2. Fix failed products before `/execute_dev` on that repo.",
             "3. **Hard-stop:** no multi-repo auto-release from this job.",
             "",
+            "## Actions",
+            "",
         ]
     )
+    lines.extend(fail_action_lines(rows))
+    lines.append("")
     body = "\n".join(lines)
 
     art = HARNESS_ROOT / ".agents" / "artifacts"
@@ -755,15 +866,7 @@ def write_summary(
                 "",
             ]
         )
-        if fails:
-            for r in fails:
-                todo_lines.append(
-                    f"- [ ] Fix readiness on **{r['name']}** (exit {r['exit']})"
-                )
-        else:
-            todo_lines.append(
-                "- [ ] All green — pick next product work from each roadmap Shaping section"
-            )
+        todo_lines.extend(fail_action_lines(rows))
         todo_lines.append("")
         _vw(proj / "TODO.md", "\n".join(todo_lines) + "\n")
         notes.append(f"vault TODO: {proj / 'TODO.md'}")

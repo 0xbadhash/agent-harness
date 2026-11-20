@@ -634,6 +634,38 @@ def recommendations_from(
     return recs
 
 
+# Phrases that recommendations_from already emits. Used only to find that
+# sentence; the Fix: line copies it and does not invent a second hint.
+_FIX_MARKERS = {
+    "hardcodes": "Hardcode scan failed",
+    "validate_full": "scripts/validate.py full",
+    "product_smoke": "failing smoke steps",
+    "test_matrix": "TEST_MATRIX.md",
+    "repo_hygiene": "Repo hygiene failed",
+    "coverage": "Coverage thresholds failed",
+    "static_denies_live": "nginx denies",
+}
+
+
+def fix_sentence_for_gate(gate: str, recs: list[str]) -> str:
+    """Return the existing recommendation sentence for one failed gate."""
+    needle = f"`{gate}`"
+    for rec in recs:
+        if needle in rec and "Investigate failed gate" in rec or (
+            needle in rec and ("Security gate" in rec or "Live HTTP probe" in rec)
+        ):
+            return rec
+    marker = _FIX_MARKERS.get(gate)
+    if marker:
+        for rec in recs:
+            if marker in rec:
+                return rec
+    for rec in recs:
+        if needle in rec:
+            return rec
+    return f"Investigate failed gate `{gate}`."
+
+
 def build_report_md(
     *,
     when: datetime,
@@ -695,9 +727,12 @@ def build_report_md(
         lines.append("_None._")
     else:
         for r in fails:
-            lines.append(f"### {r['name']}")
+            gate = str(r["name"])
+            raw_tail = r.get("stderr_tail") or r.get("stdout_tail") or ""
+            lines.append(f"### {gate}")
+            lines.append(f"Fix: {fix_sentence_for_gate(gate, recs)}")
             lines.append("```")
-            lines.append((r.get("stderr_tail") or r.get("stdout_tail") or "")[:1200])
+            lines.append(raw_tail[:1200])
             lines.append("```")
             lines.append("")
     lines.extend(["", "## Recommendations", ""])
