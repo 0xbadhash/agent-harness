@@ -1,0 +1,7 @@
+name: auto-bg
+version: "0.1.0"
+manifest_version: 2
+description: Rewrite a busy chief-of-staff Signal DM into /bg so it runs in the background.
+author: t2072u
+provides_hooks:
+  - pre_gateway_dispatch
