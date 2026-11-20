@@ -34,6 +34,8 @@ Companion to source-aware `/code_review` / `/cross_review`:
 1. Load or write a short contract (see `references/contract-template.md`).
 2. Prefer `.agents/artifacts/BEHAVIOR_CONTRACT.md` or path from user.
 3. If missing, draft from the task + user stories, then validate against it.
+4. Read `docs/FEATURE_MAP.md` when present.
+5. Attach screenshot paths the map lists. Stay source-blind. Do not browse a logged-in product.
 
 ## Rules
 

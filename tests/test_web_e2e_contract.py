@@ -205,6 +205,47 @@ def test_extract_playwright_ids(tmp_path: Path):
     assert extract_playwright_scenario_ids([p]) == {"S12", "S18b"}
 
 
+def test_feature_map_warning_only_when_missing(tmp_path: Path):
+    (tmp_path / "web").mkdir()
+    (tmp_path / "web" / "index.html").write_text("<html></html>", encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "E2E_COMET_SCENARIOS.md").write_text(
+        "# x\nPROMPT FOR COMET\nReport template\nplaywright e2e/home.spec.ts\n### S0 — Smoke\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "e2e").mkdir()
+    (tmp_path / "e2e" / "home.spec.ts").write_text(
+        "test('S0 smoke load', async () => {});",
+        encoding="utf-8",
+    )
+    (tmp_path / "playwright.config.ts").write_text("export default {}", encoding="utf-8")
+    _write_plugin(
+        tmp_path,
+        "product_id: x\n"
+        "smoke:\n"
+        "  - name: e2e\n"
+        "    cmd: [npm, run, test:e2e]\n"
+        "web_e2e:\n"
+        "  enabled: true\n"
+        "  surfaces:\n"
+        "    - id: home\n"
+        "      order: 0\n"
+        "      path: /\n"
+        "      playwright: e2e/home.spec.ts\n"
+        "      scenarios:\n"
+        "        - id: smoke\n"
+        "          name: Smoke\n"
+        "          steps: [open]\n",
+    )
+    missing = validate_web_e2e(tmp_path)
+    assert missing["pass"] is True, missing["violations"]
+    assert any("FEATURE_MAP.md missing" in w for w in missing["warnings"])
+    (tmp_path / "docs" / "FEATURE_MAP.md").write_text("| S-id |\n", encoding="utf-8")
+    present = validate_web_e2e(tmp_path)
+    assert present["pass"] is True, present["violations"]
+    assert not any("FEATURE_MAP" in w for w in present["warnings"])
+
+
 def test_cli_check_web_e2e():
     r = subprocess.run(
         [sys.executable, str(SCRIPTS / "check_web_e2e.py"), "--root", str(ROOT), "--json"],
