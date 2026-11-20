@@ -45,3 +45,5 @@ jobs:
           python scripts/agent_eval_checklist.py --root . --skip-tests
       - name: Agent-config evals (stale refs / edit guard)
         run: python scripts/run_agent_config_evals.py --root .
+      - name: Skill drift
+        run: python scripts/check_skill_drift.py

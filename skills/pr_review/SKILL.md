@@ -8,6 +8,7 @@ user-invocable: true
 max-retries: 0
 timeout-seconds: 600
 preserve-artifacts-on-failure: true
+model: none
 ---
 # Reads: git diff, PR_DRAFT.md, .agents/artifacts/CODE_REVIEW.md, BEHAVIOR_REPORT.md
 # Writes: pipeline → approved/blocked

@@ -22,12 +22,14 @@ Use when the operator says `/challenge` and pastes or points at a proposal.
 2. From the product root, run:
 
 ```bash
+python3 scripts/challenge.py --proposal path/to/proposal.md
 python3 scripts/challenge.py --proposal path/to/proposal.md --vault /opt/second-brain/vault
 ```
 
 Hermes, or any checkout without the installed script, runs the harness copy:
 
 ```bash
+python3 ~/agent-harness/scripts/challenge.py --proposal path/to/proposal.md --root <product-root>
 python3 ~/agent-harness/scripts/challenge.py --proposal path/to/proposal.md --root <product-root> --vault /opt/second-brain/vault
 ```
 
@@ -35,6 +37,7 @@ python3 ~/agent-harness/scripts/challenge.py --proposal path/to/proposal.md --ro
 4. File it:
 
 ```bash
+python3 scripts/challenge.py --proposal path/to/proposal.md --decision path/to/decision.md
 python3 scripts/challenge.py --proposal path/to/proposal.md --decision path/to/decision.md --vault /opt/second-brain/vault
 ```
 
@@ -58,3 +61,5 @@ written to `.agents/artifacts/CHALLENGE.md` and the vault note is lost.
 ## Models
 
 GLM is `z-ai-glm-5-3-flash` through `/home/debian/hermes/scripts/ask_glm.py`. Deepseek is `deepseek-chat`. Keys stay in the Hermes env and are never printed.
+
+GLM is `z-ai-glm-5-3-flash` via `ask_glm.py` and Deepseek `deepseek-v4-flash` via Venice (`https://api.venice.ai/api/v1/chat/completions`, key `VENICE_API_KEY`). Do not call `api.deepseek.com`.

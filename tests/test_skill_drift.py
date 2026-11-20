@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic skill-drift cases. The worktree manifest check lands in commit 3b."""
+"""Skill drift checker, manifest lines, and the install-copy sync."""
 from __future__ import annotations
 
 import subprocess
@@ -83,6 +83,71 @@ class TestSkillDrift(unittest.TestCase):
             result = _run(root)
             self.assertEqual(result.returncode, 1)
             self.assertIn("EXTRA orphan", result.stdout)
+
+    def test_worktree_contains_manifest_lines(self):
+        skills = ROOT / "skills"
+        blobs = {
+            p.parent.name: p.read_text(encoding="utf-8")
+            for p in skills.glob("*/SKILL.md")
+        }
+        for name in ("code_review", "pr_review", "release_mgmt", "sync_docs"):
+            self.assertIn("model: none", blobs[name])
+        self.assertIn("model: grok-4.7", blobs["spec"])
+        self.assertIn("reasoning_effort: high", blobs["spec"])
+        self.assertIn("model: grok-4.7", blobs["execute_dev"])
+        self.assertIn("reasoning_effort: high", blobs["execute_dev"])
+        self.assertIn(
+            "Else harness: first open row in `.agents/BACKLOG.md`.",
+            blobs["execute_dev"],
+        )
+        self.assertIn("always ask user before inserting", blobs["agent_transcript"])
+        self.assertIn("fail closed on secrets", blobs["agent_transcript"])
+        self.assertIn(
+            "Ops/debug only — not a ship FSM step.",
+            blobs["session_viewer"],
+        )
+        self.assertTrue((skills / "retrospect" / "SKILL.md").is_file())
+        self.assertTrue((skills / "challenge" / "SKILL.md").is_file())
+        challenge_lines = blobs["challenge"].splitlines()
+        self.assertIn(
+            "python3 scripts/challenge.py --proposal path/to/proposal.md",
+            challenge_lines,
+        )
+        self.assertIn(
+            "python3 ~/agent-harness/scripts/challenge.py --proposal path/to/proposal.md --root <product-root>",
+            challenge_lines,
+        )
+        self.assertIn(
+            "python3 scripts/challenge.py --proposal path/to/proposal.md --decision path/to/decision.md",
+            challenge_lines,
+        )
+        self.assertIn("z-ai-glm-5-3-flash", blobs["challenge"])
+        self.assertIn("ask_glm.py", blobs["challenge"])
+        self.assertIn("deepseek-v4-flash", blobs["challenge"])
+        self.assertIn("Venice", blobs["challenge"])
+        self.assertNotIn("audit_repo", blobs["sweep"])
+
+    def test_sync_refuses_unlisted_extra_dir(self):
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import sync_installed_skills as sync_mod  # noqa: E402
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            _write(root / "skills" / "demo" / "SKILL.md", "same\n")
+            _write(root / ".agents" / "skills" / "orphan" / "SKILL.md", "extra\n")
+            code = sync_mod.sync(root, [])
+            self.assertEqual(code, 0)
+            self.assertTrue((root / ".agents" / "skills" / "orphan" / "SKILL.md").is_file())
+            self.assertEqual(
+                (root / ".agents" / "skills" / "demo" / "SKILL.md").read_text(encoding="utf-8"),
+                "same\n",
+            )
+            refused = sync_mod.sync(root, ["demo"])
+            self.assertEqual(refused, 1)
+            self.assertTrue((root / "skills" / "demo" / "SKILL.md").is_file())
+            gone = sync_mod.sync(root, ["orphan"])
+            self.assertEqual(gone, 0)
+            self.assertFalse((root / ".agents" / "skills" / "orphan").exists())
 
 
 if __name__ == "__main__":
