@@ -794,13 +794,32 @@ def collect_and_learn(
     *,
     artifact_dir: Path,
     promote: bool = True,
+    vault: Path | None = None,
+    quick: bool = False,
+    skip_live: bool = True,
+    dry_run: bool = True,
 ) -> int:
     """Sequential stand-in used by tests: one ``run_one`` per product, then learn.
 
     Tests replace ``run_one``. Production ``main`` calls ``run_one`` with the
     real gate arguments, then ``refresh_fail_learning``.
+
+    Defaults stay dry-run and skip-live so an unpatched stand-in cannot start
+    a live night gate. ``vault`` falls back to ``artifact_dir`` only here;
+    production passes the resolved vault into ``run_one`` directly.
     """
-    rows = [run_one(name, root) for name, root in products]
+    vault_path = artifact_dir if vault is None else vault
+    rows = [
+        run_one(
+            name,
+            root,
+            vault=vault_path,
+            quick=quick,
+            skip_live=skip_live,
+            dry_run=dry_run,
+        )
+        for name, root in products
+    ]
     return exit_after_learning(
         rows,
         products,

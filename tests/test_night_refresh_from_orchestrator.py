@@ -97,6 +97,62 @@ class TestNightRefreshFromOrchestrator(unittest.TestCase):
             self.assertIn("demo", triage)
             self.assertNotIn("recheck green", triage)
 
+    def test_collect_and_learn_forwards_gate_args_to_run_one(self):
+        """run_one is keyword-only for vault/quick/skip_live/dry_run.
+
+        collect_and_learn is the sequential stand-in. It must pass those
+        arguments through, including when the caller leaves the safe defaults.
+        """
+        mod = _load()
+        calls: list[dict[str, object]] = []
+
+        def capture(name, root, **kwargs):  # noqa: ARG001
+            calls.append(dict(kwargs))
+            return _fake_run_one(name, root)
+
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            root = t / "demo"
+            root.mkdir()
+            out_dir = t / "learn"
+            vault = t / "vault"
+            with patch.object(mod, "run_one", capture):
+                explicit = mod.collect_and_learn(
+                    [("demo", root)],
+                    artifact_dir=out_dir,
+                    promote=False,
+                    vault=vault,
+                    quick=True,
+                    skip_live=False,
+                    dry_run=False,
+                )
+                defaulted = mod.collect_and_learn(
+                    [("demo", root)],
+                    artifact_dir=out_dir,
+                    promote=False,
+                )
+        explicit_kwargs, default_kwargs = calls
+        self.assertEqual(explicit, 1)
+        self.assertEqual(
+            explicit_kwargs,
+            {
+                "vault": vault,
+                "quick": True,
+                "skip_live": False,
+                "dry_run": False,
+            },
+        )
+        self.assertEqual(defaulted, 1)
+        self.assertEqual(
+            default_kwargs,
+            {
+                "vault": out_dir,
+                "quick": False,
+                "skip_live": True,
+                "dry_run": True,
+            },
+        )
+
     def test_refresh_exception_keeps_exit_and_leaves_no_partial(self):
         mod = _load()
         sys.path.insert(0, str(ROOT / "scripts"))
