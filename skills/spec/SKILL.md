@@ -13,6 +13,8 @@ user-invocable: true
 max-retries: 0
 timeout-seconds: 900
 preserve-artifacts-on-failure: true
+model: grok-4.7
+reasoning_effort: high
 ---
 # Reads: product_plugin.yaml, constitution (see §0), product roadmap, pipeline.json, product layout
 # Writes: .agents/specs/<slug>.md, optional …-plan.md, optional tickets/, roadmap OPEN item

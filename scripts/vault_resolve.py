@@ -31,7 +31,7 @@ def load_vault_config(product_root: Path | None = None) -> dict:
         "enabled": False,
         "root_env": CANONICAL_VAULT_ENV,
         "default_root": "",
-        "project_label": "product",
+        "project_label": "",
         "dev_log_rel": "",
         "product_id": "",
         "mirror_docs": [],
@@ -54,7 +54,7 @@ def load_vault_config(product_root: Path | None = None) -> dict:
                 val = val.split(" #", 1)[0].rstrip()
             if key == "product_id":
                 cfg["product_id"] = val
-                if cfg["project_label"] == "product":
+                if not cfg["project_label"]:
                     cfg["project_label"] = val
             else:
                 cfg[key] = val
@@ -97,9 +97,28 @@ def load_vault_config(product_root: Path | None = None) -> dict:
 
 
 def project_rel(product_root: Path | None = None, *parts: str) -> Path:
-    """Relative path under 01-Projects/<label>/… from plugin."""
-    cfg = load_vault_config(product_root)
-    label = (cfg.get("project_label") or cfg.get("product_id") or "product").strip()
+    """Relative path under 01-Projects/<label>/… from plugin.
+
+    The label is never invented. It comes from the plugin, or from the product root's own directory
+    name; with neither, this refuses rather than filing a note under a guessed project (a hardcoded
+    fallback of "product" is how harness test fixtures ended up in the live vault).
+    """
+    root = product_root if product_root is not None else Path.cwd()
+    cfg = load_vault_config(root)
+    label = (cfg.get("project_label") or cfg.get("product_id") or "").strip()
+    if not label:
+        label = root.resolve().name.strip()
+    if (
+        not label
+        or label in {".", ".."}
+        or "/" in label
+        or "\\" in label
+        or label.startswith(".")
+    ):
+        raise ValueError(
+            "vault project_label is unset and the product root has no usable name; "
+            "refusing to invent a project label"
+        )
     return Path("01-Projects") / label / Path(*parts) if parts else Path("01-Projects") / label
 
 

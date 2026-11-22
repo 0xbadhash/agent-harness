@@ -1,0 +1,8 @@
+{
+  "_why": "Exact-match exemptions for paths that are absolute inside a container image, not on this host. Prefix matching is deliberately not supported.",
+  "allow_exact": [
+    "/home/browser",
+    "/home/browser/.config",
+    "/home/browser/.cache"
+  ]
+}

@@ -136,6 +136,23 @@ fi
 rsync -a "${RSYNC_EX[@]}" "${PROTECT_EX[@]}" "$HARNESS_ROOT/scripts/" "$PRODUCT_ROOT/scripts/"
 echo "  ~ scripts/"
 
+# Shared test SoT (T1905U): scripts/tests (at least test_night_shift_product_paths.py)
+# is owned by agent-harness — ALWAYS refreshed from the harness copy, never from a
+# sibling product, and never fork-protected. A stale per-product duplicate here is
+# the exact regression class t1666u closed; re-run this installer instead of hand-editing.
+mkdir -p "$PRODUCT_ROOT/scripts/tests"
+rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/scripts/tests/" "$PRODUCT_ROOT/scripts/tests/"
+for t in "$HARNESS_ROOT"/scripts/tests/*.py; do
+  rel="tests/$(basename "$t")"
+  if [[ -f "$PRODUCT_ROOT/scripts/$rel" ]]; then
+    if ! cmp -s "$t" "$PRODUCT_ROOT/scripts/$rel"; then
+      echo "  ❌ shared test SoT mismatch after rsync: scripts/$rel" >&2
+      exit 1
+    fi
+  fi
+done
+echo "  ~ scripts/tests/ (shared tests refreshed from harness SoT)"
+
 rsync -a "${RSYNC_EX[@]}" "$HARNESS_ROOT/policy/" "$PRODUCT_ROOT/.agents/policy/"
 echo "  ~ .agents/policy/"
 

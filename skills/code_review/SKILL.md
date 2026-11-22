@@ -9,6 +9,7 @@ user-invocable: true
 max-retries: 0
 timeout-seconds: 900
 preserve-artifacts-on-failure: true
+model: none
 ---
 
 # Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints

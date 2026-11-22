@@ -40,37 +40,3 @@ Follow-up, not a blocker: repo `Group=debian` still differs from the installed `
 1. Overwriting `PR_DRAFT.md` drops the previous IoC narrative from the working file. That narrative remains in git history on the parent commit.
 2. File count is 8 because review artifacts were replaced, not because the unit grew a new schedule.
 3. systemd prints `Sun,Mon,Tue,Wed,Thu` as `Mon..Thu,Sun`. Same weekday set.
-
----
-
-# CROSS-REVIEW — vault completion writer (2026-11-09)
-
-**Marker:** CROSS-REVIEW
-**Security lens:** the only untrusted input is event content produced by an executor on the same host. It cannot
-select a path (`run_id` grammar), cannot break YAML (quoted serializer), and cannot execute in Obsidian (inert
-body). The writer's write scope is one directory, enforced by construction: `runs_dir()/day/run_id.md`.
-**Ops lens:** level-triggered unit; the start limiter is disabled on purpose so a non-empty spool keeps firing;
-`ExecStopPost` is belt only. A stuck spool is visible as a repeating journal line carrying `stage=` and `run_id=`.
-**Product lens:** the note is readable, the index is rebuilt rather than appended, and nothing else in the vault is
-touched.
-
-Blockers: 0. Majors: 0. Follow-ups: 1 — the CLI has no `--dry-run`, so an executor cannot see the event before it
-lands in the spool. Not required by the spec; recorded rather than silently added.
-
----
-
-# CROSS-REVIEW — security-root-ioc real homes (2026-11-22)
-
-**Marker:** CROSS-REVIEW
-**Base:** parent of `6e616ba`
-**Head:** `6e616ba` plus the PR draft threat-tag and red-proof fix
-**Secrets:** clean on `HEAD~1...HEAD` before this note
-**Blockers:** 0
-
-Security: none. A readable parent no longer stands in for an unlistable child home.
-Maintainability: none. Discovery is one function and tests inject `multiuser_home`.
-Domain: none. No username hardcoded. `--home` remains the override.
-
-### Obsolete / cleanup (scoped)
-
-No Tier A, B, or C. Confidence 0.9. `resolve_home_roots` is referenced by the scanner and its unit test. The `/home` parent stays as the fail-closed required path when no child exists. Keep the unit and the ship-flow sentence.

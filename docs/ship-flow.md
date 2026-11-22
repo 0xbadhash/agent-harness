@@ -424,7 +424,10 @@ gate; there is no separate workflow name required.
 ### Ops: Security IOC (not a PR hard gate)
 
 Weekly root/containerd seed-malware scan: `scripts/security_root_ioc_scan.py` +
-`deploy/security-root-ioc.timer`. Surfaces on OPS-DASHBOARD / `agent-tasks/security-ioc-status`.
+`deploy/security-root-ioc.timer`. The unit runs as root, so the script requires
+each directory under `/home` unless `--home` is passed. `status=ok` means those
+homes were walked. A walk of the parent alone is not a clean scan.
+Surfaces on OPS-DASHBOARD / `agent-tasks/security-ioc-status`.
 Does **not** block `/pr_review --validate`. Green IOC ≠ full 0-day coverage.
 
 ### Portfolio install (HSQ-1)

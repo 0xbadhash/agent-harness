@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Entry point for the completion writer. Deliberately NOT a replacement for the
+# `hermes` CLI: overwriting ~/.local/bin/hermes would put the whole CLI behind a
+# one-line bug and an update would silently remove this command.
+exec /usr/bin/python3 "$(dirname "$(readlink -f "$0")")/vault_done.py" "$@"

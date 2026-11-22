@@ -71,10 +71,9 @@ def _combined_tails(results: list[dict[str, Any]]) -> str:
 
 def try_ensure_dev_env(root: Path, *, dry_run: bool) -> dict[str, Any] | None:
     """Install product venv / requirements-dev when gates fail on missing deps."""
-    scripts = root / "scripts"
-    ensure = scripts / "ensure_product_dev_env.py"
+    # AH-2: never import or run a product copy of this script.
     harness_ensure = Path(__file__).resolve().parent / "ensure_product_dev_env.py"
-    target = ensure if ensure.is_file() else harness_ensure
+    target = harness_ensure
     if not target.is_file():
         # inline minimal: requirements-dev + venv
         req = root / "requirements-dev.txt"

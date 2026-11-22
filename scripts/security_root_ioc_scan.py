@@ -2,10 +2,20 @@
 """Weekly (or on-demand) root/containerd IoC scan for known npm malware seeds.
 
 Detects ChainDrop / keyv-style campaign fingerprints under:
-  - /home (product trees)
+  - the operator home (see below)
   - /opt
   - /var/lib/containerd (needs root/sudo)
   - optional extra roots via --root
+
+Home selection:
+  The weekly unit runs as User=root, so Path.home() is /root and a walk of
+  /root alone can report status=ok without opening the real home. Requiring
+  the parent /home is not enough: os.walk does not raise when a child is
+  unlistable, so a green walk of /home can skip that home. When the process
+  home is /root and --home is omitted, each immediate child directory of
+  /home is scanned and required. --home PATH (repeatable) replaces that
+  discovery. A required home that was not a readable directory is
+  status=incomplete (exit 2), never ok.
 
 Writes:
   $PRODUCT_VAULT_ROOT/agent-tasks/security-ioc-status.md
@@ -20,6 +30,8 @@ Behavior vs OPS-DASHBOARD:
     dashboard with noise when green.
 
   python3 scripts/security_root_ioc_scan.py
+  python3 scripts/security_root_ioc_scan.py --home /path/to/home
+  python3 scripts/security_root_ioc_scan.py --print-roots
   python3 scripts/security_root_ioc_scan.py --deep   # include containerd (sudo)
   sudo python3 scripts/security_root_ioc_scan.py --deep --write-dashboard
 
@@ -63,6 +75,114 @@ PAYLOAD_NAMES = (
 
 # setup.mjs only suspicious under keyv-ish trees
 SETUP_MJS_HINTS = ("keyv", "flat-cache", "file-entry-cache", "cacheable")
+
+# systemd User=root. Not the operator tree the timer is meant to cover.
+_ROOT_HOME = Path("/root")
+# Parent of the real homes. Children are required. The parent walk is not:
+# os.walk swallows an unlistable child, so a green /home can skip one.
+_MULTIUSER_HOME = Path("/home")
+_SYSTEM_ROOT = Path("/opt")
+_CONTAINERD_ROOT = Path("/var/lib/containerd")
+
+
+def _same_path(left: Path, right: Path) -> bool:
+    if left == right:
+        return True
+    try:
+        return left.expanduser().resolve() == right.expanduser().resolve()
+    except OSError:
+        return False
+
+
+def discover_real_homes(multiuser_home: Path) -> list[Path]:
+    """Immediate child directories of the multi-user home parent.
+
+    No username is hardcoded. A file in the parent is not a home. An
+    unlistable parent or a child whose type cannot be stated yields no
+    confident list (the caller fail-closes). Sorted by name.
+    """
+    if not multiuser_home.is_dir():
+        return []
+    try:
+        children = list(multiuser_home.iterdir())
+    except OSError:
+        return []
+    found: list[Path] = []
+    for child in children:
+        try:
+            is_dir = child.is_dir()
+        except OSError:
+            return []
+        if is_dir:
+            found.append(child)
+    found.sort(key=lambda path: path.name)
+    return found
+
+
+def resolve_home_roots(
+    process_home: Path,
+    explicit_homes: list[str] | None = None,
+    *,
+    multiuser_home: Path | None = None,
+) -> tuple[list[Path], list[Path]]:
+    """Return (home roots to scan, required home roots).
+
+    Explicit homes (--home) replace the process home. Every one is required.
+    When the process home is /root, each child directory of the multi-user
+    parent is required and /root is still walked. The parent itself is not
+    a scan root and cannot satisfy the required list. No child directory
+    means the parent is required and unscanned, so the result is incomplete.
+    """
+    explicit = [Path(raw).expanduser() for raw in (explicit_homes or []) if str(raw).strip()]
+    if explicit:
+        return list(explicit), list(explicit)
+    if _same_path(process_home, _ROOT_HOME):
+        base = multiuser_home if multiuser_home is not None else _MULTIUSER_HOME
+        real = discover_real_homes(base)
+        if real:
+            return [*real, _ROOT_HOME], list(real)
+        return [_ROOT_HOME], [base]
+    home = process_home.expanduser()
+    return [home], [home]
+
+
+def assemble_roots(
+    *,
+    process_home: Path,
+    deep: bool,
+    extra_roots: list[str],
+    explicit_homes: list[str],
+    multiuser_home: Path | None = None,
+) -> tuple[list[Path], list[Path]]:
+    """Full walk list plus the homes that must actually be scanned."""
+    homes, required = resolve_home_roots(
+        process_home, explicit_homes, multiuser_home=multiuser_home
+    )
+    roots = list(homes)
+    roots.append(_SYSTEM_ROOT)
+    if deep:
+        roots.append(_CONTAINERD_ROOT)
+    for raw in extra_roots:
+        roots.append(Path(raw).expanduser())
+    return roots, required
+
+
+def format_roots(roots: list[Path], required: list[Path]) -> str:
+    lines = ["security_root_ioc roots_only"]
+    for path in required:
+        lines.append(f"required {path}")
+    for path in roots:
+        lines.append(f"root {path}")
+    return "\n".join(lines) + "\n"
+
+
+def exit_code(result: dict) -> int:
+    status = result.get("status")
+    if status == "fail":
+        return 1
+    if status != "ok":
+        return 2
+    return 0
 
 
 def _vault() -> Path | None:
@@ -112,17 +232,34 @@ def scan_lockfile(path: Path) -> list[str]:
     return hits
 
 
-def scan_tree(root: Path, *, max_depth: int | None = None) -> tuple[list[str], list[str]]:
-    """Return (malicious_pins, payload_paths)."""
+def scan_tree(
+    root: Path, *, max_depth: int | None = None
+) -> tuple[list[str], list[str], bool]:
+    """Return (malicious_pins, payload_paths, walked).
+
+    walked is False when the tree could not be entered. Pins already seen
+    before a later PermissionError are still returned.
+    """
     pins: list[str] = []
     payloads: list[str] = []
     if not root.is_dir():
-        return pins, payloads
+        return pins, payloads, False
 
     # Walk with depth limit to avoid pathological trees
     root_depth = len(root.parts)
+    walked = True
+    top_failed = False
+
+    def _on_walk_error(err: OSError) -> None:
+        nonlocal top_failed
+        name = getattr(err, "filename", None)
+        if name is not None and _same_path(Path(name), root):
+            top_failed = True
+
     try:
-        for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        for dirpath, dirnames, filenames in os.walk(
+            root, followlinks=False, onerror=_on_walk_error
+        ):
             p = Path(dirpath)
             depth = len(p.parts) - root_depth
             if max_depth is not None and depth > max_depth:
@@ -154,27 +291,39 @@ def scan_tree(root: Path, *, max_depth: int | None = None) -> tuple[list[str], l
                     if any(h in s for h in SETUP_MJS_HINTS):
                         payloads.append(str(fp))
     except PermissionError:
-        pass
-    return pins, payloads
+        top_failed = True
+    if top_failed:
+        walked = False
+    return pins, payloads, walked
 
 
-def run_scan(roots: list[Path], *, deep: bool) -> dict:
+def run_scan(
+    roots: list[Path],
+    *,
+    deep: bool,
+    required: list[Path] | None = None,
+) -> dict:
     all_pins: list[str] = []
     all_payloads: list[str] = []
     scanned: list[str] = []
     errors: list[str] = []
 
     for root in roots:
-        if not root.exists():
+        # A missing path or a non-directory was not walked. Callers that
+        # require this root must not treat that as a clean scan.
+        if not root.is_dir():
             errors.append(f"missing:{root}")
             continue
-        if not os.access(root, os.R_OK):
+        if not os.access(root, os.R_OK | os.X_OK):
             errors.append(f"unreadable:{root}")
             continue
         depth = None if deep else 8
-        pins, payloads = scan_tree(root, max_depth=depth)
+        pins, payloads, walked = scan_tree(root, max_depth=depth)
         all_pins.extend(pins)
         all_payloads.extend(payloads)
+        if not walked:
+            errors.append(f"unreadable:{root}")
+            continue
         scanned.append(str(root))
 
     # de-dupe preserve order
@@ -189,7 +338,14 @@ def run_scan(roots: list[Path], *, deep: bool) -> dict:
 
     pins_u = uniq(all_pins)
     pay_u = uniq(all_payloads)
-    status = "fail" if pins_u or pay_u else "ok"
+    scanned_set = set(scanned)
+    missing_required = [str(path) for path in (required or []) if str(path) not in scanned_set]
+    if pins_u or pay_u:
+        status = "fail"
+    elif missing_required:
+        status = "incomplete"
+    else:
+        status = "ok"
     utc, hkt = _now_labels()
     return {
         "status": status,
@@ -198,6 +354,7 @@ def run_scan(roots: list[Path], *, deep: bool) -> dict:
         "deep": deep,
         "scanned_roots": scanned,
         "errors": errors,
+        "missing_required": missing_required,
         "malicious_pins": pins_u[:50],
         "payload_paths": pay_u[:50],
         "pin_count": len(pins_u),
@@ -212,7 +369,12 @@ def write_artifacts(vault: Path, result: dict) -> tuple[Path, Path]:
     jpath.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 
     st = result["status"]
-    emoji = "🔴" if st == "fail" else "🟢"
+    if st == "fail":
+        emoji = "🔴"
+    elif st == "ok":
+        emoji = "🟢"
+    else:
+        emoji = "🟡"
     lines = [
         "tags:",
         "  - type/ops",
@@ -239,6 +401,21 @@ def write_artifacts(vault: Path, result: dict) -> tuple[Path, Path]:
     lines.extend(["", "## Findings", ""])
     if st == "ok":
         lines.append("No malicious seed pins or known payload filenames found.")
+    elif st == "incomplete":
+        lines.append(
+            "Required home was not scanned. This result is not clean."
+        )
+        for miss in result.get("missing_required") or []:
+            lines.append(f"- missing required `{miss}`")
+        lines.extend(
+            [
+                "",
+                "## Action",
+                "",
+                "1. Pass `--home` for each operator tree, or restore read access to that home.",
+                "2. Re-run. Do not treat this file as a green scan.",
+            ]
+        )
     else:
         if result.get("malicious_pins"):
             lines.append("### Malicious npm pins")
@@ -291,7 +468,12 @@ def maybe_refresh_dashboard(force: bool, has_findings: bool) -> int:
     return int(r.returncode)
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    process_home: Path | None = None,
+    multiuser_home: Path | None = None,
+) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--deep",
@@ -302,7 +484,22 @@ def main(argv: list[str] | None = None) -> int:
         "--root",
         action="append",
         default=[],
-        help="Extra root to scan (repeatable)",
+        help="Extra root to scan (repeatable). Does not replace the home.",
+    )
+    ap.add_argument(
+        "--home",
+        action="append",
+        default=[],
+        help=(
+            "Operator home to scan (repeatable). Replaces Path.home(). "
+            "When omitted and the process home is /root, each directory "
+            "under /home is required."
+        ),
+    )
+    ap.add_argument(
+        "--print-roots",
+        action="store_true",
+        help="Print planned roots and exit. Does not walk or write artifacts.",
     )
     ap.add_argument(
         "--write-dashboard",
@@ -315,17 +512,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Print only; do not write vault artifacts",
     )
     args = ap.parse_args(argv)
+    home = process_home if process_home is not None else Path.home()
+    roots, required = assemble_roots(
+        process_home=home,
+        deep=bool(args.deep),
+        extra_roots=list(args.root),
+        explicit_homes=list(args.home),
+        multiuser_home=multiuser_home,
+    )
+    if args.print_roots:
+        # Plan only. Must not claim status=ok: nothing was walked.
+        print(format_roots(roots, required), end="")
+        return 0
 
-    roots: list[Path] = [
-        Path.home(),
-        Path("/opt"),
-    ]
-    if args.deep:
-        roots.append(Path("/var/lib/containerd"))
-    for r in args.root:
-        roots.append(Path(r).expanduser())
-
-    result = run_scan(roots, deep=bool(args.deep))
+    result = run_scan(roots, deep=bool(args.deep), required=required)
     print(
         f"security_root_ioc status={result['status']} "
         f"pins={result['pin_count']} payloads={result['payload_count']} "
@@ -347,8 +547,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  wrote {jpath}")
             print(f"  wrote {mpath}")
 
-    has_findings = result["status"] != "ok"
-    # User request: notify dashboard when something found; always-refresh optional
+    has_findings = result["status"] == "fail"
+    # Refresh on findings or when the operator asked. Incomplete is not a
+    # malware hit; the non-ok JSON status is enough for the dashboard.
     rc_dash = maybe_refresh_dashboard(
         force=bool(args.write_dashboard),
         has_findings=has_findings,
@@ -356,7 +557,7 @@ def main(argv: list[str] | None = None) -> int:
     if has_findings or args.write_dashboard:
         print(f"  ops_dashboard refresh rc={rc_dash}")
 
-    return 1 if has_findings else 0
+    return exit_code(result)
 
 
 if __name__ == "__main__":

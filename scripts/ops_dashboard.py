@@ -661,6 +661,117 @@ def collect_waivers(harness: Path) -> tuple[list[Item], list[Item]]:
     return well, att
 
 
+def _restic_slot(now: datetime) -> tuple[datetime, bool]:
+    """Night timer is 19:40 UTC, which is 03:40 HKT the next calendar day.
+
+    Before today's 19:40 UTC, grade yesterday's slot. After it, grade today's
+    slot and keep DID-NOT-RUN only while that fire has not finished.
+    """
+    slot = now.astimezone(UTC).replace(hour=19, minute=40, second=0, microsecond=0)
+    if now < slot:
+        return slot - timedelta(days=1), False
+    return slot, now < slot + timedelta(hours=2)
+
+
+def collect_vault_restic(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]]:
+    """Daily vault-restic-night + rclone pcloud:vault-restic. Does not run a backup."""
+    del vault
+    well: list[Item] = []
+    att: list[Item] = []
+    fail: list[Item] = []
+    now = datetime.now(UTC)
+    expected, slot_open = _restic_slot(now)
+    day = expected.strftime("%Y-%m-%d")
+    log = f"/var/log/vault-restic-night/cleanup-{day}.log"
+    log_mtime = ""
+    try:
+        st = subprocess.run(
+            ["sudo", "-n", "stat", "-c", "%y", log],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        if st.returncode == 0:
+            log_mtime = (st.stdout or "").strip().split(".", 1)[0]
+    except (OSError, subprocess.TimeoutExpired):
+        log_mtime = ""
+
+    night = "DID-NOT-RUN"
+    ok_at = ""
+    try:
+        proc = subprocess.run(
+            [
+                "journalctl",
+                "-u",
+                "vault-restic-night.service",
+                "--since",
+                expected.strftime("%Y-%m-%d %H:%M:%S"),
+                "--no-pager",
+                "-o",
+                "cat",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        text = proc.stdout or ""
+        for line in text.splitlines():
+            if "vault-restic-night: OK" in line:
+                night = "PASS"
+                ok_at = line.strip()
+        if night != "PASS":
+            if "CLEANUP SKIPPED" in text or "BLOCKED" in text or "error" in text.lower():
+                night = "FAIL"
+            elif log_mtime and not slot_open:
+                night = "PASS"
+            elif slot_open:
+                night = "DID-NOT-RUN"
+            else:
+                night = "FAIL"
+    except (OSError, subprocess.TimeoutExpired):
+        if log_mtime and not slot_open:
+            night = "PASS"
+        elif slot_open:
+            night = "DID-NOT-RUN"
+        else:
+            night = "FAIL"
+
+    rclone_state = "FAIL"
+    try:
+        proc = subprocess.run(
+            ["sudo", "-n", "rclone", "lsd", "pcloud:vault-restic"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode == 0:
+            rclone_state = "PASS"
+    except (OSError, subprocess.TimeoutExpired):
+        rclone_state = "FAIL"
+
+    when = ok_at or (f"log {log} @ {log_mtime} UTC" if log_mtime else f"slot {day} 19:40 UTC")
+    summary = (
+        f"vault-restic-night **{night}** ({when}; timer 19:40 UTC / 03:40 HKT next day); "
+        f"rclone pcloud:vault-restic **{rclone_state}** (root lsd)"
+    )
+    item = Item(
+        "info",
+        "vault-restic",
+        summary,
+        action="journalctl -u vault-restic-night.service --since 'yesterday 19:40 UTC'",
+    )
+    if night == "FAIL" or rclone_state == "FAIL":
+        item.severity = "fail"
+        fail.append(item)
+    elif night == "DID-NOT-RUN":
+        item.severity = "attention"
+        att.append(item)
+    else:
+        item.severity = "green"
+        well.append(item)
+    return well, att, fail
+
+
 def append_ops_snapshot(d: Dashboard, vault: Path | None) -> None:
     """HSQ-2: append one JSONL snapshot for trend mining."""
     row = {
@@ -704,6 +815,11 @@ def build(vault: Path | None, quick: bool) -> Dashboard:
     d.todos.extend(t)
 
     w, a, f = collect_vault_health(vault)
+    d.went_well.extend(w)
+    d.attention.extend(a)
+    d.failing.extend(f)
+
+    w, a, f = collect_vault_restic(vault)
     d.went_well.extend(w)
     d.attention.extend(a)
     d.failing.extend(f)
@@ -939,10 +1055,33 @@ def render(d: Dashboard, vault: Path | None) -> str:
             "- **Manual:** `sudo python3 scripts/security_root_ioc_scan.py --deep --write-dashboard`",
             "",
             "_Auto-generated — do not hand-edit the tables; fix sources and re-run generator._",
+            "Hand rows kept between the markers below survive the next --write.",
+            "<!-- hand-rows:start -->",
+            "<!-- hand-rows:end -->",
             "",
         ]
     )
     return "\n".join(lines)
+
+
+def _preserve_hand_rows(md: str, previous: str) -> str:
+    """Keep a hand-written block. Generator tables are replaced; this block is not."""
+    match = re.search(
+        r"<!-- hand-rows:start -->.*?<!-- hand-rows:end -->",
+        previous,
+        re.S,
+    )
+    if not match:
+        return md
+    block = match.group(0)
+    fresh = re.search(
+        r"<!-- hand-rows:start -->.*?<!-- hand-rows:end -->",
+        md,
+        re.S,
+    )
+    if not fresh:
+        return md.rstrip() + "\n" + block + "\n"
+    return md[: fresh.start()] + block + md[fresh.end() :]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -956,6 +1095,10 @@ def main(argv: list[str] | None = None) -> int:
     vault = _vault_root(args.vault)
     d = build(vault, quick=args.quick)
     md = render(d, vault)
+    if vault:
+        prev = vault / "agent-tasks" / "OPS-DASHBOARD.md"
+        if prev.is_file():
+            md = _preserve_hand_rows(md, prev.read_text(encoding="utf-8", errors="replace"))
     if args.stdout or args.no_write:
         print(md)
     if not args.no_write:

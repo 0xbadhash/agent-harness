@@ -6,6 +6,8 @@ user-invocable: true
 max-retries: 0
 timeout-seconds: 600
 preserve-artifacts-on-failure: true
+model: grok-4.7
+reasoning_effort: high
 ---
 # Pipeline: docs/ship-flow.md (in harness) / product docs
 # Reads: product_plugin.yaml, product roadmap, .agents/BACKLOG.md, pipeline.json
@@ -31,7 +33,8 @@ When invoked with `/execute_dev`:
 1. **Load task:**
    - If user args specify a task → use that (acceptance must be clear).
    - Else product: first open priority item in the product roadmap file (see `product_plugin.yaml` → `product_roadmap`).
-   - Else harness: first open row in `.agents/BACKLOG.md` / CHANGELOG Open work.
+   - Else harness: first open row in `.agents/BACKLOG.md`.
+   - CHANGELOG Open work is the fallback when that backlog row is empty.
    - If none → `✅ ROADMAP EMPTY.`
 2. **Spec check:** Missing acceptance criteria → `🛑 SPEC MISSING.` and halt.
    - For code ships, fill **## Traceability** (AC → test/smoke) in PR_DRAFT before `/pr_review` (hard gate B2).

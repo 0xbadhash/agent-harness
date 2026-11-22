@@ -4,17 +4,16 @@ Same determinism contract as the standalone suite: filesystem/AST/text checks
 and offline imports only - no network, no LLM calls, no sleeps.
 
 The suite asserts the box's sibling topology (workflow-harness checkout,
-harness-shared package). On a fresh CI checkout without those siblings the
+sibling repos). On a fresh CI checkout without those siblings the
 whole directory is skipped; on the box it runs for real.
 """
-import os
 from pathlib import Path
 
 AH = Path(__file__).resolve().parents[2]   # agent-harness repo root
 WH = Path("/home/debian/workflow-harness")  # sibling repo, absolute (E35 only)
 
 # Box-only suite: skip collection when the sibling topology is absent (CI).
-_BOX_TOPOLOGY = WH.is_dir() and os.path.isdir("/home/debian/harness-shared")
+_BOX_TOPOLOGY = WH.is_dir()
 collect_ignore = [] if _BOX_TOPOLOGY else ["test_agent_harness_e01_e25.py"]
 
 def ah(*parts): return AH.joinpath(*parts)

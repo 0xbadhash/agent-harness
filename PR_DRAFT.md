@@ -1,80 +1,107 @@
-# PR draft — vault completion writer
+# PR draft — root IoC scan requires each real home
 
-**Spec:** .agents/specs/2026-11-09-vault-completion-writer.md
-**Plan:** .agents/specs/2026-11-09-vault-completion-writer-plan.md
-**Tickets:** .agents/tickets/vault-completion-writer/
-
-Status: spec ready; implementation not started.
-
-## Red-proof
-
-- red_cmd: `python3 scripts/vault_done.py --id 'BAD/../ID' --verdict PASS` → exits 2, `refused: run id must match`, writes no file
-- green_cmd: `.venv/bin/python -m pytest tests/test_vault_writer.py -q`
-
-## Traceability
-
-| AC | Test |
-|----|------|
-| A1 partial writes event + matchable tag | `test_a1_partial_writes_event_and_prints_matchable_tag` |
-| A2 unknown verdict writes nothing | `test_a2_unknown_verdict_writes_nothing` |
-| A3 note + 0444 processed copy | `test_a3_drain_writes_note_and_read_only_processed_copy` |
-| A4 idempotent / rev2 preserves original | `test_a4_same_event_twice_makes_one_note`, `test_a4_changed_content_makes_rev2_and_preserves_original` |
-| A5 crash between note and processed resumes | `test_a5_crash_between_note_and_processed_resumes` |
-| A6 bad id / `---` refused | `test_a6_bad_run_id_and_separator_are_refused` |
-| A7 no start limiter | `test_a7_units_disable_the_start_limiter` |
-| A8 run id round-trips | covered by A1/A3 note path assertions |
-| A9 plain file the vault can commit | `test_a9_note_is_a_plain_file_the_vault_can_commit` |
-| S1 inert body | `test_s1_body_is_inert` |
-| S2 YAML quoting | `test_s2_yaml_quote_roundtrips_and_escapes` |
-
-## Threat notes
-
-Tags: injection, path-traversal, secrets.
-
-- **injection**: free text from an executor lands in a markdown vault a live Obsidian renders. The body is rendered
-  inert (`&lt;`, `&#96;`, `&#126;`) and frontmatter is quoted, so a fenced dataviewjs block cannot form. Tested by
-  `test_s1_body_is_inert` with a real attack fixture.
-- **path-traversal**: `run_id` is the only path component and must match `^[A-Z0-9-]{1,64}$`; the note path is
-  built from it plus a fixed directory, never from event content. Refused before any write.
-- **secrets**: events and notes carry paths, hashes and verdicts only; the CLI refuses control characters and the
-  writer never echoes file contents. No token is read or written.
-
-## Evidence pack
-
-- hard_gates: `python3 scripts/hard_gates.py --diff HEAD~1...HEAD`
-- pytest: **375 passed** (`TMPDIR=/tmp`, harness suite) · targeted **24 passed**
-- smoke: live staging run — `hermes-done --verdict PARTIAL` → tag, event, drain, note with 12 frontmatter fields
-- validate: `check_hardcodes.py` → no hardcodes
-- coverage: N/A (no coverage runner configured) · SBOM: N/A (Python stdlib only, no new dependency)
-- Tickets: `.agents/tickets/vault-completion-writer/` (T01–T03)
+**Spec:** .agents/specs/2026-11-08-security-root-ioc.md
+**Plan:** .agents/specs/2026-11-08-security-root-ioc-plan.md
 
 ## What Problem This Solves
 
-A finished job announces itself as a chat string that a tmux-scrollback grep has to guess at, and the grep only
-accepts three verdicts while briefs ask for six. Completions are lost, and there is no durable record that a run
-happened, what it concluded, or what evidence it left. After this change a completion is a vault note with
-frontmatter and a day index, written by a service that retries until the queue is empty.
+The weekly unit runs as root, so `Path.home()` is `/root`. The 2026-11-08 ship required the parent `/home` and could still report `status=ok` when a child home was never listed. `os.walk` swallows that error. A temp tree with a readable parent, a mode `000` child, and `keyv@6.0.0` inside the child returned `ok` and `pin_count=0`. The last vault JSON (2026-11-20) lists `scanned_roots` as `/home`, not the real homes under it.
 
 ## Why This Change Was Made
 
-The vault is the surface a human opens and that `vault-autocommit` versions. Recording completions there removes
-the pane dependency and the verdict coercion, and makes "did it finish, and what did it decide" answerable by
-search rather than by memory.
+Each immediate child directory of `/home` is now a required root. `/root` is still walked and is not enough. The parent is not a scan root, so a parent walk cannot stand in for a child. If no child can be named, the result is `incomplete`. `--home` still replaces discovery. No username is hardcoded.
 
 ## User Impact
 
-The operator can read a run's verdict, decision flag and evidence hashes in Obsidian. Executors call one command.
-Nothing is sent anywhere: Signal HARD HOLD stands, and the writer only touches `agent-tasks/hermes-runs/`.
+The Sunday timer's green line means each home directory under `/home` was entered. A home that could not be listed is `incomplete` (exit 2), not a green artifact. Operators who need a different tree pass `--home`.
+
+## Evidence
+
+The first pytest run failed with `TypeError` on `multiuser_home` (5 failed, 8 passed). That command passes now, so the executable red proof is the old contract: requiring exactly `/home` must not succeed.
+
+```text
+red_cmd: .venv/bin/python -c "import importlib.util; from pathlib import Path; p=Path('scripts/security_root_ioc_scan.py'); spec=importlib.util.spec_from_file_location('ioc', p); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); _roots, required = mod.resolve_home_roots(Path('/root'), []); raise SystemExit(0 if required == [Path('/home')] else 1)"
+green_cmd: .venv/bin/python -m pytest -q tests/test_security_root_ioc_scan.py
+```
+
+Green result: 13 passed. CLI: `HOME=/root` `--print-roots --no-artifact` lists `required /home/debian`, `/home/denny`, and `/home/secondbrain`, and does not print a line `required /home`. `--home` to a missing or mode `000` directory exits 2. `--home` to a tree with `keyv@6.0.0` exits 1. `--home` to an empty readable directory exits 0.
+
+## Evidence pack
+
+| Item | Result |
+|------|--------|
+| pytest | 13 passed in `tests/test_security_root_ioc_scan.py` after the fix; 5 failed before it. `validate.py full` test_runner exit 0 |
+| hard_gates | run at `/pr_review --validate` on this commit |
+| smoke | `product_smoke.py` 2/2 passed (hardcodes, unit) |
+| validate | `python3 scripts/validate.py full` 6/6 gates passed |
+
+## Spec
+
+**Spec:** `.agents/specs/2026-11-08-security-root-ioc.md`
+
+## Traceability
+
+| AC | Test / smoke |
+|----|----------------|
+| AC-1 | `test_root_process_home_requires_each_child_home` |
+| AC-2 | `test_explicit_home_replaces_process_home` |
+| AC-3 | `test_non_root_process_home_is_unchanged`, `test_deep_and_extra_root_still_append` |
+| AC-4 | `test_missing_required_home_is_not_clean`, `test_unreadable_required_home_is_not_clean` |
+| AC-5 | `test_pin_under_required_home_fails`, `test_payload_filename_under_required_home_fails` |
+| AC-6 | `test_print_roots_for_root_process_home` |
+| AC-7 | `test_unlistable_child_with_pin_is_not_clean` |
+| AC-8 | `test_empty_multiuser_root_is_not_a_scanned_home` |
+
+## Threat notes
+
+- supply-chain: the scan exists to catch known malicious npm seed pins. A parent-only walk let a pin in an unlistable home look clean. Each child home is required, so a missed home is incomplete, not ok.
+- path-traversal: `--home` is an operator-supplied path and replaces discovery. It is not joined onto a fixed root and it is not taken from file content. Tests use temp directories only.
+- secrets: the status artifact records pin names and payload paths, not file bodies. No token is read into the markdown.
+
+## Red-proof
+
+```text
+red_cmd: .venv/bin/python -c "import importlib.util; from pathlib import Path; p=Path('scripts/security_root_ioc_scan.py'); spec=importlib.util.spec_from_file_location('ioc', p); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); _roots, required = mod.resolve_home_roots(Path('/root'), []); raise SystemExit(0 if required == [Path('/home')] else 1)"
+green_cmd: .venv/bin/python -m pytest -q tests/test_security_root_ioc_scan.py
+```
+
+## Cross-review
+
+**Marker:** CROSS-REVIEW
+**Range:** `HEAD~1...HEAD` for `6e616ba`, plus this draft fix.
+**Secrets:** `check_secrets_diff.py --base HEAD~1 --head HEAD` clean.
+**Blockers:** 0
+
+### Security Guru
+
+None. `status=ok` now requires each child of `/home` to be entered. An unlistable child is `incomplete` (exit 2), not a green scan. `--home` replaces discovery instead of appending a path the operator did not mean to treat as optional. No new credential surface.
+
+### Maintainability Expert
+
+None. Home selection stays in `resolve_home_roots` / `discover_real_homes`. Tests pass `multiuser_home` so the suite does not walk the live `/home`.
+
+### Obsolete / cleanup (scoped)
+
+No Tier A, B, or C delete. Confidence 0.9 that nothing in this diff is safe to remove. Evidence: `rg resolve_home_roots` hits the scanner and `tests/test_security_root_ioc_scan.py` only. The parent path `/home` remains the fallback required root when no child directory can be named. The systemd unit and `docs/ship-flow.md` still name this scan. Keep both.
+
+### Domain Specialist
+
+None. Domain hint is a portable harness with no host-only default. The script does not hardcode a username. On this host `--print-roots` with `HOME=/root` names `/home/debian`, `/home/denny`, and `/home/secondbrain`.
+
+### Follow-ups
+
+- Nested `os.walk` errors inside a home that was entered are still ignored. That is not the home-level false clean this item closes.
+- `status=fail` still refreshes the ops dashboard even with `--no-artifact`. Pre-existing. Not changed.
 
 ## Things that look bad but are actually fine
 
-1. **No timer.** The unit is level-triggered on a non-empty spool; a timer would add a polling interval the CEO
-   explicitly excluded.
-2. **`StartLimitIntervalSec=0` looks like "no limits".** It disables the *start* limiter only, because the default
-   would move a failing unit to `failed` and stop re-activating a spool that still has work.
-3. **`hermes-done` instead of `hermes done`.** A dispatcher over `~/.local/bin/hermes` would put the whole CLI
-   behind one line of this code and would vanish on `hermes update`.
-4. **Notes are 0664 and processed events are 0444.** The note is meant to be edited by the vault owner; the
-   processed event is evidence and must not drift.
-5. **Staging by default.** Without `HERMES_VAULT_STAGING=1` removed the writer writes to `_staging/`, because the
-   rule that permits live vault writes is still only proposed, not stamped.
+1. **`/root` is still scanned.** Root-owned files stay in the walk. A clean `/root` cannot satisfy the required list.
+2. **Other users' homes are required.** The parent used to be one walk of every child. Naming each child does not add a new tree. It stops a skipped child from looking clean.
+3. **No username in the script.** Children of `/home` are discovered at run time. `--home` is the override when the real tree lives elsewhere.
+4. **Exit 2 is not in `SuccessExitStatus`.** The timer should show the miss. That was already the rule.
+
+## Test plan
+
+- `tests/test_security_root_ioc_scan.py` (red, then 13 passed)
+- `HOME=/root python3 scripts/security_root_ioc_scan.py --print-roots --no-artifact`
+- `scripts/check_hardcodes.py`

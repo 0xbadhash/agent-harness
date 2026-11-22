@@ -38,8 +38,8 @@ Gates (when scripts exist): test matrix, hygiene, hardcodes, skills, validate fu
 
 **Auto-fix + proposals:** on gate failure → mechanical autofix → re-run gates once → TODO gets fix log + **PROPOSE confidence=… kind=… lean=… | action | evidence:** lines (refactor/standardize/lean waste only when fact-backed).
 
-**Morning after:** residual FAIL/TODO → `python3 scripts/night_shift_morning_triage.py` (optional `--recheck`). Writes `MORNING_TRIAGE.md`.  
-**Bounded remediate + tickets:** `python3 scripts/night_fail_remediate.py` (autofix + daytime recheck + `NIGHT_FAIL_TICKETS.md`). Does **not** invent features / auto full ship.
+**Night-job refresh:** after reports are written, `bin/night_shift_all_products.py` rewrites `.agents/artifacts/MORNING_TRIAGE.md`, `NIGHT_FAIL_PROMOTIONS.md`, and `NIGHT_FAIL_TICKETS.md`. No autofix and no `--write-stubs`. The tickets header is `report-only; autofix not run`. Skip the refresh with `--no-promote`.
+**Bounded remediate** stays a separate manual path and the morning unit: `python3 scripts/night_fail_remediate.py` (autofix + daytime recheck). The night job does not call it. It does **not** invent features / auto full ship.
 
 **ORCH-TOOLS:** `tools/bin/lint_and_test.sh` → `validate full` (+ optional `--coverage`).
 
@@ -83,6 +83,8 @@ Registry: `config/night_shift_products.yaml` (or `$NIGHT_SHIFT_PRODUCTS_FILE`).
 | `01-Projects/harness-night-shift/TODO.md` | Cross-product checkboxes |
 | `01-Projects/harness-night-shift/log.md` | Append-only |
 
+All-report tails name each failed gate, the first failing line (at most 120 characters), and a one-line fix. The writer stores that summary under `agent-tasks/night-shift/`. The paths in the table above stay as written.
+
 ## Schedule — **03:15 HKT** (wall clock)
 
 Host runs **UTC**. Timer fires **`19:15 UTC`** = **03:15 next calendar morning in Hong Kong** (HKT = UTC+8).
@@ -96,11 +98,41 @@ systemctl list-timers | grep night-shift-all
 # Expect Next: … 19:15:00 UTC
 ```
 
-Disable legacy watchlist-only timer if present:
+The watchlist-only unit `night-shift-readiness.timer` is retired. One nightly path remains: `night-shift-all.timer`. Watchlist stays in `config/night_shift_products.yaml`. Do not reinstall the duplicate unit.
 
 ```bash
-sudo systemctl disable --now night-shift-readiness.timer 2>/dev/null || true
+python3 scripts/retire_duplicate_night_shift_unit.py \
+  --unit-dir /etc/systemd/system \
+  --products-file config/night_shift_products.yaml \
+  --apply --systemd
 ```
+
+## Watchlist golden-fixture re-export cadence (T1905U)
+
+SoT for the remedy: `~/watchlist/migration/tests/fixtures/golden/README.md`.
+Golden parity (price / RSI / SMA50 bands in `ParityTest.php`) drifts as the
+sliding 50-day window and live bars move. The night path re-exports **before**
+the nightly gate goes red:
+
+```bash
+# Pre-night checker (harness SoT; default = dry report, exit 2 when a band is breached)
+python3 scripts/watchlist_golden_drift.py            # dry report
+python3 scripts/watchlist_golden_drift.py --weekly   # + flag <25% band headroom
+python3 scripts/watchlist_golden_drift.py --fix      # run the README remedy for breaching tickers
+```
+
+`--fix` runs the exact README remedy per ticker — `php bin/refresh.php
+--export-golden=TICKER` from `~/watchlist/migration`, drops obsolete
+same-ticker fixtures, then `vendor/bin/phpunit tests/GoldenFixtureTest.php
+tests/ParityTest.php` and `PYTHONPATH=. pytest
+tests/test_golden_fixtures.py`. It never widens tolerances.
+
+**Cadence (encoded in the existing night path, no new timer/cron):**
+`bin/night_shift_all_products.py` runs the checker for the `watchlist` product
+just before readiness (`run_one` → `_watchlist_golden_precheck`):
+nightly it re-exports only tickers already beyond tolerance; on Sundays (UTC)
+it adds the `--weekly` headroom catch-up so a fixture is refreshed just
+before it will breach. In `--dry-run` mode the pre-check reports only.
 
 ## product_plugin optional knobs
 
@@ -122,7 +154,10 @@ Coverage config (product or harness): `config/coverage_config.json` (see `config
 
 ## Related
 
-- Install: `./install_into_product.sh /path/to/product`
+- Install: `./install_into_product.sh /path/to/product` — shared `scripts/tests/`
+  (incl. `test_night_shift_product_paths.py`, canonical since t1666u) always
+  refresh from the harness SoT; never copy them from a sibling product, and
+  never hand-edit a product copy (edit agent-harness, re-run the installer).
 - Hygiene: `/sweep`
 - Ship: `/execute_dev` → … → `/sync_docs` (night_shift is **off** the ship FSM)
 

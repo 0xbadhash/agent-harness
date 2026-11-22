@@ -5,6 +5,7 @@ disable-model-invocation: true
 user-invocable: true
 max-retries: 0
 timeout-seconds: 600
+model: none
 ---
 # Reads: PR_DRAFT.md, product roadmap (plugin), .agents/artifacts/INFRA_RUNBOOK.md (if used)
 # Writes: RELEASE_RUNBOOK.md, pipeline → shipped

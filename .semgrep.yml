@@ -3,25 +3,36 @@ rules:
   - id: py-subprocess-shell-true
     languages: [python]
     severity: ERROR
-    message: "subprocess with shell=True is dangerous"
+    message: "subprocess with shell=True is dangerous. FIX: pass an argument list and keep shell=False."
     pattern: subprocess.$FUNC(..., shell=True, ...)
   - id: py-eval-use
     languages: [python]
     severity: ERROR
-    message: "avoid eval()"
+    message: "avoid eval(). FIX: parse with ast.literal_eval or a dedicated parser."
     pattern: eval(...)
   - id: py-exec-use
     languages: [python]
     severity: ERROR
-    message: "avoid exec()"
+    message: "avoid exec(). FIX: call a function instead of executing a string."
     pattern: exec(...)
   - id: py-pickle-loads
     languages: [python]
     severity: WARNING
-    message: "pickle.loads on untrusted data is unsafe"
+    message: "pickle.loads on untrusted data is unsafe. FIX: use a structured format such as JSON."
     pattern: pickle.loads(...)
   - id: generic-hardcoded-password
     languages: [python, typescript, javascript]
     severity: ERROR
-    message: "possible hardcoded password/secret assignment"
+    message: "possible hardcoded password/secret assignment. FIX: read the secret from the environment or a secret store."
     pattern-regex: (?i)(password|secret|api_key)\s*=\s*['\"][^'\"]{8,}['\"]
+  - id: py-except-exception-pass
+    languages: [python]
+    severity: ERROR
+    message: "silent except hides the failure. FIX: log the exception to stderr and keep the existing fallback, or re-raise. Do not pass."
+    pattern-either:
+      - pattern: |
+          except Exception:
+            pass
+      - pattern: |
+          except:
+            pass

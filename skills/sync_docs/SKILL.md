@@ -7,6 +7,7 @@ disable-model-invocation: true
 user-invocable: true
 max-retries: 0
 timeout-seconds: 600
+model: none
 ---
 
 # Anti-patterns: policy/AGENT_REFERENCE.md · base_constraints

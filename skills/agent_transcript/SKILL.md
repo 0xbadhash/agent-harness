@@ -2,7 +2,7 @@
 name: agent_transcript
 description: >
   OPTIONAL docs-only skill (not in ship_skills). Best-effort sanitized session
-  summary for GitHub PR/issue bodies. Local-only; ask user before inserting;
+  summary for GitHub PR/issue bodies. Local-only discovery; always ask user before inserting;
   fail closed on secrets. Not required for ship closeout.
 disable-model-invocation: true
 user-invocable: true

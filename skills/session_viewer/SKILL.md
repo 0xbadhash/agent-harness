@@ -2,7 +2,7 @@
 name: session_viewer
 description: >
   OPTIONAL ops/debug skill (not in ship_skills). Render session transcripts
-  (JSONL/text) as local HTML. Not a ship FSM step.
+  (JSONL/text) as local HTML. Ops/debug only — not a ship FSM step.
 disable-model-invocation: true
 user-invocable: true
 max-retries: 0

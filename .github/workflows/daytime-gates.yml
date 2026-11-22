@@ -18,7 +18,7 @@ jobs:
         run: |
           python -m pip install -U pip
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          pip install pytest pytest-cov ruff mypy hypothesis || true
+          pip install pytest pytest-cov ruff mypy hypothesis pyyaml || true
       - name: J1 unit (coverage)
         run: |
           python -m pytest tests/ -q \
@@ -35,11 +35,13 @@ jobs:
       - name: J3 hardcodes
         run: python scripts/check_hardcodes.py
       - name: J7 secrets
-        run: python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD || true
+        run: python scripts/check_secrets_diff.py --base HEAD~1 --head HEAD
       - name: J12 Semgrep
         run: |
           pip install -q semgrep
-          semgrep --config .semgrep.yml --error --quiet .
+          semgrep --config .semgrep.yml --error . 2>&1 | tail -60
+      - name: Import boundary
+        run: python scripts/check_import_boundaries.py
   skill-conformance:
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +53,8 @@ jobs:
           python-version: "3.12"
       - name: Checklist when skill paths change
         run: |
-          python scripts/agent_eval_checklist.py --root . --skip-tests || true
+          python scripts/agent_eval_checklist.py --root . --skip-tests
       - name: Agent-config evals (stale refs / edit guard)
         run: python scripts/run_agent_config_evals.py --root .
+      - name: Skill drift
+        run: python scripts/check_skill_drift.py

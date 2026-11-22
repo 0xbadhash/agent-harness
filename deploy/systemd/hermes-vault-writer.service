@@ -1,0 +1,14 @@
+[Unit]
+Description=Hermes vault writer — drain completion events into vault notes
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+# Interval 0 disables the start limiter (burst is then ignored). The default
+# (5 starts / 10 s) would move the unit to failed and stop re-activating a
+# non-empty spool — a silent stall, not an alarm.
+ExecStart=/usr/bin/python3 %h/agent-harness/scripts/vault_writer.py --drain
+# Belt only: one extra pass in the same activation. The retry story is the unit
+# being re-activated because the spool is still non-empty.
+ExecStopPost=-/usr/bin/python3 %h/agent-harness/scripts/vault_writer.py --drain
+TimeoutStartSec=300

@@ -36,6 +36,31 @@ class TestPromote(unittest.TestCase):
             )
             self.assertIn("hardcodes", out.read_text(encoding="utf-8"))
 
+    def test_report_only_tickets_names_gate_and_skips_stubs(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            out = t / "NIGHT_FAIL_TICKETS.md"
+            pnf.write_report_only_tickets(
+                [
+                    (
+                        "demo",
+                        "hardcodes",
+                        "Hardcode scan failed — remove secrets/absolute paths.",
+                    )
+                ],
+                out,
+            )
+            text = out.read_text(encoding="utf-8")
+            self.assertIn("report-only; autofix not run", text)
+            self.assertIn("gate `hardcodes`", text)
+            self.assertIn(
+                "Hardcode scan failed — remove secrets/absolute paths.",
+                text,
+            )
+            self.assertNotIn("assertTrue", text)
+            self.assertEqual(list(t.glob("test_gate_*.py")), [])
+            self.assertFalse((t / "tests" / "night_fail_promotions").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,11 @@ WorkingDirectory=/home/debian/agent-harness
 Environment=PRODUCT_VAULT_ROOT=/opt/second-brain/vault
 Environment=PATH=/home/debian/agent-harness/.venv/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 /home/debian/agent-harness/scripts/ops_dashboard.py --write
+# Contract: exit 2 is an intentional RED. The writer returns 2 when overall
+# is RED and 0 otherwise. SuccessExitStatus=0 2 keeps the oneshot successful
+# for the timer. The RED stays in the process exit code and in OPS-DASHBOARD.md.
+# Do not drop 2 from SuccessExitStatus.
+# Registry: agent-tasks/ops/SYSTEMD-TIMERS-INVENTORY.md (ops-dashboard rows).
 SuccessExitStatus=0 2
 
 [Install]

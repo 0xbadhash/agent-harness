@@ -409,6 +409,12 @@ def validate_web_e2e(root: Path, *, strict: bool | None = None) -> dict[str, Any
         else:
             result["warnings"].append(msg)
 
+    if not (root / "docs" / "FEATURE_MAP.md").is_file():
+        result["warnings"].append(
+            "FEATURE_MAP.md missing. FIX: python3 scripts/web_feature_map.py "
+            "--root . --out docs/FEATURE_MAP.md"
+        )
+
     return result
 
 
