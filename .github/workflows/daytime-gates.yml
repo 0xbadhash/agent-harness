@@ -18,9 +18,17 @@ jobs:
         run: |
           python -m pip install -U pip
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          pip install pytest ruff mypy hypothesis || true
-      - name: J1 unit
-        run: python -m pytest tests/ -q
+          pip install pytest pytest-cov ruff mypy hypothesis || true
+      - name: J1 unit (coverage)
+        run: |
+          python -m pytest tests/ -q \
+            --cov=scripts \
+            --cov-report=json:.agents/artifacts/coverage.json \
+            --cov-report=term-missing:skip-covered
+      - name: Coverage thresholds
+        run: python scripts/check_module_coverage.py --from-json .agents/artifacts/coverage.json
+      - name: Lint ratchet
+        run: python scripts/check_lint_ratchet.py
       - name: J5 daytime readiness
         run: python scripts/daytime_readiness_subset.py --root .
       - name: J3 hardcodes

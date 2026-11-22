@@ -94,6 +94,62 @@ def _gh_latest_workflow(repo: str, workflow: str = "daytime-gates.yml") -> dict:
     }
 
 
+def local_origin_parity(root: Path = HARNESS, branch: str = "main") -> dict:
+    """Compare local ``main`` with ``origin/main`` (E03 fork-drift alarm).
+
+    Returns {ok, ahead, behind, detail}. ``ahead`` = local commits not on
+    origin; ``behind`` = origin commits not local. Missing git/remote is
+    reported as unknown, not green.
+    """
+    if shutil.which("git") is None:
+        return {"ok": False, "ahead": 0, "behind": 0, "detail": "git not on PATH"}
+    ref = f"origin/{branch}"
+    probe = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "--quiet", ref],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if probe.returncode != 0:
+        return {"ok": False, "ahead": 0, "behind": 0, "detail": f"{ref} not found"}
+    counts = subprocess.run(
+        ["git", "-C", str(root), "rev-list", "--left-right", "--count", f"{ref}...{branch}"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if counts.returncode != 0:
+        return {
+            "ok": False,
+            "ahead": 0,
+            "behind": 0,
+            "detail": (counts.stderr or "rev-list failed").strip()[:200],
+        }
+    try:
+        behind_s, ahead_s = (counts.stdout or "").split()
+        behind, ahead = int(behind_s), int(ahead_s)
+    except ValueError:
+        return {"ok": False, "ahead": 0, "behind": 0, "detail": "bad rev-list output"}
+    ok = ahead == 0 and behind == 0
+    detail = (
+        f"in sync with {ref}"
+        if ok
+        else f"DRIFT: ahead {ahead}, behind {behind} vs {ref}"
+    )
+    return {"ok": ok, "ahead": ahead, "behind": behind, "detail": detail}
+
+
+def parity_alert(parity: dict) -> str:
+    """Loud, non-silent escalation text for a diverged checkout."""
+    if parity.get("ok"):
+        return "✅ local main ↔ origin/main: in sync"
+    return (
+        "🚨 ALERT — fork drift: "
+        + str(parity.get("detail") or "unknown")
+        + " — fetch/rebase, or open a fork-sync issue before trusting this status"
+    )
+
+
 def collect() -> list[dict]:
     out: list[dict] = []
     for pid, repo in sorted(_repos().items()):
@@ -102,16 +158,22 @@ def collect() -> list[dict]:
     return out
 
 
-def render_markdown(rows: list[dict]) -> str:
+def render_markdown(rows: list[dict], parity: dict | None = None) -> str:
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
         "# GitHub daytime-gates status (Tier B-5)",
         "",
         f"_Generated {now} by `scripts/github_daytime_status.py`_",
         "",
-        "| Product | Repo | Status | Branch | Link |",
-        "|---------|------|--------|--------|------|",
     ]
+    if parity is not None:
+        lines.extend(["## Local ↔ origin parity", "", parity_alert(parity), ""])
+    lines.extend(
+        [
+            "| Product | Repo | Status | Branch | Link |",
+            "|---------|------|--------|--------|------|",
+        ]
+    )
     for r in rows:
         url = r.get("url") or ""
         link = f"[run]({url})" if url else "—"
@@ -139,17 +201,27 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=HARNESS / ".agents" / "artifacts" / "GITHUB_DAYTIME.md",
     )
+    ap.add_argument(
+        "--fail-on-drift",
+        action="store_true",
+        help="Exit 1 when local main and origin/main diverge (default: alert only)",
+    )
     args = ap.parse_args(argv)
     rows = collect()
+    parity = local_origin_parity()
+    if not parity["ok"]:
+        print(parity_alert(parity), file=sys.stderr)
     if args.json:
-        print(json.dumps(rows, indent=2))
+        print(json.dumps({"rows": rows, "parity": parity}, indent=2))
     else:
-        md = render_markdown(rows)
+        md = render_markdown(rows, parity)
         print(md)
         if args.write:
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(md, encoding="utf-8")
             print(f"✅ wrote {args.out}", file=sys.stderr)
+    if args.fail_on_drift and not parity["ok"]:
+        return 1
     return 0
 
 
