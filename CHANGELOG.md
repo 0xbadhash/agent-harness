@@ -10,6 +10,11 @@
 
 ## Unreleased
 
+### fix(security): root IoC scan requires each real home
+
+- When the process home is `/root`, `scripts/security_root_ioc_scan.py` requires each child directory of `/home`. A walk of the parent is not a clean scan: `os.walk` can skip an unlistable child and still report `status=ok`.
+- No child directory (empty or unlistable parent) is `status=incomplete`. `--home` still replaces discovery. No username is hardcoded.
+
 ## v1.4.50 — 2026-11-08
 
 ### fix(security): root IoC scan cannot go green from /root alone
@@ -499,12 +504,14 @@ Agents were shipping web UI without updating Playwright or Comet/Perplexity scen
 - **Spec:** `.agents/specs/2026-11-08-security-root-ioc.md`
 - **Plan:** none
 - **Acceptance:**
-  - [x] AC-1 process home `/root` requires `/home`
+  - [x] AC-1 process home `/root` requires each child directory of `/home`, not the parent
   - [x] AC-2 `--home` replaces the process home
   - [x] AC-3 other process homes stay unchanged
   - [x] AC-4 missed required home is incomplete, not green
   - [x] AC-5 a pin or payload under the required home fails
-  - [x] AC-6 `--print-roots` shows the plan and does not claim ok
+  - [x] AC-6 `--print-roots` lists each real home and does not claim ok
+  - [x] AC-7 an unlistable child that holds a known pin is not ok
+  - [x] AC-8 an empty multi-user root is not ok
 - **Smoke:** hardcodes + `scripts/smoke_unit.sh` (unit smoke is the full pytest suite; run with `TMPDIR=/tmp` on this host)
 - **Notes:** grill-me complete
 

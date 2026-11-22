@@ -9,11 +9,13 @@ Detects ChainDrop / keyv-style campaign fingerprints under:
 
 Home selection:
   The weekly unit runs as User=root, so Path.home() is /root and a walk of
-  /root alone can report status=ok without opening /home (where product trees
-  live). When the process home is /root and --home is omitted, /home is
-  scanned and required. --home PATH (repeatable) replaces the process home.
-  A required home that was not a readable directory is status=incomplete
-  (exit 2), never ok.
+  /root alone can report status=ok without opening the real home. Requiring
+  the parent /home is not enough: os.walk does not raise when a child is
+  unlistable, so a green walk of /home can skip that home. When the process
+  home is /root and --home is omitted, each immediate child directory of
+  /home is scanned and required. --home PATH (repeatable) replaces that
+  discovery. A required home that was not a readable directory is
+  status=incomplete (exit 2), never ok.
 
 Writes:
   $PRODUCT_VAULT_ROOT/agent-tasks/security-ioc-status.md
@@ -76,7 +78,8 @@ SETUP_MJS_HINTS = ("keyv", "flat-cache", "file-entry-cache", "cacheable")
 
 # systemd User=root. Not the operator tree the timer is meant to cover.
 _ROOT_HOME = Path("/root")
-# Documented product-tree root. No username: /home/<user> is inside this walk.
+# Parent of the real homes. Children are required. The parent walk is not:
+# os.walk swallows an unlistable child, so a green /home can skip one.
 _MULTIUSER_HOME = Path("/home")
 _SYSTEM_ROOT = Path("/opt")
 _CONTAINERD_ROOT = Path("/var/lib/containerd")
@@ -91,21 +94,54 @@ def _same_path(left: Path, right: Path) -> bool:
         return False
 
 
+def discover_real_homes(multiuser_home: Path) -> list[Path]:
+    """Immediate child directories of the multi-user home parent.
+
+    No username is hardcoded. A file in the parent is not a home. An
+    unlistable parent or a child whose type cannot be stated yields no
+    confident list (the caller fail-closes). Sorted by name.
+    """
+    if not multiuser_home.is_dir():
+        return []
+    try:
+        children = list(multiuser_home.iterdir())
+    except OSError:
+        return []
+    found: list[Path] = []
+    for child in children:
+        try:
+            is_dir = child.is_dir()
+        except OSError:
+            return []
+        if is_dir:
+            found.append(child)
+    found.sort(key=lambda path: path.name)
+    return found
+
+
 def resolve_home_roots(
     process_home: Path,
     explicit_homes: list[str] | None = None,
+    *,
+    multiuser_home: Path | None = None,
 ) -> tuple[list[Path], list[Path]]:
     """Return (home roots to scan, required home roots).
 
     Explicit homes (--home) replace the process home. Every one is required.
-    When the process home is /root, /home is required and /root is still
-    walked. A clean /root cannot satisfy the required list.
+    When the process home is /root, each child directory of the multi-user
+    parent is required and /root is still walked. The parent itself is not
+    a scan root and cannot satisfy the required list. No child directory
+    means the parent is required and unscanned, so the result is incomplete.
     """
     explicit = [Path(raw).expanduser() for raw in (explicit_homes or []) if str(raw).strip()]
     if explicit:
         return list(explicit), list(explicit)
     if _same_path(process_home, _ROOT_HOME):
-        return [_MULTIUSER_HOME, _ROOT_HOME], [_MULTIUSER_HOME]
+        base = multiuser_home if multiuser_home is not None else _MULTIUSER_HOME
+        real = discover_real_homes(base)
+        if real:
+            return [*real, _ROOT_HOME], list(real)
+        return [_ROOT_HOME], [base]
     home = process_home.expanduser()
     return [home], [home]
 
@@ -116,9 +152,12 @@ def assemble_roots(
     deep: bool,
     extra_roots: list[str],
     explicit_homes: list[str],
+    multiuser_home: Path | None = None,
 ) -> tuple[list[Path], list[Path]]:
     """Full walk list plus the homes that must actually be scanned."""
-    homes, required = resolve_home_roots(process_home, explicit_homes)
+    homes, required = resolve_home_roots(
+        process_home, explicit_homes, multiuser_home=multiuser_home
+    )
     roots = list(homes)
     roots.append(_SYSTEM_ROOT)
     if deep:
@@ -209,8 +248,18 @@ def scan_tree(
     # Walk with depth limit to avoid pathological trees
     root_depth = len(root.parts)
     walked = True
+    top_failed = False
+
+    def _on_walk_error(err: OSError) -> None:
+        nonlocal top_failed
+        name = getattr(err, "filename", None)
+        if name is not None and _same_path(Path(name), root):
+            top_failed = True
+
     try:
-        for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        for dirpath, dirnames, filenames in os.walk(
+            root, followlinks=False, onerror=_on_walk_error
+        ):
             p = Path(dirpath)
             depth = len(p.parts) - root_depth
             if max_depth is not None and depth > max_depth:
@@ -242,6 +291,8 @@ def scan_tree(
                     if any(h in s for h in SETUP_MJS_HINTS):
                         payloads.append(str(fp))
     except PermissionError:
+        top_failed = True
+    if top_failed:
         walked = False
     return pins, payloads, walked
 
@@ -361,7 +412,7 @@ def write_artifacts(vault: Path, result: dict) -> tuple[Path, Path]:
                 "",
                 "## Action",
                 "",
-                "1. Pass `--home` for the operator tree, or restore read access to `/home`.",
+                "1. Pass `--home` for each operator tree, or restore read access to that home.",
                 "2. Re-run. Do not treat this file as a green scan.",
             ]
         )
@@ -417,7 +468,12 @@ def maybe_refresh_dashboard(force: bool, has_findings: bool) -> int:
     return int(r.returncode)
 
 
-def main(argv: list[str] | None = None, *, process_home: Path | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    process_home: Path | None = None,
+    multiuser_home: Path | None = None,
+) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--deep",
@@ -436,7 +492,8 @@ def main(argv: list[str] | None = None, *, process_home: Path | None = None) -> 
         default=[],
         help=(
             "Operator home to scan (repeatable). Replaces Path.home(). "
-            "When omitted and the process home is /root, /home is required."
+            "When omitted and the process home is /root, each directory "
+            "under /home is required."
         ),
     )
     ap.add_argument(
@@ -461,6 +518,7 @@ def main(argv: list[str] | None = None, *, process_home: Path | None = None) -> 
         deep=bool(args.deep),
         extra_roots=list(args.root),
         explicit_homes=list(args.home),
+        multiuser_home=multiuser_home,
     )
     if args.print_roots:
         # Plan only. Must not claim status=ok: nothing was walked.

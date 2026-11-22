@@ -13,7 +13,7 @@ Python 3, stdlib only, pytest. No new service. No username hardcoded. Do not edi
 
 Split home selection out of `main`. `resolve_home_roots` returns the homes to walk and the homes that must have been entered. `assemble_roots` adds `/opt`, containerd when `--deep`, and each `--root`. `run_scan` sets `status=incomplete` when a required home is missing from `scanned_roots`. `exit_code` maps fail to 1, ok to 0, and anything else to 2. The markdown artifact is green only for `ok`. `--print-roots` prints the plan and returns before any walk or vault write.
 
-When the process home is `/root` and `--home` is omitted, the required home is `/home` and `/root` is still walked. `--home` replaces both.
+When the process home is `/root` and `--home` is omitted, `discover_real_homes` lists immediate child directories of `/home`. Each is required. `/root` is still walked and is not required. The parent is not a scan root (that walk hides unlistable children and would scan every home twice). An empty or unlistable parent is `incomplete`. `--home` replaces discovery. Tests pass `multiuser_home` so the suite does not list the live `/home`.
 
 ## Architecture decisions
 
@@ -47,7 +47,7 @@ When the process home is `/root` and `--home` is omitted, the required home is `
 
 | Risk | Mitigation |
 |------|------------|
-| A clean `/root` still reports ok | `/home` is required when the process home is `/root` |
+| A clean `/root` or a parent-only walk still reports ok | Each child of `/home` is required when the process home is `/root` |
 | `--print-roots` looks like a clean scan | It does not print `status=ok` and it does not write artifacts |
 | Walking all of `/home` is slow | That is the documented surface. Tests stay on temp dirs |
 

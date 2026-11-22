@@ -22,13 +22,25 @@ def _load():
 
 
 class TestResolveHomeRoots(unittest.TestCase):
-    def test_root_process_home_requires_real_home(self):
-        """AC-1. A clean /root is not enough when the process home is /root."""
+    def test_root_process_home_requires_each_child_home(self):
+        """AC-1. A clean /root or a parent-only walk is not the real home."""
         mod = _load()
-        roots, required = mod.resolve_home_roots(Path("/root"), [])
-        self.assertIn(Path("/home"), roots)
-        self.assertEqual(required, [Path("/home")])
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "home"
+            parent.mkdir()
+            first = parent / "ada"
+            second = parent / "bea"
+            first.mkdir()
+            second.mkdir()
+            (parent / "notes.txt").write_text("not a home", encoding="utf-8")
+            roots, required = mod.resolve_home_roots(
+                Path("/root"), [], multiuser_home=parent
+            )
+        self.assertEqual(required, [first, second])
+        self.assertEqual(roots[:2], [first, second])
         self.assertIn(Path("/root"), roots)
+        self.assertNotIn(parent, required)
+        self.assertNotIn(parent, roots)
         self.assertNotEqual(roots, [Path("/root")])
 
     def test_explicit_home_replaces_process_home(self):
@@ -55,18 +67,42 @@ class TestResolveHomeRoots(unittest.TestCase):
     def test_deep_and_extra_root_still_append(self):
         """AC-3. containerd and --root stay additive."""
         mod = _load()
-        roots, required = mod.assemble_roots(
-            process_home=Path("/root"),
-            deep=True,
-            extra_roots=["/var/extra-ioc"],
-            explicit_homes=[],
-        )
-        self.assertEqual(roots[0], Path("/home"))
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "home"
+            parent.mkdir()
+            child = parent / "ada"
+            child.mkdir()
+            roots, required = mod.assemble_roots(
+                process_home=Path("/root"),
+                deep=True,
+                extra_roots=["/var/extra-ioc"],
+                explicit_homes=[],
+                multiuser_home=parent,
+            )
+        self.assertEqual(roots[0], child)
         self.assertIn(Path("/root"), roots)
         self.assertIn(Path("/opt"), roots)
         self.assertIn(Path("/var/lib/containerd"), roots)
         self.assertIn(Path("/var/extra-ioc"), roots)
-        self.assertEqual(required, [Path("/home")])
+        self.assertEqual(required, [child])
+        self.assertNotIn(parent, required)
+
+    def test_empty_multiuser_root_is_not_a_scanned_home(self):
+        """AC-8. No child directory means the parent cannot go green."""
+        mod = _load()
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "home"
+            parent.mkdir()
+            roots, required = mod.resolve_home_roots(
+                Path("/root"), [], multiuser_home=parent
+            )
+            scan_roots = [path for path in roots if path != Path("/root")]
+            result = mod.run_scan(scan_roots, deep=False, required=required)
+        self.assertEqual(required, [parent])
+        self.assertNotIn(parent, roots)
+        self.assertEqual(result["status"], "incomplete")
+        self.assertNotEqual(result["status"], "ok")
+        self.assertEqual(mod.exit_code(result), 2)
 
 
 class TestScanStatus(unittest.TestCase):
@@ -156,27 +192,67 @@ class TestScanStatus(unittest.TestCase):
             self.assertIn("No malicious seed pins", text)
 
 
+class TestUnreadableChildHome(unittest.TestCase):
+    def test_unlistable_child_with_pin_is_not_clean(self):
+        """AC-7. A parent walk must not hide a pin inside a real home."""
+        mod = _load()
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "home"
+            child = parent / "debian"
+            child.mkdir(parents=True)
+            other = parent / "other"
+            other.mkdir()
+            lock = {
+                "packages": {
+                    "node_modules/keyv": {"version": "6.0.0"},
+                }
+            }
+            (child / "package-lock.json").write_text(
+                json.dumps(lock), encoding="utf-8"
+            )
+            os.chmod(child, 0)
+            try:
+                roots, required = mod.resolve_home_roots(
+                    Path("/root"), [], multiuser_home=parent
+                )
+                scan_roots = [path for path in roots if path != Path("/root")]
+                result = mod.run_scan(scan_roots, deep=True, required=required)
+            finally:
+                os.chmod(child, 0o755)
+        self.assertIn(child, required)
+        self.assertNotEqual(result["status"], "ok")
+        self.assertEqual(result["status"], "incomplete")
+        self.assertEqual(result["pin_count"], 0)
+        self.assertIn(str(child), result["missing_required"])
+        self.assertEqual(mod.exit_code(result), 2)
+
+
 class TestPrintRoots(unittest.TestCase):
     def test_print_roots_for_root_process_home(self):
-        """AC-6. The plan lists /home and does not claim a clean scan."""
+        """AC-6. The plan lists each real home and does not claim a clean scan."""
         mod = _load()
         buf = io.StringIO()
         with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp) / "home"
+            child = parent / "operator"
+            child.mkdir(parents=True)
             os.environ["PRODUCT_VAULT_ROOT"] = tmp
             try:
                 with redirect_stdout(buf):
                     rc = mod.main(
                         ["--print-roots", "--no-artifact"],
                         process_home=Path("/root"),
+                        multiuser_home=parent,
                     )
-                self.assertEqual(list(Path(tmp).iterdir()), [])
+                self.assertEqual(list(Path(tmp).iterdir()), [parent])
             finally:
                 os.environ.pop("PRODUCT_VAULT_ROOT", None)
         self.assertEqual(rc, 0)
-        text = buf.getvalue()
-        self.assertIn("required /home", text)
-        self.assertIn("root /home", text)
-        self.assertNotIn("status=ok", text)
+        lines = buf.getvalue().splitlines()
+        self.assertIn(f"required {child}", lines)
+        self.assertIn(f"root {child}", lines)
+        self.assertNotIn(f"required {parent}", lines)
+        self.assertNotIn("status=ok", buf.getvalue())
 
     def test_print_roots_explicit_home_does_not_add_root_home(self):
         """AC-2 via the CLI plan. --home replaces /root and /home."""
