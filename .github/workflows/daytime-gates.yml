@@ -39,7 +39,7 @@ jobs:
       - name: J12 Semgrep
         run: |
           pip install -q semgrep
-          semgrep --config .semgrep.yml --error --quiet .
+          semgrep --config .semgrep.yml --error . 2>&1 | tail -60
       - name: Import boundary
         run: python scripts/check_import_boundaries.py
   skill-conformance:
