@@ -1,4 +1,45 @@
+## v1.4.51 — 2026-11-09
+
+- **Vault completion writer (staging).** `hermes-done` records a run's verdict as one JSON event; `vault_writer.py`
+  drains it into an append-only vault note plus a per-day index rebuilt once per drain, then copies the event to
+  `processed/` as a read-only inode. Level-triggered unit (`DirectoryNotEmpty`, `StartLimitIntervalSec=0`),
+  resume-not-skip idempotence, quoted YAML, inert body rendering.
+- Live vault writes remain disabled: the replacement for `RULE-SINGLE-VAULT-WRITE-T1148U` is proposed, not stamped.
+
 # Changelog
+
+## Unreleased
+
+### fix(security): root IoC scan requires each real home
+
+- When the process home is `/root`, `scripts/security_root_ioc_scan.py` requires each child directory of `/home`. A walk of the parent is not a clean scan: `os.walk` can skip an unlistable child and still report `status=ok`.
+- No child directory (empty or unlistable parent) is `status=incomplete`. `--home` still replaces discovery. No username is hardcoded.
+
+### fix(night): clear golden-drift hardcode, ruff, and mypy
+
+- Allow the public Yahoo Finance chart hosts in `check_hardcodes.py`. They are the market-data endpoints `scripts/watchlist_golden_drift.py` calls, not secrets.
+- Rename the ambiguous RSI loss variable and drop the unused fixture list so `ruff check` is clean.
+- Narrow the golden-drift test's module spec so mypy accepts the loader.
+
+### fix(night): pass run_one gate args from collect_and_learn
+
+- `collect_and_learn` called `run_one(name, root)` without the keyword-only `vault`, `quick`, `skip_live`, and `dry_run` arguments, so `mypy` failed `validate_full`.
+- The stand-in now forwards those arguments. Defaults are dry-run and skip-live, and an omitted vault is the artifact directory.
+
+## v1.4.50 — 2026-11-08
+
+### fix(security): root IoC scan cannot go green from /root alone
+
+- When the process home is `/root`, `scripts/security_root_ioc_scan.py` scans `/home` and requires that walk. `--home` replaces the process home.
+- A required home that was missing or not walked is `status=incomplete` (exit 2), not a green artifact.
+- `--print-roots` prints the plan and does not claim `status=ok`.
+
+### fix(night): clear validate_full for the live vault
+
+- Register `mission-feeds` in `config/night_shift_products.yaml` with a `~/` path.
+- Allow the live vault layout in `vault_schema_lint`: `challenges/`, `INDEX.md`, root `instruction-versions/` and `rules/`, and the files-only `herm-config` stub.
+- Stop inventing the vault label `product` when a plugin label is missing. `challenge.py` no longer falls back to `/opt/second-brain/vault`.
+- Drop the unused `subprocess` import in `scripts/kanban_fs.py` (ruff F401).
 
 ## v1.4.49 — 2026-10-10
 
@@ -466,6 +507,37 @@ Agents were shipping web UI without updating Playwright or Comet/Perplexity scen
 
 
 ## Open work
+
+### [DONE] Root IoC scan must cover the real home
+- **Status:** done
+- **Priority:** P1
+- **Next:** false
+- **Spec:** `.agents/specs/2026-11-08-security-root-ioc.md`
+- **Plan:** none
+- **Acceptance:**
+  - [x] AC-1 process home `/root` requires each child directory of `/home`, not the parent
+  - [x] AC-2 `--home` replaces the process home
+  - [x] AC-3 other process homes stay unchanged
+  - [x] AC-4 missed required home is incomplete, not green
+  - [x] AC-5 a pin or payload under the required home fails
+  - [x] AC-6 `--print-roots` lists each real home and does not claim ok
+  - [x] AC-7 an unlistable child that holds a known pin is not ok
+  - [x] AC-8 an empty multi-user root is not ok
+- **Smoke:** hardcodes + `scripts/smoke_unit.sh` (unit smoke is the full pytest suite; run with `TMPDIR=/tmp` on this host)
+- **Notes:** grill-me complete
+
+### [DONE] Retire duplicate night-shift-readiness unit
+- **Status:** done
+- **Priority:** P1
+- **Next:** false
+- **Spec:** `.agents/specs/2026-11-08-retire-night-shift-readiness-unit.md`
+- **Plan:** `.agents/specs/2026-11-08-retire-night-shift-readiness-unit-plan.md`
+- **Acceptance:**
+  - [x] AC-1 watchlist stays in the product registry
+  - [x] AC-2..AC-7 retirement plan removes only the duplicate unit
+  - [x] Host timer list keeps night-shift-all only
+- **Smoke:** hardcodes + scripts/smoke_unit.sh
+- **Notes:** grill-me complete
 
 ### [DONE] P0 unattended chain + night remediate + default portfolio push
 - **Status:** done (v1.4.13)

@@ -4,3 +4,6 @@ __pycache__/
 
 # Local install / generated (harness is SoT at skills/ and scripts/)
 .agents/
+
+# Local scorecard dumps (SoT is vault agent-tasks/evidence)
+evidence/
