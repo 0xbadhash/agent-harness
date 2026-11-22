@@ -139,7 +139,11 @@ URL_HOST_ALLOW = re.compile(
     r"lobste\.rs|"
     r"([\w-]+\.)?substack\.com|"
     r"substackcdn\.com|"
-    r"([\w.-]+\.)?amazonaws\.com"
+    r"([\w.-]+\.)?amazonaws\.com|"
+    # Public market-data hosts used by scripts/watchlist_golden_drift.py.
+    # Not credentials; same class as other public API hosts above.
+    r"query1\.finance\.yahoo\.com|"
+    r"(www\.)?finance\.yahoo\.com"
     r")([/:?]|$)",
     re.I,
 )

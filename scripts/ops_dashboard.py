@@ -112,108 +112,107 @@ def _wiki_link(vault: Path, rel: str, label: str | None = None) -> str:
     return f"[[{p}|{lab}]]"
 
 
+def last_0315_hkt(now: datetime | None = None) -> datetime:
+    """Most recent scheduled night run: 03:15 Asia/Hong_Kong."""
+    local = (now or datetime.now(UTC)).astimezone(HKT)
+    deadline = local.replace(hour=3, minute=15, second=0, microsecond=0)
+    if local < deadline:
+        deadline -= timedelta(days=1)
+    return deadline
+
+
+def parse_night_all_report(text: str) -> tuple[str, int, int, list[tuple[str, int, bool]]]:
+    """Return (PASS|FAIL|'', passed, total, [(product, exit, failed)])."""
+    overall = ""
+    passed = 0
+    total = 0
+    m = re.search(r"\*\*Overall:\*\*\s*(PASS|FAIL)\s*\((\d+)/(\d+)", text)
+    if m:
+        overall = m.group(1)
+        passed = int(m.group(2))
+        total = int(m.group(3))
+    rows: list[tuple[str, int, bool]] = []
+    in_table = False
+    for line in text.splitlines():
+        if line.startswith("| Product |") and "Exit" in line:
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if line.startswith("|---"):
+            continue
+        if not line.startswith("|"):
+            break
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        pid = cells[0].strip("` ")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", pid):
+            continue
+        exit_m = re.search(r"-?\d+", cells[2])
+        exit_code = int(exit_m.group(0)) if exit_m else 1
+        failed = exit_code != 0 or "❌" in cells[1] or "FAIL" in cells[1]
+        rows.append((pid, exit_code, failed))
+    return overall, passed, total, rows
+
+
 def collect_night(vault: Path | None, harness: Path) -> tuple[list[Item], list[Item], list[Item]]:
+    """Night readiness comes only from NIGHT_SHIFT_ALL_REPORT.md.
+
+    A missing report, or one older than the last 03:15 HKT run, is RED/stale.
+    Morning triage and SUMMARY.md must not repaint those rows as PASS.
+    """
     well: list[Item] = []
     att: list[Item] = []
     fail: list[Item] = []
-    # Prefer morning triage (includes recheck) over multi-product SUMMARY
-    summary = (vault / "agent-tasks/night-shift/SUMMARY.md") if vault else None
-    triage = harness / ".agents/artifacts/MORNING_TRIAGE.md"
-    triage_text = _read(triage)
-    sum_text = _read(summary) if summary else ""
-    # Prefer live SUMMARY when it is at least as new as morning triage so a
-    # stale triage cannot repaint closed FAILs onto the official dash.
-    use_summary = False
-    if summary and summary.is_file() and sum_text:
-        t_m = triage.stat().st_mtime if triage.is_file() else 0.0
-        if summary.stat().st_mtime >= t_m:
-            use_summary = True
-    text = sum_text if use_summary else (triage_text or sum_text)
-    if not text:
-        att.append(
+    report = harness / ".agents/artifacts/NIGHT_SHIFT_ALL_REPORT.md"
+    if not report.is_file():
+        fail.append(
             Item(
-                "attention",
+                "fail",
                 "night_shift",
-                "No night-shift SUMMARY or MORNING_TRIAGE found",
-                action="Run night_shift or morning_triage",
+                "Night readiness RED/stale: NIGHT_SHIFT_ALL_REPORT.md missing",
+                action="Run night_shift_all_products.py",
             )
         )
         return well, att, fail
-
-    # Parse FAIL/PASS from SUMMARY and/or MORNING_TRIAGE tables
-    seen_pass: set[str] = set()
-    seen_fail: set[str] = set()
-
-    def _pid(line: str) -> str | None:
-        m = re.search(r"\|\s*`([a-zA-Z0-9_-]+)`\s*\|", line)
-        if m:
-            return m.group(1)
-        m = re.search(r"\|\s*([a-zA-Z0-9_-]+)\s*\|", line)
-        if m and m.group(1) not in ("Project", "Product", "path"):
-            return m.group(1)
-        return None
-
-    for line in text.splitlines():
-        if "|" not in line or "---" in line:
-            continue
-        if "Project" in line or ("Product" in line and "Path" in line):
-            continue
-        pid = _pid(line)
-        if not pid:
-            continue
-        # BIP39 is not an Ops Dashboard item
-        if pid.lower() in {"bip39lab", "bip39", "bip39-lab"}:
-            continue
-        # Morning triage recheck wins
-        if "yes→ok" in line or "recheck green" in line.lower():
-            if pid not in seen_pass:
-                seen_pass.add(pid)
-                well.append(
-                    Item("green", "night_shift", f"Night readiness PASS: **{pid}**")
+    mtime = datetime.fromtimestamp(report.stat().st_mtime, UTC)
+    if mtime < last_0315_hkt():
+        fail.append(
+            Item(
+                "fail",
+                "night_shift",
+                "Night readiness RED/stale: NIGHT_SHIFT_ALL_REPORT.md older than 03:15 HKT",
+                action="Run night_shift_all_products.py",
+            )
+        )
+        return well, att, fail
+    text = _read(report, limit=200_000)
+    overall, passed, total, rows = parse_night_all_report(text)
+    count = f"{passed}/{total}" if total else "0/0"
+    headline = f"Night readiness overall **{count}** ({overall or 'UNKNOWN'})"
+    if overall == "PASS" and total and passed == total and not any(f for _, _, f in rows):
+        well.append(Item("green", "night_shift", headline))
+    else:
+        fail.append(Item("fail", "night_shift", headline, action="Open NIGHT_SHIFT_ALL_REPORT.md"))
+    for pid, exit_code, failed in rows:
+        if failed:
+            link = (
+                _wiki_link(vault, f"01-Projects/{pid}/TODO.md", f"{pid} TODO")
+                if vault
+                else ""
+            )
+            fail.append(
+                Item(
+                    "fail",
+                    "night_shift",
+                    f"Night readiness FAIL: **{pid}** exit {exit_code}",
+                    link=link,
+                    action=f"Open product TODO / re-run readiness for {pid}",
                 )
-            continue
-        if "yes→fail" in line or "recheck still red" in line.lower():
-            if pid not in seen_fail:
-                seen_fail.add(pid)
-                link = (
-                    _wiki_link(vault, f"01-Projects/{pid}/TODO.md", f"{pid} TODO")
-                    if vault
-                    else ""
-                )
-                fail.append(
-                    Item(
-                        "fail",
-                        "night_shift",
-                        f"Night readiness FAIL: **{pid}**",
-                        link=link,
-                        action=f"Open product TODO / re-run readiness for {pid}",
-                    )
-                )
-            continue
-        if "FAIL" in line or "❌" in line:
-            if pid not in seen_fail and pid not in seen_pass:
-                seen_fail.add(pid)
-                link = (
-                    _wiki_link(vault, f"01-Projects/{pid}/TODO.md", f"{pid} TODO")
-                    if vault
-                    else ""
-                )
-                fail.append(
-                    Item(
-                        "fail",
-                        "night_shift",
-                        f"Night readiness FAIL: **{pid}**",
-                        link=link,
-                        action=f"Open product TODO / re-run readiness for {pid}",
-                    )
-                )
-        elif "PASS" in line or "✅" in line:
-            if pid not in seen_pass and pid not in seen_fail:
-                seen_pass.add(pid)
-                well.append(
-                    Item("green", "night_shift", f"Night readiness PASS: **{pid}**")
-                )
-
+            )
+        else:
+            well.append(Item("green", "night_shift", f"Night readiness PASS: **{pid}**"))
     return well, att, fail
 
 
@@ -228,13 +227,17 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
     detail = ""
     day = datetime.now(HKT).strftime("%Y-%m-%d")
     if script.is_file():
-        r = subprocess.run(
-            [sys.executable, str(script), "--date", day, "--no-write"],
-            cwd=str(cat),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            r = subprocess.run(
+                [sys.executable, str(script), "--date", day, "--no-write"],
+                cwd=str(cat),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=45,
+            )
+        except subprocess.TimeoutExpired:
+            r = subprocess.CompletedProcess(args=[], returncode=124, stdout="", stderr="timeout 45s")
         out = (r.stdout or "") + (r.stderr or "")
         m = re.search(r"state=(\S+)", out)
         if m:
@@ -316,57 +319,52 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
     return well, att, fail, todos
 
 
-def collect_vault_health(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]]:
+def _load_vault_health_probe():
+    """Load the second-brain probe. The weekly file is not the live status."""
+    import importlib.util
+
+    script = Path(
+        os.environ.get(
+            "VAULT_HEALTH_PROBE",
+            "/opt/second-brain/scripts/vault_health_probe.py",
+        )
+    )
+    spec = importlib.util.spec_from_file_location("vault_health_probe_live", script)
+    if spec is None or spec.loader is None:
+        raise ImportError(str(script))
+    mod = importlib.util.module_from_spec(spec)
+    # dataclass looks up the module in sys.modules during class creation.
+    sys.modules[spec.name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def collect_vault_health(vault: Path | None, *, probe_fn=None):
+    """Vault row is live stack probes. The weekly file is the full report only."""
     well: list[Item] = []
     att: list[Item] = []
     fail: list[Item] = []
     if not vault:
         return well, att, fail
     health = vault / "agent-tasks" / "health-status.md"
-    text = _read(health)
-    if not text:
-        att.append(Item("attention", "vault", "health-status.md missing"))
-        return well, att, fail
     link = _wiki_link(vault, "agent-tasks/health-status.md", "health-status")
-    overall = "unknown"
-    m = re.search(r"\*\*Overall\*\*:\s*(\w+)", text)
-    if m:
-        overall = m.group(1).upper()
-    if overall in ("OK", "HEALTHY", "PASS"):
-        well.append(Item("green", "vault", f"Vault health **{overall}**", link=link))
-    elif overall in ("DEGRADED", "WARN"):
-        att.append(
-            Item(
-                "attention",
-                "vault",
-                f"Vault health **{overall}**",
-                link=link,
-                action="See Recommendations in health-status",
-            )
-        )
-    else:
-        fail.append(Item("fail", "vault", f"Vault health **{overall}**", link=link))
-
-    # Recommendations table only (cleaner than raw status rows)
-    in_rec = False
-    for line in text.splitlines():
-        if line.startswith("## Recommendations"):
-            in_rec = True
-            continue
-        if in_rec and line.startswith("## "):
-            break
-        if in_rec and line.strip().startswith("|") and "Conf" not in line and "---" not in line:
-            cells = [c.strip() for c in line.strip("|").split("|")]
-            if len(cells) >= 4 and cells[1] in ("WARN", "FAIL", "ERROR", "CRIT"):
-                att.append(
-                    Item(
-                        "attention" if cells[1] == "WARN" else "fail",
-                        "vault",
-                        f"{cells[1]}: {cells[2][:80]} — {cells[3][:60]}",
-                        link=link,
-                        action=cells[2][:100],
-                    )
-                )
+    if not _read(health):
+        att.append(Item("attention", "vault", "health-status.md missing", link=link))
+    try:
+        mod = _load_vault_health_probe()
+        probe = (probe_fn or mod.probe_stack)()
+        rows = mod.dashboard_rows(probe)
+    except (OSError, subprocess.SubprocessError, ImportError, ValueError, TypeError, KeyError, StopIteration, RuntimeError):
+        fail.append(Item("fail", "vault", "Vault health live probe failed", link=link))
+        return well, att, fail
+    for row in rows:
+        item = Item(row.severity, "vault", row.summary, link=link, action=row.action)
+        if row.bucket == "well":
+            well.append(item)
+        elif row.bucket == "fail":
+            fail.append(item)
+        else:
+            att.append(item)
     return well, att, fail
 
 
