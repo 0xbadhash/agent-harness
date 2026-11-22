@@ -107,6 +107,8 @@ ANY_URL = re.compile(r"https?://[\w.-]+\.\w{2,}[^\s)\]'\"`]*", re.I)
 URL_HOST_ALLOW = re.compile(
     r"^https?://("
     r"localhost|127\.0\.0\.1|example\.com|"
+    r"app\.example\.com|"
+    r"api\.venice\.ai|"
     r"(www\.)?github\.com|"
     r"raw\.githubusercontent\.com|"
     r"pols\.dev|"
