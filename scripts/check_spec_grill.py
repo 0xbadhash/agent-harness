@@ -79,6 +79,14 @@ def check_spec_text(text: str, *, label: str = "spec") -> tuple[bool, list[str]]
         ]
     if status and status not in {"complete", "done", "ok"}:
         msgs.append(f"warn: {label} grill Status={status!r} (expected complete)")
+    # E22: a shape question is cheaper to settle with disposable prototypes.
+    if re.search(r"\b(design|open) question\b", text, re.IGNORECASE) and not re.search(
+        r"\bprototype\b", text, re.IGNORECASE
+    ):
+        msgs.append(
+            f"warn: {label} raises a design question without a prototype note — "
+            "run scripts/prototype_variants.py and record the chosen variant"
+        )
     return True, [f"ok: {label} grill-me complete ({n} Q/A)"] + msgs
 
 
