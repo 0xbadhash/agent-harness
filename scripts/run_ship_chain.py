@@ -121,6 +121,7 @@ def run_chain(
     stop_at: str | None,
     allow_auto_markers: bool = False,
     ship_self: bool = False,
+    require_pr_body: bool = False,
 ) -> int:
     root = root.resolve()
     py = sys.executable
@@ -184,6 +185,16 @@ def run_chain(
                 prt + "\n## Threat notes\n- Asset: runtime surface\n- Abuse: incomplete review — hard_gates still apply\n",
                 encoding="utf-8",
             )
+
+    # E09: opt-in PR-body gate (smallest slice, before/after, merge danger).
+    if require_pr_body:
+        pr_gate = SCRIPTS / "check_pr_body.py"
+        if pr_gate.is_file() and step(
+            "check_pr_body", [py, str(pr_gate), "--root", str(root)]
+        ) != 0:
+            _write_log(root, log, _phase(root))
+            print("❌ PR body gate failed — fix PR_DRAFT.md sections")
+            return 1
 
     # E04 dogfood: the harness ships through the same chain, plus the gates that
     # only make sense for the source of truth.
@@ -297,6 +308,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Dogfood: require this checkout to be agent-harness and run harness gates",
     )
+    ap.add_argument(
+        "--require-pr-body",
+        action="store_true",
+        help="Fail when PR_DRAFT lacks smallest/before-after/merge-danger sections",
+    )
     args = ap.parse_args(argv)
     return run_chain(
         args.root,
@@ -307,6 +323,7 @@ def main(argv: list[str] | None = None) -> int:
         stop_at=args.stop_at,
         allow_auto_markers=bool(args.allow_auto_markers),
         ship_self=bool(args.ship_self),
+        require_pr_body=bool(args.require_pr_body),
     )
 
 

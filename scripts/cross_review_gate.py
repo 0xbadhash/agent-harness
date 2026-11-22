@@ -129,6 +129,111 @@ def is_large_diff(diff: str | None) -> tuple[bool, str]:
     )
 
 
+STANDARDS_AXIS = "standards"
+SPEC_AXIS = "spec-fidelity"
+AXES = (STANDARDS_AXIS, SPEC_AXIS)
+BARE_EXCEPT_RE = re.compile(r"^\+\s*except\s*:")
+TODO_RE = re.compile(r"TODO(?!\s*\(|\s*:|\s*#)")
+AC_RE = re.compile(r"\bAC-(\d+)\b", re.IGNORECASE)
+
+
+def _added_lines(diff: str | None) -> list[tuple[str, str]]:
+    """Return (path, added_line) for a git diff range."""
+    cmd = ["git", "diff", "-U0"]
+    cmd.append(diff or "HEAD~1...HEAD")
+    run = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)
+    if run.returncode != 0:
+        return []
+    out: list[tuple[str, str]] = []
+    path = ""
+    for line in run.stdout.splitlines():
+        if line.startswith("+++ b/"):
+            path = line[6:]
+        elif line.startswith("+") and not line.startswith("+++"):
+            out.append((path, line[1:]))
+    return out
+
+
+def review_standards(diff: str | None = None) -> dict:
+    """Axis 1 — code standards that do not depend on the spec."""
+    findings: list[str] = []
+    for path, line in _added_lines(diff):
+        if BARE_EXCEPT_RE.match("+" + line):
+            findings.append(f"{path}: bare `except:` swallows the cause")
+        if TODO_RE.search(line) and not is_test_path(path):
+            findings.append(f"{path}: TODO without an owner or issue reference")
+    return {
+        "axis": STANDARDS_AXIS,
+        "ok": not findings,
+        "findings": findings,
+        "message": (
+            "✅ standards axis clean"
+            if not findings
+            else f"❌ standards axis: {len(findings)} finding(s)"
+        ),
+    }
+
+
+def _spec_path(spec: Path | None) -> Path | None:
+    if spec is not None:
+        return spec if spec.is_file() else None
+    if PR_DRAFT.is_file():
+        match = re.search(r"\*\*Spec:\*\*\s*(\S+)", PR_DRAFT.read_text(encoding="utf-8"))
+        if match:
+            candidate = ROOT / match.group(1).strip().strip("`")
+            return candidate if candidate.is_file() else None
+    return None
+
+
+def review_spec_fidelity(
+    diff: str | None = None, spec: Path | None = None
+) -> dict:
+    """Axis 2 — does the change actually satisfy the linked spec?"""
+    path = _spec_path(spec)
+    if path is None:
+        return {
+            "axis": SPEC_AXIS,
+            "ok": True,
+            "findings": [],
+            "message": "✅ spec axis N/A (no linked spec)",
+        }
+    acs = sorted({int(m.group(1)) for m in AC_RE.finditer(path.read_text(encoding="utf-8"))})
+    if not acs:
+        return {
+            "axis": SPEC_AXIS,
+            "ok": True,
+            "findings": [],
+            "message": f"✅ spec axis clean ({path.name} has no AC-n)",
+        }
+    changed = "\n".join(line for _, line in _added_lines(diff))
+    tests = "\n".join(
+        p.read_text(encoding="utf-8", errors="replace")
+        for p in ROOT.joinpath("tests").rglob("test_*.py")
+    )
+    corpus = changed + "\n" + tests
+    findings = [
+        f"AC-{n} has no code/test reference in the diff or tests"
+        for n in acs
+        if not re.search(rf"\bAC-{n}\b|ac[_-]?{n}\b", corpus, re.IGNORECASE)
+    ]
+    return {
+        "axis": SPEC_AXIS,
+        "ok": not findings,
+        "findings": findings,
+        "message": (
+            f"✅ spec axis clean ({len(acs)} AC(s) traced)"
+            if not findings
+            else f"❌ spec axis: {len(findings)} finding(s)"
+        ),
+    }
+
+
+def review_axes(
+    diff: str | None = None, spec: Path | None = None
+) -> list[dict]:
+    return [review_standards(diff), review_spec_fidelity(diff, spec)]
+
+
 def evaluate(
     diff: str | None = None,
     pr_draft: Path = PR_DRAFT,
@@ -165,7 +270,29 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Exit 1 if large diff lacks evidence (hard gate)",
     )
+    ap.add_argument(
+        "--axis",
+        choices=[*AXES, "both"],
+        default=None,
+        help="Run one review axis instead of the artifact-presence check",
+    )
+    ap.add_argument("--spec", type=Path, default=None, help="Linked Spec path")
     args = ap.parse_args(argv)
+
+    if args.axis:
+        axes = review_axes(args.diff, args.spec) if args.axis == "both" else [
+            review_standards(args.diff)
+            if args.axis == STANDARDS_AXIS
+            else review_spec_fidelity(args.diff, args.spec)
+        ]
+        for result in axes:
+            print(result["message"])
+            for finding in result["findings"]:
+                print(f"  - {finding}")
+        if args.strict and not all(result["ok"] for result in axes):
+            return 1
+        return 0
+
     result = evaluate(args.diff, args.pr_draft)
     print(result["message"])
     print(
