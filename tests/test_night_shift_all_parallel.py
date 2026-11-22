@@ -22,6 +22,8 @@ def _load():
     return mod
 
 
+@unittest.skipUnless(os.path.isdir("/opt/second-brain/vault"),
+                     "box-only: canonical vault checkout is not present on hosted runners")
 class TestNightVaultGuard(unittest.TestCase):
     def test_unset_defaults_outside_harness(self):
         mod = _load()

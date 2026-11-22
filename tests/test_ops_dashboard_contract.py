@@ -30,6 +30,8 @@ def _directive_lines(text: str, key: str) -> list[str]:
     return [ln.strip() for ln in text.splitlines() if ln.startswith(key)]
 
 
+@unittest.skipUnless(LIVE_SERVICE.is_file(),
+                     "box-only: live ops-dashboard systemd units are not present on hosted runners")
 class TestOpsDashboardContract(unittest.TestCase):
     def test_ac_1_exit_2_is_intentional_red(self):
         """AC-1: SuccessExitStatus=0 2 stays, and the unit says exit 2 is RED."""
