@@ -26,8 +26,11 @@ import argparse
 import json
 import os
 import re
+import shutil
+import signal
 import subprocess
 import sys
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -60,30 +63,35 @@ def _run(
     env: dict | None = None,
 ) -> dict[str, Any]:
     try:
-        r = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=str(cwd or ROOT),
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
             env=env or os.environ.copy(),
+            start_new_session=True,
         )
+        try:
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.communicate()
+            return {
+                "name": name,
+                "cmd": cmd,
+                "exit": 124,
+                "ok": False,
+                "stdout_tail": "",
+                "stderr_tail": f"timeout after {timeout}s",
+            }
         return {
             "name": name,
             "cmd": cmd,
-            "exit": r.returncode,
-            "ok": r.returncode == 0,
-            "stdout_tail": (r.stdout or "")[-1500:],
-            "stderr_tail": (r.stderr or "")[-800:],
-        }
-    except subprocess.TimeoutExpired:
-        return {
-            "name": name,
-            "cmd": cmd,
-            "exit": 124,
-            "ok": False,
-            "stdout_tail": "",
-            "stderr_tail": f"timeout after {timeout}s",
+            "exit": proc.returncode,
+            "ok": proc.returncode == 0,
+            "stdout_tail": (out or "")[-1500:],
+            "stderr_tail": (err or "")[-800:],
         }
     except FileNotFoundError as exc:
         return {
@@ -203,14 +211,120 @@ def _load_plugin(root: Path | None = None) -> dict[str, Any]:
     return data
 
 
+def _tool_manifest(root: Path | None = None) -> list[str]:
+    """Per-product required-tools manifest (E05).
+
+    Sources, in order: ``night_shift.required_tools`` in product_plugin.yaml
+    and ``.agents/night_shift_tools.yaml`` (one tool per line, ``- name``).
+    A tool is a PATH executable or an existing absolute/relative path.
+    """
+    root = ROOT if root is None else root
+    required: list[str] = []
+    plugin = _load_plugin(root)
+    raw = str((plugin.get("night_shift") or {}).get("required_tools") or "").strip()
+    if raw.startswith("[") and raw.endswith("]"):
+        raw = raw[1:-1]
+    required.extend(x.strip().strip("\"'") for x in raw.split(",") if x.strip())
+    manifest = root / ".agents" / "night_shift_tools.yaml"
+    if manifest.is_file():
+        for line in manifest.read_text(encoding="utf-8", errors="replace").splitlines():
+            row = line.split("#", 1)[0].strip().lstrip("-").strip().strip("\"'")
+            if row and not row.endswith(":"):
+                required.append(row)
+    return sorted({t for t in required if t})
+
+
+def missing_tools(root: Path | None = None) -> list[str]:
+    root = ROOT if root is None else root
+    missing: list[str] = []
+    for tool in _tool_manifest(root):
+        if "/" in tool or tool.startswith("."):
+            if not (root / tool).exists():
+                missing.append(tool)
+        elif shutil.which(tool) is None:
+            missing.append(tool)
+    return missing
+
+
+def required_tools_result(root: Path | None = None) -> dict[str, Any] | None:
+    """DEGRADED verdict when a declared required tool is absent (never a skip)."""
+    required = _tool_manifest(root)
+    if not required:
+        return None
+    missing = missing_tools(root)
+    if missing:
+        return {
+            "name": "required_tools",
+            "cmd": [],
+            "exit": 1,
+            "ok": False,
+            "status": "DEGRADED",
+            "stdout_tail": "",
+            "stderr_tail": (
+                "missing required tool(s): " + ", ".join(missing)
+                + " — install them or remove them from the per-product manifest"
+            ),
+        }
+    return {
+        "name": "required_tools",
+        "cmd": [],
+        "exit": 0,
+        "ok": True,
+        "status": "ok",
+        "stdout_tail": f"all {len(required)} required tool(s) present",
+        "stderr_tail": "",
+    }
+
+
+RED_SUITE = "RED_SUITE"
+
+
+def red_suite_result(name: str, reason: str) -> dict[str, Any]:
+    """A suite that did not run is RED_SUITE, never an invisible skip."""
+    return {
+        "name": name,
+        "cmd": [],
+        "exit": 1,
+        "ok": False,
+        "status": RED_SUITE,
+        "stdout_tail": "",
+        "stderr_tail": reason,
+    }
+
+
+def overall_verdict(results: list[dict[str, Any]]) -> str:
+    """PASS / FAIL plus the two distinct non-skip verdicts (E05, E06)."""
+    if any(str(r.get("status")) == "DEGRADED" for r in results):
+        return "DEGRADED"
+    if any(str(r.get("status")) == RED_SUITE for r in results):
+        return RED_SUITE
+    return "PASS" if all(r.get("ok") for r in results) else "FAIL"
+
+
+def _safe_label(raw: str) -> str:
+    """Single path segment. Reject absolute paths and '..' (AH-1)."""
+    label = str(raw).strip()
+    if (
+        not label
+        or label in {".", ".."}
+        or "/" in label
+        or "\\" in label
+        or label.startswith(".")
+    ):
+        return "product"
+    return label
+
+
 def _vault_project_rel(plugin: dict[str, Any]) -> Path:
     vault = plugin.get("vault") or {}
-    label = (
-        vault.get("project_label")
-        or plugin.get("product_id")
-        or ROOT.name
+    label = _safe_label(
+        str(
+            vault.get("project_label")
+            or plugin.get("product_id")
+            or ROOT.name
+        )
     )
-    return Path("01-Projects") / str(label)
+    return Path("01-Projects") / label
 
 
 def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
@@ -223,8 +337,8 @@ def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
         r = resolve_vault_root(cli_vault=None, product_root=ROOT, require_enabled=False)
         if r is not None:
             return Path(r)
-    except Exception:
-        pass
+    except Exception as exc:
+        print(type(exc).__name__, file=sys.stderr)
     vault = plugin.get("vault") or {}
     # Canonical first, then plugin root_env, then legacy aliases
     for key in (
@@ -248,6 +362,11 @@ def run_gates(
     py = _venv_python()
     results: list[dict[str, Any]] = []
 
+    # E05: a declared-but-missing tool degrades the verdict; it never reads green.
+    tools_result = required_tools_result(ROOT)
+    if tools_result is not None:
+        results.append(tools_result)
+
     def add_if(script: str, name: str, args: list[str] | None = None, **kw: Any) -> None:
         path = SCRIPTS / script
         if not path.is_file():
@@ -266,15 +385,12 @@ def run_gates(
             )
         )
     elif matrix.is_file():
+        # E06: the suite exists but could not run. That is RED_SUITE, not a skip.
         results.append(
-            {
-                "name": "test_matrix",
-                "cmd": [],
-                "exit": 0,
-                "ok": True,
-                "stdout_tail": "matrix present but checker missing — skipped",
-                "stderr_tail": "",
-            }
+            red_suite_result(
+                "test_matrix",
+                "matrix present but check_test_matrix.py missing — suite did not run",
+            )
         )
 
     add_if("check_repo_hygiene.py", "repo_hygiene", timeout=120)
@@ -308,6 +424,8 @@ def run_gates(
         vcmd = [py, str(SCRIPTS / "validate.py"), vmode]
         if use_sot_lint:
             vcmd.append("--skip-vault-schema")
+        # readiness runs check_hardcodes as its own gate (line ~304)
+        vcmd.append("--skip-hardcodes")
         v_timeout = int(ns.get("validate_timeout", 1800 if vmode == "full" else 300))
         v_result = _run(
             "validate_full",
@@ -332,36 +450,13 @@ def run_gates(
             if vault is not None and Path(vault).is_dir():
                 lint_r = _run(
                     "vault_schema_lint_sot",
-                    [py, str(sot_lint_path), "--vault", str(vault)],
+                    [py, str(sot_lint_path), "--vault", str(vault), "--no-strict-warn"],
                     timeout=120,
                 )
-                # Fold SoT lint into validate_full gate (same ship bar).
-                sot_hdr = "\n── vault_schema_lint (harness SoT) ──\n"
-                if not lint_r.get("ok"):
-                    v_result = {
-                        **v_result,
-                        "ok": False,
-                        "exit": lint_r.get("exit") or 1,
-                        "stdout_tail": (
-                            (v_result.get("stdout_tail") or "")
-                            + sot_hdr
-                            + (lint_r.get("stdout_tail") or "")
-                        )[-4000:],
-                        "stderr_tail": (
-                            (v_result.get("stderr_tail") or "")
-                            + "\n"
-                            + (lint_r.get("stderr_tail") or "")
-                        )[-4000:],
-                    }
-                else:
-                    v_result = {
-                        **v_result,
-                        "stdout_tail": (
-                            (v_result.get("stdout_tail") or "")
-                            + sot_hdr
-                            + "✅ vault_schema_lint passed (SoT)\n"
-                        )[-4000:],
-                    }
+                # Reported as its own fleet gate: one vault-wide error must not
+                # red a product that passes its own checks.
+                lint_r["name"] = "vault_schema_lint_sot"
+                results.append(lint_r)
         results.append(v_result)
     if (SCRIPTS / "product_smoke.py").is_file():
         ns = plugin.get("night_shift") or {}
@@ -455,10 +550,29 @@ def run_gates(
                         timeout=120,
                     )
                 )
-        for i, url in enumerate(live_urls):
+        allowed_hosts = set()
+        host = (ns.get("default_host") or "").strip()
+        if host:
+            allowed_hosts.add(urlparse(host if "://" in host else "https://" + host).hostname or "")
+        allowed_hosts.discard("")
+
+        def _curl_https(name: str, url: str) -> None:
+            parsed = urlparse(url)
+            if parsed.scheme != "https" or (parsed.hostname or "") not in allowed_hosts:
+                results.append(
+                    {
+                        "name": name,
+                        "cmd": ["curl", url],
+                        "exit": 1,
+                        "ok": False,
+                        "stdout_tail": "",
+                        "stderr_tail": "live URL refused (https + default_host only)",
+                    }
+                )
+                return
             results.append(
                 _run(
-                    f"live_http_{i}",
+                    name,
                     [
                         "curl",
                         "-sS",
@@ -466,6 +580,10 @@ def run_gates(
                         "/dev/null",
                         "-w",
                         "%{http_code}",
+                        "--proto",
+                        "=https",
+                        "--max-redirs",
+                        "0",
                         "--max-time",
                         "20",
                         url,
@@ -473,6 +591,9 @@ def run_gates(
                     timeout=30,
                 )
             )
+
+        for i, url in enumerate(live_urls):
+            _curl_https(f"live_http_{i}", url)
             last = results[-1]
             if last["ok"]:
                 code = (last.get("stdout_tail") or "").strip()
@@ -488,23 +609,7 @@ def run_gates(
         path = (ns.get("live_path") or "").strip()
         if base and path and not live_urls:
             url = base.rstrip("/") + "/" + path.lstrip("/")
-            results.append(
-                _run(
-                    "live_http",
-                    [
-                        "curl",
-                        "-sS",
-                        "-o",
-                        "/dev/null",
-                        "-w",
-                        "%{http_code}",
-                        "--max-time",
-                        "20",
-                        url,
-                    ],
-                    timeout=30,
-                )
-            )
+            _curl_https("live_http", url)
             last = results[-1]
             if last["ok"]:
                 code = (last.get("stdout_tail") or "").strip()
@@ -584,6 +689,11 @@ def recommendations_from(
             recs.append(
                 f"[{product_id}] Live HTTP probe `{name}` failed — check app / fpm / DNS."
             )
+        elif name == "required_tools":
+            recs.append(
+                f"[{product_id}] Required tool missing — install it on this host or "
+                "drop it from night_shift.required_tools / .agents/night_shift_tools.yaml."
+            )
         elif name == "hardcodes":
             recs.append(f"[{product_id}] Hardcode scan failed — remove secrets/absolute paths.")
         elif name == "repo_hygiene":
@@ -622,6 +732,38 @@ def recommendations_from(
     return recs
 
 
+# Phrases that recommendations_from already emits. Used only to find that
+# sentence; the Fix: line copies it and does not invent a second hint.
+_FIX_MARKERS = {
+    "hardcodes": "Hardcode scan failed",
+    "validate_full": "scripts/validate.py full",
+    "product_smoke": "failing smoke steps",
+    "test_matrix": "TEST_MATRIX.md",
+    "repo_hygiene": "Repo hygiene failed",
+    "coverage": "Coverage thresholds failed",
+    "static_denies_live": "nginx denies",
+}
+
+
+def fix_sentence_for_gate(gate: str, recs: list[str]) -> str:
+    """Return the existing recommendation sentence for one failed gate."""
+    needle = f"`{gate}`"
+    for rec in recs:
+        if needle in rec and "Investigate failed gate" in rec or (
+            needle in rec and ("Security gate" in rec or "Live HTTP probe" in rec)
+        ):
+            return rec
+    marker = _FIX_MARKERS.get(gate)
+    if marker:
+        for rec in recs:
+            if marker in rec:
+                return rec
+    for rec in recs:
+        if needle in rec:
+            return rec
+    return f"Investigate failed gate `{gate}`."
+
+
 def build_report_md(
     *,
     when: datetime,
@@ -632,7 +774,7 @@ def build_report_md(
 ) -> str:
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
-    overall = "PASS" if passed == total else "FAIL"
+    overall = overall_verdict(results)
     when_s = format_when_dual(when)
     lines = [
         f"# Night shift readiness — {product_id} — {when_s}",
@@ -674,18 +816,23 @@ def build_report_md(
         "web_e2e": "Ship hard_gates if website",
     }
     for r in results:
-        tag = "✅" if r["ok"] else "❌"
+        status = str(r.get("status") or "")
+        tag = "✅" if r["ok"] else ("🟡" if status == "DEGRADED" else "❌")
+        name = f"{r['name']} ({status})" if status and status != "ok" else str(r["name"])
         extra = when_else.get(str(r["name"]), "See act map")
-        lines.append(f"| {r['name']} | {tag} | {r.get('exit')} | {extra} |")
+        lines.append(f"| {name} | {tag} | {r.get('exit')} | {extra} |")
     lines.extend(["", "## Failures (tails)", ""])
     fails = [r for r in results if not r["ok"]]
     if not fails:
         lines.append("_None._")
     else:
         for r in fails:
-            lines.append(f"### {r['name']}")
+            gate = str(r["name"])
+            raw_tail = r.get("stderr_tail") or r.get("stdout_tail") or ""
+            lines.append(f"### {gate}")
+            lines.append(f"Fix: {fix_sentence_for_gate(gate, recs)}")
             lines.append("```")
-            lines.append((r.get("stderr_tail") or r.get("stdout_tail") or "")[:1200])
+            lines.append(raw_tail[:1200])
             lines.append("```")
             lines.append("")
     lines.extend(["", "## Recommendations", ""])
@@ -763,6 +910,26 @@ def sync_kanban_readiness_file(
     return "kanban: no-op (night shift does not write agent-tasks/kanban.md)"
 
 
+def merge_human_backlog(path: Path, generated: str) -> str:
+    """Keep the operator's Human backlog; only the auto section is regenerated.
+
+    The nightly writer used to replace the whole file, so anything typed under
+    "## Human backlog" was destroyed every run.
+    """
+    header = "## Human backlog"
+    try:
+        old = path.read_text(encoding="utf-8") if path.is_file() else ""
+    except OSError:
+        old = ""
+    idx = old.find(header)
+    if idx < 0:
+        return generated
+    human = old[idx:].rstrip() + "\n"
+    if header in generated:
+        return generated[: generated.find(header)].rstrip() + "\n\n" + human
+    return generated.rstrip() + "\n\n" + human
+
+
 def write_vault(
     vault: Path,
     project_rel: Path,
@@ -792,11 +959,12 @@ def write_vault(
         notes.append(f"vault log: {log_path}")
 
         todo_path = proj / "TODO.md"
+        merged_todo = merge_human_backlog(todo_path, todo_md)
         try:
             from vault_fs import write_text as _vw  # type: ignore
-            _vw(todo_path, todo_md)
+            _vw(todo_path, merged_todo)
         except ImportError:
-            todo_path.write_text(todo_md, encoding="utf-8")
+            todo_path.write_text(merged_todo, encoding="utf-8")
         notes.append(f"vault TODO: {todo_path}")
 
         # Intentionally does NOT call sync_kanban_readiness_file / write kanban.md
@@ -917,7 +1085,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
-    overall = "PASS" if passed == total else "FAIL"
+    overall = overall_verdict(results)
     report_md = build_report_md(
         when=when,
         results=results,
