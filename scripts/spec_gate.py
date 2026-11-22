@@ -14,15 +14,56 @@ import json
 import os
 import re
 import subprocess
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
-WAIVER_RE = re.compile(
-    r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.IGNORECASE,
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import (  # noqa: E402
+    SPEC_MARKER,
+    SPEC_RE,
+    WAIVER_MARKER,
+    WAIVER_RE,
+    WAIVERS,
 )
-WAIVERS = frozenset({"hotfix", "chore", "docs-only", "prose-only"})
+
+# E13: an ADR is worth recording only when the decision is hard to reverse,
+# surprising to a reader, or carries a real tradeoff. A section that states
+# none of the three is spec theater.
+ADR_HEADER_RE = re.compile(
+    r"^##+\s+(?:ADR(?:[-\s]\d+)?|Decision record)\b", re.IGNORECASE | re.MULTILINE
+)
+REVERSIBLE_RE = re.compile(r"reversib", re.IGNORECASE)
+SURPRISE_RE = re.compile(r"surpris", re.IGNORECASE)
+TRADEOFF_RE = re.compile(r"trade[-\s]?off", re.IGNORECASE)
+
+# E14: uppercase domain terms in the spec must resolve in GLOSSARY.md.
+UPPER_TERM_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,}\b")
+GLOSSARY_ALLOW = frozenset(
+    {
+        "AC", "ADR", "API", "CI", "CLI", "JSON", "HTTP", "HTTPS", "LLM", "N/A",
+        "PDF", "PR", "README", "TDD", "TODO", "UI", "URL", "UX", "UUID", "YAML",
+    }
+)
+GLOSSARY_PATHS = ("GLOSSARY.md", "docs/GLOSSARY.md")
+
+# E16: tickets carry blocking edges so the build order is explicit.
+TICKETS_LINE_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.IGNORECASE)
+DEPENDS_RE = re.compile(
+    r"^\s*(?:[-*]\s*)?(?:\*\*Blocked by:\*\*|depends_on|blocked_by)\s*:?\s*(.+)$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+# E20: a bug fix needs a reproduction that went red before the fix.
+BUG_SIGNAL_RE = re.compile(
+    r"^\*\*(?:Type|Kind):\*\*\s*bug\b|^#+\s+Bug\b", re.IGNORECASE | re.MULTILINE
+)
+REPRO_HEADER_RE = re.compile(
+    r"^##+\s+(?:Repro(?:duction)?)\b", re.IGNORECASE | re.MULTILINE
+)
 
 
 def _pipeline(root: Path) -> dict:
@@ -91,6 +132,169 @@ def append_waiver_log(
     return log
 
 
+def _section_body(text: str, header: re.Pattern[str]) -> str:
+    match = header.search(text)
+    if not match:
+        return ""
+    tail = text[match.end() :]
+    nxt = re.search(r"^##+\s", tail, re.MULTILINE)
+    return tail[: nxt.start()] if nxt else tail
+
+
+def check_adr_three_part(text: str) -> tuple[bool, list[str]]:
+    """E13 — ADR sections must answer reversible / surprise / tradeoff."""
+    if not ADR_HEADER_RE.search(text):
+        return True, ["ok: no ADR section — three-part test N/A"]
+    body = _section_body(text, ADR_HEADER_RE)
+    missing = [
+        label
+        for label, pattern in (
+            ("reversibility", REVERSIBLE_RE),
+            ("surprise", SURPRISE_RE),
+            ("tradeoff", TRADEOFF_RE),
+        )
+        if not pattern.search(body)
+    ]
+    if missing:
+        return False, [
+            "ADR three-part test: missing "
+            + ", ".join(missing)
+            + " — say whether the decision is reversible, what would surprise "
+            "a reader, and the tradeoff; drop the ADR if none apply"
+        ]
+    return True, ["ok: ADR three-part test (reversibility / surprise / tradeoff)"]
+
+
+def _glossary_terms(root: Path) -> tuple[set[str], Path | None]:
+    for rel in GLOSSARY_PATHS:
+        path = root / rel
+        if not path.is_file():
+            continue
+        terms: set[str] = set()
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            row = line.strip()
+            if row.startswith("|") and not row.startswith("|---"):
+                cells = [c.strip() for c in row.strip("|").split("|")]
+                if cells and cells[0] and cells[0].lower() != "term":
+                    terms.add(re.sub(r"[`*]", "", cells[0]).strip())
+            elif row.startswith(("-", "*")):
+                match = re.match(r"^[-*]\s+\*\*([^*]+)\*\*", row)
+                if match:
+                    terms.add(match.group(1).strip())
+        return terms, path
+    return set(), None
+
+
+def check_glossary(root: Path, text: str) -> tuple[bool, list[str]]:
+    """E14 — uppercase domain terms must be defined in GLOSSARY.md."""
+    terms, path = _glossary_terms(Path(root))
+    if path is None:
+        return True, ["ok: no GLOSSARY.md — domain-term check N/A"]
+    known = {t.lower() for t in terms}
+    undefined = sorted(
+        {
+            term
+            for term in UPPER_TERM_RE.findall(text)
+            if term not in GLOSSARY_ALLOW and term.lower() not in known
+        }
+    )
+    if undefined:
+        return False, [
+            f"undefined domain term(s) {', '.join(undefined)} — add each to "
+            f"{path.relative_to(root)} with a one-line definition"
+        ]
+    return True, [f"ok: domain terms resolved in {path.relative_to(root)}"]
+
+
+def _ticket_dir(root: Path, spec_path: Path, text: str) -> Path | None:
+    match = TICKETS_LINE_RE.search(text)
+    if match:
+        raw = match.group(1).strip().strip("`")
+        candidate = (root / raw).resolve()
+        if candidate.is_dir() and str(candidate).startswith(str(root.resolve())):
+            return candidate
+        return None
+    sibling = spec_path.parent / spec_path.stem / "tickets"
+    return sibling if sibling.is_dir() else None
+
+
+def check_ticket_blocking_edges(
+    root: Path, spec_path: Path, text: str
+) -> tuple[bool, list[str]]:
+    """E16 — each ticket declares blocking edges that resolve to other tickets."""
+    tickets_dir = _ticket_dir(root, spec_path, text)
+    if tickets_dir is None:
+        return True, ["ok: no tickets dir — blocking-edge check N/A"]
+    tickets = sorted(tickets_dir.glob("*.md"))
+    if not tickets:
+        return False, [f"tickets dir empty: {tickets_dir.relative_to(root)}"]
+    ids = {p.stem for p in tickets}
+    short_ids: dict[str, str] = {}
+    for ticket in tickets:
+        short_ids.setdefault(re.split(r"[-_.]", ticket.stem)[0], ticket.stem)
+    failures: list[str] = []
+    graph: dict[str, set[str]] = {}
+    for ticket in tickets:
+        body = ticket.read_text(encoding="utf-8", errors="replace")
+        edges = DEPENDS_RE.findall(body)
+        if not edges:
+            failures.append(
+                f"{ticket.name}: missing **Blocked by:** / depends_on edge "
+                "(use 'None' for a root ticket)"
+            )
+            continue
+        deps: set[str] = set()
+        for raw in edges:
+            for token in re.split(r"[,\s]+", raw.strip()):
+                token = token.strip("`[]()")
+                if not token or token.lower() in {"none", "n/a", "na", "-", "none."}:
+                    continue
+                target = token if token in ids else short_ids.get(token)
+                if target is None:
+                    failures.append(f"{ticket.name}: blocking edge {token!r} has no ticket")
+                elif target == ticket.stem:
+                    failures.append(f"{ticket.name}: ticket blocks itself")
+                else:
+                    deps.add(target)
+        graph[ticket.stem] = deps
+
+    def _cycle(node: str, seen: set[str], stack: set[str]) -> bool:
+        if node in stack:
+            return True
+        if node in seen:
+            return False
+        seen.add(node)
+        stack.add(node)
+        return any(_cycle(dep, seen, stack) for dep in graph.get(node, set()))
+
+    for ticket_id in graph:
+        if _cycle(ticket_id, set(), set()):
+            failures.append(f"{ticket_id}: blocking edges form a cycle")
+    if failures:
+        return False, failures
+    return True, [f"ok: {len(tickets)} ticket(s) with blocking edges"]
+
+
+def check_repro_requirement(text: str) -> tuple[bool, list[str]]:
+    """E20 — a bug-fix spec needs a reproduction that failed first."""
+    if not BUG_SIGNAL_RE.search(text):
+        return True, ["ok: not a bug fix — repro requirement N/A"]
+    if not REPRO_HEADER_RE.search(text):
+        return False, [
+            "bug fix requires a ## Reproduction section: the command or steps "
+            "that failed before the change, and the observed red result"
+        ]
+    body = _section_body(text, REPRO_HEADER_RE)
+    if not re.search(r"repro", body, re.IGNORECASE) or not re.search(
+        r"\b(red|fail|error|traceback|exit\s*[1-9])\b", body, re.IGNORECASE
+    ):
+        return False, [
+            "## Reproduction must name a repro command/steps and the red result "
+            "(error, traceback, or non-zero exit) observed before the fix"
+        ]
+    return True, ["ok: bug-fix reproduction recorded (went red first)"]
+
+
 def check(
     root: Path,
     *,
@@ -151,11 +355,23 @@ def check(
         except Exception as e:  # noqa: BLE001
             msgs.append(f"fail: grill check error: {e}")
             return False, msgs
+
+        spec_text = spec_path.read_text(encoding="utf-8", errors="replace")
+        for checker, args in (
+            (check_adr_three_part, (spec_text,)),
+            (check_glossary, (root, spec_text)),
+            (check_ticket_blocking_edges, (root, spec_path, spec_text)),
+            (check_repro_requirement, (spec_text,)),
+        ):
+            c_ok, c_msgs = checker(*args)
+            msgs.extend(c_msgs)
+            if not c_ok:
+                return False, msgs
         return True, msgs
 
     msgs.append(
-        "fail: need **Spec:** <path> in PR_DRAFT or pipeline spec_id, "
-        "or **Spec waiver:** hotfix|chore|docs-only|prose-only"
+        f"fail: need {SPEC_MARKER} <path> in PR_DRAFT or pipeline spec_id, "
+        f"or {WAIVER_MARKER} hotfix|chore|docs-only|prose-only"
     )
     return False, msgs
 

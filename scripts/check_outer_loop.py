@@ -27,13 +27,14 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import SPEC_RE, WAIVER_RE  # noqa: E402
+
 PLAN_RE = re.compile(r"\*\*Plan:\*\*\s*(\S+)", re.IGNORECASE)
 TICKETS_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.IGNORECASE)
-WAIVER_RE = re.compile(
-    r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.IGNORECASE,
-)
 IMPL_SEQ_RE = re.compile(
     r"^##\s+Implementation sequence\b(.*?)(?=^##\s|\Z)",
     re.IGNORECASE | re.MULTILINE | re.DOTALL,

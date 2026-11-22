@@ -13,6 +13,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import waiver_type  # noqa: E402
+
 SRC_SUFFIX = {".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs"}
 SKIP_PARTS = (
     "tests/",
@@ -109,7 +115,7 @@ def check(
     draft = ""
     if pr_draft and pr_draft.is_file():
         draft = pr_draft.read_text(encoding="utf-8", errors="replace")
-    if re.search(r"\*\*Spec waiver:\*\*\s*(docs-only|prose-only)\b", draft, re.IGNORECASE):
+    if waiver_type(draft) in {"docs-only", "prose-only"}:
         return True, ["ok: docs/prose waiver — path tests skipped"]
 
     waivers = _untested_waivers(draft)
