@@ -17,14 +17,14 @@ The Sunday timer's green line means each home directory under `/home` was entere
 
 ## Evidence
 
-Red: the new tests called `multiuser_home` before the scanner accepted it.
+The first pytest run failed with `TypeError` on `multiuser_home` (5 failed, 8 passed). That command passes now, so the executable red proof is the old contract: requiring exactly `/home` must not succeed.
 
 ```text
-red_cmd: .venv/bin/python -m pytest -q tests/test_security_root_ioc_scan.py --tb=line
+red_cmd: .venv/bin/python -c "import importlib.util; from pathlib import Path; p=Path('scripts/security_root_ioc_scan.py'); spec=importlib.util.spec_from_file_location('ioc', p); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); _roots, required = mod.resolve_home_roots(Path('/root'), []); raise SystemExit(0 if required == [Path('/home')] else 1)"
 green_cmd: .venv/bin/python -m pytest -q tests/test_security_root_ioc_scan.py
 ```
 
-Red result: 5 failed (`TypeError` on `multiuser_home`), 8 passed. Green result: 13 passed. CLI: `HOME=/root` `--print-roots --no-artifact` lists `required /home/debian`, `/home/denny`, and `/home/secondbrain`, and does not print a line `required /home`. `--home` to a missing or mode `000` directory exits 2. `--home` to a tree with `keyv@6.0.0` exits 1. `--home` to an empty readable directory exits 0.
+Green result: 13 passed. CLI: `HOME=/root` `--print-roots --no-artifact` lists `required /home/debian`, `/home/denny`, and `/home/secondbrain`, and does not print a line `required /home`. `--home` to a missing or mode `000` directory exits 2. `--home` to a tree with `keyv@6.0.0` exits 1. `--home` to an empty readable directory exits 0.
 
 ## Evidence pack
 
@@ -54,15 +54,44 @@ Red result: 5 failed (`TypeError` on `multiuser_home`), 8 passed. Green result: 
 
 ## Threat notes
 
-- Asset: operator home trees and the weekly green/red line on the security IoC artifact. The trust boundary is "status=ok only after each required home was entered."
-- Abuse: a parent directory that is readable while a child is not used to look like a clean scan. The child is now required, so that case is `incomplete` (exit 2), not `ok`. `--home /root` remains an explicit operator choice.
+- supply-chain: the scan exists to catch known malicious npm seed pins. A parent-only walk let a pin in an unlistable home look clean. Each child home is required, so a missed home is incomplete, not ok.
+- path-traversal: `--home` is an operator-supplied path and replaces discovery. It is not joined onto a fixed root and it is not taken from file content. Tests use temp directories only.
+- secrets: the status artifact records pin names and payload paths, not file bodies. No token is read into the markdown.
 
 ## Red-proof
 
 ```text
-red_cmd: .venv/bin/python -m pytest -q tests/test_security_root_ioc_scan.py --tb=line
+red_cmd: .venv/bin/python -c "import importlib.util; from pathlib import Path; p=Path('scripts/security_root_ioc_scan.py'); spec=importlib.util.spec_from_file_location('ioc', p); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); _roots, required = mod.resolve_home_roots(Path('/root'), []); raise SystemExit(0 if required == [Path('/home')] else 1)"
 green_cmd: .venv/bin/python -m pytest -q tests/test_security_root_ioc_scan.py
 ```
+
+## Cross-review
+
+**Marker:** CROSS-REVIEW
+**Range:** `HEAD~1...HEAD` for `6e616ba`, plus this draft fix.
+**Secrets:** `check_secrets_diff.py --base HEAD~1 --head HEAD` clean.
+**Blockers:** 0
+
+### Security Guru
+
+None. `status=ok` now requires each child of `/home` to be entered. An unlistable child is `incomplete` (exit 2), not a green scan. `--home` replaces discovery instead of appending a path the operator did not mean to treat as optional. No new credential surface.
+
+### Maintainability Expert
+
+None. Home selection stays in `resolve_home_roots` / `discover_real_homes`. Tests pass `multiuser_home` so the suite does not walk the live `/home`.
+
+### Obsolete / cleanup (scoped)
+
+No Tier A, B, or C delete. Confidence 0.9 that nothing in this diff is safe to remove. Evidence: `rg resolve_home_roots` hits the scanner and `tests/test_security_root_ioc_scan.py` only. The parent path `/home` remains the fallback required root when no child directory can be named. The systemd unit and `docs/ship-flow.md` still name this scan. Keep both.
+
+### Domain Specialist
+
+None. Domain hint is a portable harness with no host-only default. The script does not hardcode a username. On this host `--print-roots` with `HOME=/root` names `/home/debian`, `/home/denny`, and `/home/secondbrain`.
+
+### Follow-ups
+
+- Nested `os.walk` errors inside a home that was entered are still ignored. That is not the home-level false clean this item closes.
+- `status=fail` still refreshes the ops dashboard even with `--no-artifact`. Pre-existing. Not changed.
 
 ## Things that look bad but are actually fine
 
