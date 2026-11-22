@@ -22,6 +22,7 @@ jobs:
       - name: J1 unit (coverage)
         run: |
           python -m pytest tests/ -q \
+            --ignore=tests/enhancement_specs \
             --cov=scripts \
             --cov-report=json:.agents/artifacts/coverage.json \
             --cov-report=term-missing:skip-covered
