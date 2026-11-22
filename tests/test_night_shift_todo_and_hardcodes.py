@@ -55,10 +55,10 @@ def test_bare_onedrive_id_is_not_a_credential(tmp_path: Path, capsys) -> None:
 
 
 def test_assigned_key_is_still_flagged(tmp_path: Path, capsys) -> None:
-    # Fake 16-hex fixture for the checker (built by concat so the Semgrep
-    # generic hardcoded-secret rule does not fire on the test itself).
+    # Fake 16-hex fixture for the checker (assembled so neither the Semgrep
+    # hardcoded-secret rule nor any scanner sees a literal credential here).
     fake_key = "C8748B4546" + "461F49"
-    body = f'API_KEY = "{fake_key}"\n'
+    body = ("API_KEY" + ' = ' + chr(34) + fake_key + chr(34) + "\n")
     assert _scan(tmp_path, {"config.py": body}) == 1
     assert "exposed_api_key" in capsys.readouterr().out
 
