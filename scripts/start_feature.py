@@ -4,10 +4,37 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from datetime import date
 from pathlib import Path
 
-WAIVERS = frozenset({"hotfix", "chore", "docs-only", "prose-only"})
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import WAIVER_MARKER, WAIVERS  # noqa: E402
+
+# E17: size the slice before opening the window. The tree is deliberately
+# boring: a huge first slice is a review and revert risk, not ambition.
+DIFF_SIZE_TREE = {
+    "small": "≤3 files and ≤100 changed lines — one reviewable slice",
+    "medium": "≤8 files and ≤400 changed lines — split by surface if wider",
+    "huge": ">8 files or >400 changed lines — split before opening the window",
+}
+TICKET_STUB = """# 01 — {title}
+
+**What to build:** {title}
+
+**depends_on:** None
+**Status:** ready-for-agent
+
+- [ ] First tracer bullet: the smallest end-to-end path that proves the shape
+- [ ] Follow-on slices (split here while the diff is still small)
+
+## Acceptance
+
+- [ ] AC-1: …
+"""
 
 PR_SKELETON = """# PR Draft: {title}
 
@@ -65,7 +92,7 @@ SPEC_STUB = """# {title}
 - **Created:** {today}
 - **Status:** draft
 - **Priority:** P1
-- **Spec waiver:** (use start_feature --waiver instead if no full spec)
+- {waiver_marker} (use start_feature --waiver instead if no full spec)
 
 ## Problem Statement
 
@@ -103,6 +130,15 @@ def _slugify(s: str) -> str:
     return s.strip("-") or "feature"
 
 
+def classify_diff_size(files: int, lines: int) -> tuple[str, str]:
+    """E17 — return (size, guidance) for a planned first slice."""
+    if files <= 3 and lines <= 100:
+        return "small", DIFF_SIZE_TREE["small"]
+    if files <= 8 and lines <= 400:
+        return "medium", DIFF_SIZE_TREE["medium"]
+    return "huge", DIFF_SIZE_TREE["huge"]
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=Path("."))
@@ -124,6 +160,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Overwrite existing PR_DRAFT.md",
     )
+    ap.add_argument(
+        "--ticket-stub",
+        action="store_true",
+        help="Write a tracer-bullet ticket with a depends_on edge",
+    )
+    ap.add_argument(
+        "--estimate-files",
+        type=int,
+        default=None,
+        help="Planned file count for the diff-size decision tree",
+    )
+    ap.add_argument(
+        "--estimate-lines",
+        type=int,
+        default=None,
+        help="Planned changed-line count for the diff-size decision tree",
+    )
     args = ap.parse_args(argv)
     root = args.root.resolve()
     slug = _slugify(args.slug)
@@ -132,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
 
     spec_rel = ""
     if args.waiver:
-        spec_line = f"**Spec waiver:** {args.waiver}"
+        spec_line = f"{WAIVER_MARKER} {args.waiver}"
     else:
         if args.write_spec_stub:
             spec_rel = f".agents/specs/{today}-{slug}.md"
@@ -140,7 +193,10 @@ def main(argv: list[str] | None = None) -> int:
             if not spec_path.is_file() or args.force:
                 spec_path.parent.mkdir(parents=True, exist_ok=True)
                 spec_path.write_text(
-                    SPEC_STUB.format(title=title, today=today), encoding="utf-8"
+                    SPEC_STUB.format(
+                        title=title, today=today, waiver_marker=WAIVER_MARKER
+                    ),
+                    encoding="utf-8",
                 )
                 print(f"✅ wrote {spec_path}")
             else:
@@ -165,6 +221,20 @@ def main(argv: list[str] | None = None) -> int:
             PR_SKELETON.format(title=title, spec_line=spec_line), encoding="utf-8"
         )
         print(f"✅ wrote {pr}")
+
+    if args.ticket_stub:
+        ticket_dir = root / ".agents" / "tickets" / slug
+        ticket = ticket_dir / f"01-{slug}.md"
+        if not ticket.is_file() or args.force:
+            ticket_dir.mkdir(parents=True, exist_ok=True)
+            ticket.write_text(TICKET_STUB.format(title=title), encoding="utf-8")
+            print(f"✅ wrote {ticket}")
+
+    if args.estimate_files is not None or args.estimate_lines is not None:
+        size, guidance = classify_diff_size(
+            max(0, args.estimate_files or 0), max(0, args.estimate_lines or 0)
+        )
+        print(f"diff size: {size} — {guidance}")
 
     print()
     print("Next:")

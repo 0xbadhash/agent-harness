@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -210,6 +211,96 @@ def _load_plugin(root: Path | None = None) -> dict[str, Any]:
     return data
 
 
+def _tool_manifest(root: Path | None = None) -> list[str]:
+    """Per-product required-tools manifest (E05).
+
+    Sources, in order: ``night_shift.required_tools`` in product_plugin.yaml
+    and ``.agents/night_shift_tools.yaml`` (one tool per line, ``- name``).
+    A tool is a PATH executable or an existing absolute/relative path.
+    """
+    root = ROOT if root is None else root
+    required: list[str] = []
+    plugin = _load_plugin(root)
+    raw = str((plugin.get("night_shift") or {}).get("required_tools") or "").strip()
+    if raw.startswith("[") and raw.endswith("]"):
+        raw = raw[1:-1]
+    required.extend(x.strip().strip("\"'") for x in raw.split(",") if x.strip())
+    manifest = root / ".agents" / "night_shift_tools.yaml"
+    if manifest.is_file():
+        for line in manifest.read_text(encoding="utf-8", errors="replace").splitlines():
+            row = line.split("#", 1)[0].strip().lstrip("-").strip().strip("\"'")
+            if row and not row.endswith(":"):
+                required.append(row)
+    return sorted({t for t in required if t})
+
+
+def missing_tools(root: Path | None = None) -> list[str]:
+    root = ROOT if root is None else root
+    missing: list[str] = []
+    for tool in _tool_manifest(root):
+        if "/" in tool or tool.startswith("."):
+            if not (root / tool).exists():
+                missing.append(tool)
+        elif shutil.which(tool) is None:
+            missing.append(tool)
+    return missing
+
+
+def required_tools_result(root: Path | None = None) -> dict[str, Any] | None:
+    """DEGRADED verdict when a declared required tool is absent (never a skip)."""
+    required = _tool_manifest(root)
+    if not required:
+        return None
+    missing = missing_tools(root)
+    if missing:
+        return {
+            "name": "required_tools",
+            "cmd": [],
+            "exit": 1,
+            "ok": False,
+            "status": "DEGRADED",
+            "stdout_tail": "",
+            "stderr_tail": (
+                "missing required tool(s): " + ", ".join(missing)
+                + " — install them or remove them from the per-product manifest"
+            ),
+        }
+    return {
+        "name": "required_tools",
+        "cmd": [],
+        "exit": 0,
+        "ok": True,
+        "status": "ok",
+        "stdout_tail": f"all {len(required)} required tool(s) present",
+        "stderr_tail": "",
+    }
+
+
+RED_SUITE = "RED_SUITE"
+
+
+def red_suite_result(name: str, reason: str) -> dict[str, Any]:
+    """A suite that did not run is RED_SUITE, never an invisible skip."""
+    return {
+        "name": name,
+        "cmd": [],
+        "exit": 1,
+        "ok": False,
+        "status": RED_SUITE,
+        "stdout_tail": "",
+        "stderr_tail": reason,
+    }
+
+
+def overall_verdict(results: list[dict[str, Any]]) -> str:
+    """PASS / FAIL plus the two distinct non-skip verdicts (E05, E06)."""
+    if any(str(r.get("status")) == "DEGRADED" for r in results):
+        return "DEGRADED"
+    if any(str(r.get("status")) == RED_SUITE for r in results):
+        return RED_SUITE
+    return "PASS" if all(r.get("ok") for r in results) else "FAIL"
+
+
 def _safe_label(raw: str) -> str:
     """Single path segment. Reject absolute paths and '..' (AH-1)."""
     label = str(raw).strip()
@@ -271,6 +362,11 @@ def run_gates(
     py = _venv_python()
     results: list[dict[str, Any]] = []
 
+    # E05: a declared-but-missing tool degrades the verdict; it never reads green.
+    tools_result = required_tools_result(ROOT)
+    if tools_result is not None:
+        results.append(tools_result)
+
     def add_if(script: str, name: str, args: list[str] | None = None, **kw: Any) -> None:
         path = SCRIPTS / script
         if not path.is_file():
@@ -289,15 +385,12 @@ def run_gates(
             )
         )
     elif matrix.is_file():
+        # E06: the suite exists but could not run. That is RED_SUITE, not a skip.
         results.append(
-            {
-                "name": "test_matrix",
-                "cmd": [],
-                "exit": 0,
-                "ok": True,
-                "stdout_tail": "matrix present but checker missing — skipped",
-                "stderr_tail": "",
-            }
+            red_suite_result(
+                "test_matrix",
+                "matrix present but check_test_matrix.py missing — suite did not run",
+            )
         )
 
     add_if("check_repo_hygiene.py", "repo_hygiene", timeout=120)
@@ -596,6 +689,11 @@ def recommendations_from(
             recs.append(
                 f"[{product_id}] Live HTTP probe `{name}` failed — check app / fpm / DNS."
             )
+        elif name == "required_tools":
+            recs.append(
+                f"[{product_id}] Required tool missing — install it on this host or "
+                "drop it from night_shift.required_tools / .agents/night_shift_tools.yaml."
+            )
         elif name == "hardcodes":
             recs.append(f"[{product_id}] Hardcode scan failed — remove secrets/absolute paths.")
         elif name == "repo_hygiene":
@@ -676,7 +774,7 @@ def build_report_md(
 ) -> str:
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
-    overall = "PASS" if passed == total else "FAIL"
+    overall = overall_verdict(results)
     when_s = format_when_dual(when)
     lines = [
         f"# Night shift readiness — {product_id} — {when_s}",
@@ -718,9 +816,11 @@ def build_report_md(
         "web_e2e": "Ship hard_gates if website",
     }
     for r in results:
-        tag = "✅" if r["ok"] else "❌"
+        status = str(r.get("status") or "")
+        tag = "✅" if r["ok"] else ("🟡" if status == "DEGRADED" else "❌")
+        name = f"{r['name']} ({status})" if status and status != "ok" else str(r["name"])
         extra = when_else.get(str(r["name"]), "See act map")
-        lines.append(f"| {r['name']} | {tag} | {r.get('exit')} | {extra} |")
+        lines.append(f"| {name} | {tag} | {r.get('exit')} | {extra} |")
     lines.extend(["", "## Failures (tails)", ""])
     fails = [r for r in results if not r["ok"]]
     if not fails:
@@ -985,7 +1085,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     passed = sum(1 for r in results if r["ok"])
     total = len(results)
-    overall = "PASS" if passed == total else "FAIL"
+    overall = overall_verdict(results)
     report_md = build_report_md(
         when=when,
         results=results,

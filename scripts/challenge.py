@@ -78,9 +78,10 @@ def call_glm(prompt: str) -> str:
 
 
 def call_deepseek(prompt: str) -> str:
-    key = _env_key("DEEPSEEK_API_KEY")
+    """Deepseek through Venice. Direct api.deepseek.com is not the challenge route."""
+    key = _env_key("VENICE_API_KEY")
     body = json.dumps({
-        "model": os.environ.get("CHALLENGE_DEEPSEEK_MODEL", "deepseek-chat"),
+        "model": os.environ.get("CHALLENGE_DEEPSEEK_MODEL", "deepseek-v4-flash"),
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 2500,
         "temperature": 0.2,
@@ -88,7 +89,7 @@ def call_deepseek(prompt: str) -> str:
     req = urllib.request.Request(
         os.environ.get(
             "CHALLENGE_DEEPSEEK_URL",
-            "https://" + "api.deepseek.com" + "/chat/completions",
+            "https://api.venice.ai/api/v1/chat/completions",
         ),
         data=body,
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
@@ -96,10 +97,15 @@ def call_deepseek(prompt: str) -> str:
     try:
         with urllib.request.urlopen(req, timeout=180) as resp:
             payload = json.load(resp)
+    except urllib.error.HTTPError as exc:
+        raise ModelError(f"Deepseek failed HTTP {exc.code}") from exc
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise ModelError("Deepseek failed") from exc
-    text = ((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
-    if not text.strip():
+    msg = ((payload.get("choices") or [{}])[0].get("message") or {})
+    text = (msg.get("content") or "").strip()
+    if not text:
+        text = (msg.get("reasoning_content") or "").strip()
+    if not text:
         raise ModelError("Deepseek empty")
     return text.strip()
 
@@ -128,7 +134,7 @@ def _note(proposal: str, rounds: tuple[str, str, str, str], decision: str) -> st
     return (
         "# Challenge\n\n"
         f"- **Date:** {datetime.now(UTC).strftime('%Y-%m-%d')}\n"
-        "- **Models:** z-ai-glm-5-3-flash, deepseek-chat\n\n"
+        "- **Models:** z-ai-glm-5-3-flash, deepseek-v4-flash via Venice\n\n"
         "## Decision\n\n"
         f"{decision.strip()}\n\n"
         "## Proposal\n\n"

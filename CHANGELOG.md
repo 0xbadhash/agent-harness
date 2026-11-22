@@ -15,6 +15,17 @@
 - When the process home is `/root`, `scripts/security_root_ioc_scan.py` requires each child directory of `/home`. A walk of the parent is not a clean scan: `os.walk` can skip an unlistable child and still report `status=ok`.
 - No child directory (empty or unlistable parent) is `status=incomplete`. `--home` still replaces discovery. No username is hardcoded.
 
+### fix(night): clear golden-drift hardcode, ruff, and mypy
+
+- Allow the public Yahoo Finance chart hosts in `check_hardcodes.py`. They are the market-data endpoints `scripts/watchlist_golden_drift.py` calls, not secrets.
+- Rename the ambiguous RSI loss variable and drop the unused fixture list so `ruff check` is clean.
+- Narrow the golden-drift test's module spec so mypy accepts the loader.
+
+### fix(night): pass run_one gate args from collect_and_learn
+
+- `collect_and_learn` called `run_one(name, root)` without the keyword-only `vault`, `quick`, `skip_live`, and `dry_run` arguments, so `mypy` failed `validate_full`.
+- The stand-in now forwards those arguments. Defaults are dry-run and skip-live, and an omitted vault is the artifact directory.
+
 ## v1.4.50 — 2026-11-08
 
 ### fix(security): root IoC scan cannot go green from /root alone

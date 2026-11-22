@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-WAIVER_RE = re.compile(r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b", re.IGNORECASE)
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import WAIVERS, WAIVER_RE  # noqa: E402
+
 DEFAULT_MAX = 8
 DEFAULT_DAYS = 30
 
@@ -51,7 +55,7 @@ def check(
             when = when.replace(tzinfo=UTC)
         if when >= cutoff:
             wtype = str(row.get("waiver_type") or "")
-            if wtype in {"hotfix", "chore", "docs-only", "prose-only"}:
+            if wtype in WAIVERS:
                 count += 1
     if count > max_waivers:
         return False, [

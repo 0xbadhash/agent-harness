@@ -17,14 +17,8 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-SPEC_RE = re.compile(
-    r"\*\*Spec:\*\*\s*(\S+)",
-    re.IGNORECASE,
-)
-WAIVER_RE = re.compile(
-    r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.IGNORECASE,
-)
+from gate_conventions import SPEC_RE, WAIVER_MARKER, WAIVER_RE  # noqa: E402
+
 RED_PROOF_RE = re.compile(
     r"(red.?proof|red_cmd|green_cmd|TDD\s*N/?A|docs-only.*TDD|TDD.*docs-only|"
     r"red\s*→\s*green|went red then green)",
@@ -245,7 +239,7 @@ def evaluate(
     if not has_spec and not has_waiver:
         violations.append(
             "hard_gates: Spec — need **Spec:** <path> or "
-            "**Spec waiver:** hotfix|chore|docs-only|prose-only"
+            f"{WAIVER_MARKER} hotfix|chore|docs-only|prose-only"
         )
 
     if prose_only:

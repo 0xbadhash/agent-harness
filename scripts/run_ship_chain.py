@@ -22,6 +22,18 @@ SCRIPTS = Path(__file__).resolve().parent
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+from gate_conventions import WAIVER_MARKER  # noqa: E402
+
+
+def _is_harness_root(root: Path) -> bool:
+    """True when this checkout is the harness source of truth."""
+    plugin = root / ".agents" / "product_plugin.yaml"
+    if plugin.is_file() and "product_id: agent-harness" in plugin.read_text(
+        encoding="utf-8", errors="replace"
+    ):
+        return True
+    return (root / "install_into_product.sh").is_file()
+
 
 def _run(cmd: list[str], cwd: Path) -> tuple[int, str]:
     r = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, check=False)
@@ -81,7 +93,7 @@ def _ensure_pr_draft(root: Path) -> None:
         return
     pr.write_text(
         "# PR Draft — run_ship_chain\n\n"
-        "**Spec waiver:** chore\n\n"
+        f"{WAIVER_MARKER} chore\n\n"
         "## What Problem This Solves\nUnattended deterministic closeout.\n\n"
         "## Why This Change Was Made\nBounded ship chain without LLM.\n\n"
         "## User Impact\nFaster closeout when artifacts sufficient.\n\n"
@@ -108,10 +120,16 @@ def run_chain(
     portfolio: bool,
     stop_at: str | None,
     allow_auto_markers: bool = False,
+    ship_self: bool = False,
+    require_pr_body: bool = False,
 ) -> int:
     root = root.resolve()
     py = sys.executable
     log: list[str] = []
+    is_harness = _is_harness_root(root)
+    if ship_self and not is_harness:
+        print("❌ --self is only valid in the agent-harness source checkout")
+        return 1
 
     def step(name: str, cmd: list[str]) -> int:
         rc, out = _run(cmd, root)
@@ -168,6 +186,24 @@ def run_chain(
                 encoding="utf-8",
             )
 
+    # E09: opt-in PR-body gate (smallest slice, before/after, merge danger).
+    if require_pr_body:
+        pr_gate = SCRIPTS / "check_pr_body.py"
+        if pr_gate.is_file() and step(
+            "check_pr_body", [py, str(pr_gate), "--root", str(root)]
+        ) != 0:
+            _write_log(root, log, _phase(root))
+            print("❌ PR body gate failed — fix PR_DRAFT.md sections")
+            return 1
+
+    # E04 dogfood: the harness ships through the same chain, plus the gates that
+    # only make sense for the source of truth.
+    if ship_self:
+        for gate_name in ("check_harness_manifest.py", "check_daytime_wiring.py"):
+            gate = SCRIPTS / gate_name
+            if gate.is_file():
+                step(f"self:{gate_name}", [py, str(gate), "--root", str(root)])
+
     # hard gates
     hg = SCRIPTS / "hard_gates.py"
     if hg.is_file():
@@ -217,14 +253,6 @@ def run_chain(
         step("git push", ["git", "push", "origin", "HEAD", "--tags"])
 
     # portfolio default for harness SoT
-    plugin = root / ".agents" / "product_plugin.yaml"
-    is_harness = False
-    if plugin.is_file() and "product_id: agent-harness" in plugin.read_text(
-        encoding="utf-8", errors="replace"
-    ):
-        is_harness = True
-    if (root / "install_into_product.sh").is_file():
-        is_harness = True
     if portfolio or is_harness:
         pir = SCRIPTS / "portfolio_install_report.py"
         if pir.is_file() and is_harness:
@@ -274,6 +302,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--stop-at", choices=["approved", "shipped"], default=None)
     ap.add_argument("--no-portfolio", action="store_true")
+    ap.add_argument(
+        "--self",
+        dest="ship_self",
+        action="store_true",
+        help="Dogfood: require this checkout to be agent-harness and run harness gates",
+    )
+    ap.add_argument(
+        "--require-pr-body",
+        action="store_true",
+        help="Fail when PR_DRAFT lacks smallest/before-after/merge-danger sections",
+    )
     args = ap.parse_args(argv)
     return run_chain(
         args.root,
@@ -283,6 +322,8 @@ def main(argv: list[str] | None = None) -> int:
         portfolio=args.portfolio and not args.no_portfolio,
         stop_at=args.stop_at,
         allow_auto_markers=bool(args.allow_auto_markers),
+        ship_self=bool(args.ship_self),
+        require_pr_body=bool(args.require_pr_body),
     )
 
 

@@ -14,11 +14,12 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
-WAIVER_RE = re.compile(
-    r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.IGNORECASE,
-)
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import SPEC_RE, WAIVER_RE  # noqa: E402
+
 AC_RE = re.compile(r"\bAC-(\d+)\b", re.IGNORECASE)
 TRACE_HEADER_RE = re.compile(r"^##\s+Traceability\b", re.IGNORECASE | re.MULTILINE)
 NA_RE = re.compile(r"AC-(\d+)\s*[:|].*\bN/?A\b", re.IGNORECASE)

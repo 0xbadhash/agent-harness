@@ -17,11 +17,12 @@ import re
 import sys
 from pathlib import Path
 
-SPEC_RE = re.compile(r"\*\*Spec:\*\*\s*(\S+)", re.IGNORECASE)
-WAIVER_RE = re.compile(
-    r"\*\*Spec waiver:\*\*\s*(hotfix|chore|docs-only|prose-only)\b",
-    re.IGNORECASE,
-)
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from gate_conventions import SPEC_RE, WAIVER_RE  # noqa: E402
+
 GRILL_HEADER_RE = re.compile(r"^##\s+Grill-me\b", re.IGNORECASE | re.MULTILINE)
 STATUS_RE = re.compile(
     r"\*\*Status:\*\*\s*(complete|done|ok|spike-skipped|skipped)\b",
@@ -78,6 +79,14 @@ def check_spec_text(text: str, *, label: str = "spec") -> tuple[bool, list[str]]
         ]
     if status and status not in {"complete", "done", "ok"}:
         msgs.append(f"warn: {label} grill Status={status!r} (expected complete)")
+    # E22: a shape question is cheaper to settle with disposable prototypes.
+    if re.search(r"\b(design|open) question\b", text, re.IGNORECASE) and not re.search(
+        r"\bprototype\b", text, re.IGNORECASE
+    ):
+        msgs.append(
+            f"warn: {label} raises a design question without a prototype note — "
+            "run scripts/prototype_variants.py and record the chosen variant"
+        )
     return True, [f"ok: {label} grill-me complete ({n} Q/A)"] + msgs
 
 
