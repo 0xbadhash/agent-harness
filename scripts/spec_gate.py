@@ -53,7 +53,7 @@ GLOSSARY_PATHS = ("GLOSSARY.md", "docs/GLOSSARY.md")
 # E16: tickets carry blocking edges so the build order is explicit.
 TICKETS_LINE_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.IGNORECASE)
 DEPENDS_RE = re.compile(
-    r"^\s*(?:[-*]\s*)?(?:\*\*Blocked by:\*\*|depends_on|blocked_by)\s*:?\s*(.+)$",
+    r"^\s*(?:[-*]\s*)?(?:\*\*)?(?:Blocked by|depends_on|blocked_by)\s*:?(?:\*\*)?\s*(.+)$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -96,6 +96,7 @@ def append_waiver_log(
     waiver_type: str,
     spec_id: str = "",
     reason: str = "",
+    gate: str = "spec_gate",
 ) -> Path | None:
     """Append one waiver record. Returns log path or None on failure."""
     root = Path(root).resolve()
@@ -118,6 +119,7 @@ def append_waiver_log(
         "ts": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "product_id": product_id,
         "waiver_type": waiver_type,
+        "gate": gate,
         "spec_id": spec_id or None,
         "pipeline_phase": pipe.get("phase"),
         "actor": os.environ.get("USER") or os.environ.get("LOGNAME") or "unknown",
@@ -246,10 +248,11 @@ def check_ticket_blocking_edges(
         deps: set[str] = set()
         for raw in edges:
             for token in re.split(r"[,\s]+", raw.strip()):
-                token = token.strip("`[]()")
+                token = token.strip("`[]()").rstrip(".")
                 if not token or token.lower() in {"none", "n/a", "na", "-", "none."}:
                     continue
-                target = token if token in ids else short_ids.get(token)
+                stem = token[:-3] if token.lower().endswith(".md") else token
+                target = stem if stem in ids else short_ids.get(stem)
                 if target is None:
                     failures.append(f"{ticket.name}: blocking edge {token!r} has no ticket")
                 elif target == ticket.stem:
