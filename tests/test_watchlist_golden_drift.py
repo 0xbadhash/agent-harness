@@ -8,6 +8,7 @@ _SPEC = importlib.util.spec_from_file_location(
     "watchlist_golden_drift",
     Path(__file__).resolve().parent.parent / "scripts" / "watchlist_golden_drift.py",
 )
+assert _SPEC is not None and _SPEC.loader is not None, "spec loader must resolve for the shipped script"
 mod = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(mod)
 

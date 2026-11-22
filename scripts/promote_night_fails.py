@@ -223,29 +223,3 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-def write_report_only_tickets(
-    rows: list[tuple[str, str, str]],
-    out: Path,
-) -> None:
-    """Checkbox tickets from report ``Fix:`` lines. Does not run autofix or write stubs.
-
-    Each row is ``(product_id, gate, fix_sentence)``.
-    """
-    out.parent.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
-    lines = [
-        "# NIGHT_FAIL_TICKETS",
-        "",
-        f"_Generated {now} by promote_night_fails.py_",
-        "",
-        "report-only; autofix not run",
-        "",
-    ]
-    if not rows:
-        lines.append("_No open tickets._")
-        lines.append("")
-    for product_id, gate, fix in rows:
-        lines.append(f"- [ ] [{product_id}] gate `{gate}`: {fix}")
-    if rows:
-        lines.append("")
-    out.write_text("\n".join(lines) + "\n", encoding="utf-8")

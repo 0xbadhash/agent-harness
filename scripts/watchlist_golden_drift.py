@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import subprocess
 import sys
 import time
@@ -125,9 +124,9 @@ def wilder_rsi(closes: list[float], period: int = 14) -> float | None:
     avg_gain, avg_loss = gain / use, loss / use
     for c in changes[use:]:
         g = c if c > 0 else 0.0
-        l = -c if c < 0 else 0.0
+        loss_c = -c if c < 0 else 0.0
         avg_gain = (avg_gain * (use - 1) + g) / use
-        avg_loss = (avg_loss * (use - 1) + l) / use
+        avg_loss = (avg_loss * (use - 1) + loss_c) / use
     if avg_loss == 0:
         return 100.0
     rs = avg_gain / avg_loss
@@ -224,12 +223,6 @@ def remedy(tickers: list[str]) -> int:
             print(f"[golden] FAIL export-golden {t} exit {r.returncode}", flush=True)
             rc = r.returncode
             continue
-        # Drop obsolete same-ticker fixtures (keep the newest date).
-        same = sorted(
-            [p for p in GOLDEN_DIR.glob(f"{t.lower()}_*.json")
-             if p.name != f"{t.lower()}_{datetime.now(UTC):%Y-%m-%d}.json"],
-            key=lambda p: p.stat().st_mtime,
-        )
         # Newest by date-in-name wins; drop everything older for this ticker.
         dated = []
         for p in GOLDEN_DIR.glob(f"{t.lower()}_*.json"):
