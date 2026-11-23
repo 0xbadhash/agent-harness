@@ -148,6 +148,12 @@ class ChallengePreflightTests(unittest.TestCase):
     """A missing vault must cost zero model calls, not four."""
 
     def test_unset_vault_calls_no_model(self) -> None:
+        """No --vault and no PRODUCT_VAULT_ROOT must not call a model.
+
+        Night shift exports PRODUCT_VAULT_ROOT for the whole suite. This case
+        is the unset vault, so the ambient value has to be cleared or preflight
+        resolves a vault and the paid rounds start.
+        """
         import challenge
 
         calls: list[str] = []
@@ -160,15 +166,20 @@ class ChallengePreflightTests(unittest.TestCase):
             calls.append("deepseek")
             raise AssertionError("deepseek must not be called during pre-flight")
 
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            proposal = root / "p.md"
-            proposal.write_text("# proposal\n\nbody\n", encoding="utf-8")
-            decision = root / "d.md"
-            decision.write_text("# decision\n", encoding="utf-8")
-            with contextlib.redirect_stderr(io.StringIO()):
-                rc = challenge.main(["--proposal", str(proposal), "--decision", str(decision),
-                                     "--root", str(root)], glm=glm, deepseek=deepseek)
+        saved = os.environ.pop("PRODUCT_VAULT_ROOT", None)
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                proposal = root / "p.md"
+                proposal.write_text("# proposal\n\nbody\n", encoding="utf-8")
+                decision = root / "d.md"
+                decision.write_text("# decision\n", encoding="utf-8")
+                with contextlib.redirect_stderr(io.StringIO()):
+                    rc = challenge.main(["--proposal", str(proposal), "--decision", str(decision),
+                                         "--root", str(root)], glm=glm, deepseek=deepseek)
+        finally:
+            if saved is not None:
+                os.environ["PRODUCT_VAULT_ROOT"] = saved
         self.assertEqual(rc, 1)
         self.assertEqual(calls, [])
 
