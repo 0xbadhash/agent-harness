@@ -277,22 +277,15 @@ def collect_news(vault: Path | None) -> tuple[list[Item], list[Item], list[Item]
             )
         )
     elif state == "ready_to_tick":
-        att.append(
+        # CEO 2026-11-24: the tick rule is gone — publish_ready_news_inbox.py
+        # auto-selects the top 3-5 slate (CEO 2026-11-20 automation). Ticking
+        # the inbox is now an optional override, never a required step.
+        well.append(
             Item(
-                "attention",
+                "green",
                 "news",
-                f"News candidates ready — **tick 3–5** in Obsidian (HKT {day})",
+                f"News auto-publish armed — top 3–5 go live at the next timer (HKT {day}); ticks optional",
                 link=link,
-                action="Open news-inbox and tick 3–5 boxes",
-            )
-        )
-        todos.append(
-            Item(
-                "attention",
-                "news",
-                f"Tick news inbox for {day}",
-                link=link,
-                action="Obsidian: 01-Projects/catalyxt/news-inbox/" + day,
             )
         )
     elif state == "missing_candidates":
