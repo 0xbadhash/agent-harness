@@ -208,6 +208,12 @@ def _allowed_rel(rel: str) -> bool:
 def _skip_path(rel: str, parts: tuple[str, ...]) -> bool:
     if any(s in parts for s in SKIP_DIRS):
         return True
+    # Recorded/generated data files (nightly data outputs, podcast notes,
+    # golden fixtures) legitimately carry real-world URLs and are inputs to
+    # tests, not hardcoded config — skip any directory literally named "data".
+    # Part-exact match (not substring) so "metadata/" etc. still gets scanned.
+    if "data" in parts:
+        return True
     low = rel.replace("\\", "/").lower()
     return any(s in low for s in SKIP_PATH_SUBSTR)
 
