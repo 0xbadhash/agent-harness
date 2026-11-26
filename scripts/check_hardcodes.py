@@ -125,7 +125,7 @@ INLINE_SECRET_PLACEHOLDER = re.compile(
 )
 EXPOSED_KEY = re.compile(r"\b[A-Z0-9]{16}\b")
 CREDENTIAL_ASSIGNED = re.compile(
-    r"(api[_-]?key|apikey|access[_-]?key|secret|token|password|passwd|bearer|authorization)",
+    r"([a-z0-9_]*key|secret|token|password|passwd|bearer|authorization)",
     re.IGNORECASE,
 )
 # Any http(s) URL — then filtered by allowlist
@@ -175,7 +175,7 @@ URL_HOST_ALLOW = re.compile(
     # Public market-data hosts used by scripts/watchlist_golden_drift.py.
     # Not credentials; same class as other public API hosts above.
     r"query1\.finance\.yahoo\.com|"
-    r"(www\.)?finance\.yahoo\.com"
+    r"(www\.)?finance\.yahoo\.com|"
     r")([/:?]|$)",
     re.I,
 )
