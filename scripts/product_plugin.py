@@ -108,7 +108,7 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
     )
     if wm:
         section = wm.group(1)
-        for key in ("enabled", "strict", "require_s_ids", "auto_detect"):
+        for key in ("enabled", "strict", "require_s_ids", "auto_detect", "comet_required"):
             key_m = re.search(rf"^[ \t]+{key}:\s*(\S+)", section, re.MULTILINE)
             if key_m:
                 raw = key_m.group(1).strip().strip("'\"")
@@ -172,6 +172,10 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
             we["surfaces"] = []
         if we:
             out["web_e2e"] = we
+        for key in ("comet_doc", "playwright_config", "e2e_dir", "base_url"):
+            key_m = re.search(rf"^[ \t]+{key}:\s*(\S+)", section, re.MULTILINE)
+            if key_m:
+                we[key] = key_m.group(1).strip().strip("'\"")
 
     # traits: web / web3 / client_secrets (true|false|auto)
     tm = re.search(
@@ -194,6 +198,25 @@ def _parse_minimal_plugin(text: str) -> dict[str, Any]:
                     traits[key] = raw  # auto or free-form
         if traits:
             out["traits"] = traits
+    # property_tests: first block only (stdlib). PyYAML is not installed in .venv.
+    ptm = re.search(
+        r"^property_tests:\s*\n(.*?)(?=^[a-zA-Z_][\w-]*:|\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if ptm:
+        section = ptm.group(1)
+        pt_block: dict[str, Any] = {}
+        en = re.search(r"^[ \t]+enabled:\s*(\S+)", section, re.MULTILINE)
+        if en:
+            raw = en.group(1).strip().strip("'\"")
+            pt_block["enabled"] = raw.lower() in ("true", "yes", "1")
+        mods = re.findall(r"^[ \t]+-[ \t]+(\S+)\s*$", section, re.MULTILINE)
+        if mods:
+            pt_block["modules"] = [m.strip().strip("'\"") for m in mods]
+        if pt_block:
+            out["property_tests"] = pt_block
+
     return out
 
 

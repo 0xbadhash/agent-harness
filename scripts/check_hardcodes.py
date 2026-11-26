@@ -294,14 +294,9 @@ def scan_root(root: Path) -> int:
                     continue
             if m.group(0) == "PYTHONUNBUFFERED":
                 continue
-            line_start = text.rfind("\n", 0, m.start()) + 1
-            line_end = text.find("\n", m.start())
-            line_text = text[line_start: line_end if line_end > 0 else len(text)]
-            # A 16-char hex token is only a credential when the line assigns it to one.
-            # OneDrive drive_id / parent_id values are bare ids: flagging them breaks
-            # a working rclone map and rotates nothing.
-            if not CREDENTIAL_ASSIGNED.search(line_text):
-                continue
+            # Any 16-char lettered token outside the allowlisted metadata files is
+            # treated as an exposed key: bare OneDrive drive_id / parent_id values
+            # live only in allowlisted data/ metadata files (path-based allow).
             line = text[: m.start()].count("\n") + 1
             print(f"❌ {rel}:{line} [exposed_api_key] {m.group(0)[:60]}")
             hits += 1

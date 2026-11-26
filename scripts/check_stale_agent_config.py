@@ -66,6 +66,17 @@ def _scan_text(rel: str, text: str, root: Path, missing: list[str]) -> None:
                 missing.append(f"{rel}: missing `{raw}`")
 
 
+def check_agents_bloat(root: Path, *, max_lines: int = 250) -> list[str]:
+    """Warn when AGENTS.md exceeds max_lines instead of staying a thin pointer file."""
+    p = root / "AGENTS.md"
+    if not p.is_file():
+        return []
+    count = len(p.read_text(encoding="utf-8", errors="replace").splitlines())
+    if count > max_lines:
+        return [f"AGENTS.md: {count} lines (>{max_lines}; keep as thin navigation pointers)"]
+    return []
+
+
 def check(root: Path) -> tuple[bool, list[str]]:
     root = root.resolve()
     missing: list[str] = []

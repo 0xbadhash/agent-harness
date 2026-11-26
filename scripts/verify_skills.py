@@ -67,6 +67,25 @@ def _load_ship_list(repo: Path) -> list[str]:
     return list(DEFAULT_SHIP)
 
 
+def check_skill_style(skill_md: Path) -> list[str]:
+    """Return soft style warnings for progressive disclosure and invocation descriptions."""
+    warns: list[str] = []
+    text = skill_md.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+    if len(lines) > 200:
+        warns.append(f"{skill_md.parent.name}/SKILL.md: {len(lines)} lines (>200; disclose to references/)")
+    m = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
+    if m:
+        fm = m.group(1)
+        if "disable-model-invocation: true" in fm:
+            dm = re.search(r"^description:\s*(.+?)(?=\n[A-Za-z0-9_-]+:|\Z)", fm, re.MULTILINE | re.DOTALL)
+            if dm and len(dm.group(1).strip()) > 240:
+                warns.append(
+                    f"{skill_md.parent.name}/SKILL.md: user-invoked description >240 chars"
+                )
+    return warns
+
+
 def _check_frontmatter(skill_md: Path, rel: str) -> list[str]:
     fails: list[str] = []
     text = skill_md.read_text(encoding="utf-8")
