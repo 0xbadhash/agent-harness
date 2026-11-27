@@ -51,5 +51,7 @@ night_shift:
   live_urls: []
   live_expect_code: "200"
   coverage_soft: "1"
+  # Outer loop (bounded autofix) refuses unless AUTOMATION_READINESS.md is current.
+  require_automation_ready: "1"
 
 product_skills: []

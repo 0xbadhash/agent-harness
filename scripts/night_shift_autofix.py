@@ -334,17 +334,51 @@ def try_fix_surface_inventory_hardcodes(
     }
 
 
+def _readiness_block(root: Path) -> dict[str, Any] | None:
+    """Return a refusal record when the inner-loop readiness artifact is not current."""
+    try:
+        from check_automation_ready import check_artifact
+
+        ok, msgs = check_artifact(root)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "name": "autofix_blocked",
+            "ok": False,
+            "exit": 1,
+            "detail": f"automation readiness unavailable: {exc}",
+        }
+    if ok:
+        return None
+    return {
+        "name": "autofix_blocked",
+        "ok": False,
+        "exit": 1,
+        "detail": msgs[0] if msgs else "automation readiness artifact not current",
+    }
+
+
 def attempt_autofix(
     root: Path,
     results: list[dict[str, Any]],
     *,
     dry_run: bool = False,
     product_id: str = "",
+    require_readiness: bool = False,
 ) -> list[dict[str, Any]]:
-    """Run bounded fixers relevant to failed gates. Returns list of attempt records."""
+    """Run bounded fixers relevant to failed gates. Returns list of attempt records.
+
+    With ``require_readiness`` the outer loop refuses to touch the tree unless a
+    current ``AUTOMATION_READINESS.md`` artifact proves the inner loop is green.
+    """
     failed = [r for r in results if not r.get("ok")]
     if not failed:
         return []
+
+    if require_readiness:
+        blocked = _readiness_block(root)
+        if blocked is not None:
+            blocked["product_id"] = product_id
+            return [blocked]
 
     names = {r.get("name") for r in failed}
     tails = _combined_tails(results).lower()
