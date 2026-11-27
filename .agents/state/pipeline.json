@@ -1,8 +1,8 @@
 {
   "card_id": null,
-  "phase": "ready_for_review",
+  "phase": "approved",
   "remediation": [],
-  "score": 100.0,
+  "score": 100,
   "spec_id": ".agents/specs/2026-11-27-harness-wiring-stack-issues.md",
   "task": "T2088U harness wiring, spec rituals, issue flows, stack plan",
   "updated_at": "2026-08-19T01:08Z",

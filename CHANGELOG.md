@@ -1,3 +1,13 @@
+## v1.4.52 — 2026-11-27
+
+### feat(harness): wire orphaned helpers and plan stacked ships
+
+- `/execute_dev` runs the ticket DAG, stack planner, smart-zone guard, and compact-safety gate; `/code_review` runs the comment audit and per-layer chunks; `/retrospect` runs the retro job.
+- `spec_gate.py` fails on normalized glossary collisions. The grill adds why-first order, pain ranking, and a `STOP` token; clarify adds a candidate-name scenario table.
+- `retro_job.py --file-issues` writes per-cluster and umbrella issue bodies offline; `--gh` is opt-in.
+- `scripts/stack_plan.py` emits dependency layers and review chunks; unknown dependencies exit non-zero.
+- Restores four pieces the base commit tested but left uncommitted: the diagnosing-bugs skill, review axes, the Merge Danger template block, and `GLOSSARY.md` references.
+
 ## v1.4.51 — 2026-11-09
 
 - **Vault completion writer (staging).** `hermes-done` records a run's verdict as one JSON event; `vault_writer.py`
