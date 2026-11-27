@@ -1,17 +1,30 @@
-# PLAN-REVIEW
+# Plan review — harness wiring, spec rituals, stacked ships
 
 **Marker:** PLAN-REVIEW
-**Plan:** `.agents/specs/2026-11-08-ops-dashboard-contract-plan.md`
-**Verdict:** PASS
+**Date:** 2026-11-27
+**Plan:** `.agents/specs/2026-11-27-harness-wiring-stack-issues-plan.md`
+**Reviewer:** implementer (pre-code pass)
+
+## Verdict
+
+APPROVE. The plan keeps the five helpers' contracts unchanged, wires them at
+their natural stages, and keeps all issue creation offline by default. The
+dependency order is buildable: tickets 01 and 02 are roots, 03 depends on the
+glossary schema from 02, and 04/05 depend on the wiring from 01.
 
 ## Findings
 
-No material issues. The plan keeps the running timer as it is.
+1. The stack planner reuses `check_ticket_dag.load_tickets`, avoiding a second
+   parser and keeping cycle semantics identical. No blocker.
+2. `--gh` is a network path; the plan requires `--file-issues` first and an argv
+   list. No blocker.
+3. Cross-repo data (ticket 03) ships in `workflow-harness` with its own tests;
+   the harness ship references it without editing the product tree. No blocker.
+4. CI ticket DAG steps iterate existing directories, so repositories without
+   specs tickets stay green. No blocker.
 
-Product: the user-facing gap is ambiguous unit text, not a new dashboard feature. Commenting the unit and the registry row is the whole slice. Rewriting `ops_dashboard.py` would be the wrong surface.
+## Required before implementation
 
-Security: no new executed path, no secret, no change to who may write the vault. `SuccessExitStatus=0 2` stays so an intentional RED does not become a timer failure.
-
-Ops: rollback is reverting the comment lines. The smoke path is `systemctl show` plus the contract test. Night-shift and the writer are not restarted.
-
-no material issues beyond the pre-existing Group mismatch, which the plan correctly leaves alone.
+- Tests must be written first and must fail for the intended reason.
+- Each changed script must be referenced from a test file (path-test gate).
+- New comments must describe constraints; the comment audit runs on this diff.

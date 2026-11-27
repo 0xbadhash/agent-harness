@@ -1,86 +1,126 @@
-# PR draft — night-shift challenge preflight and fixture TODOs
+# PR Draft: Wire orphaned harness helpers, tighten spec rituals, plan stacked ships
 
-**Spec waiver:** hotfix
-edit_guard: allow_test_edits
+**Range:** `HEAD~1..HEAD`
+**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
+**Plan:** `.agents/specs/2026-11-27-harness-wiring-stack-issues-plan.md`
+**Tickets:** `.agents/specs/2026-11-27-harness-wiring-stack-issues/tickets`
+
+## Summary
+
+- Wired `retro_job.py`, `smart_zone_guard.py`, `check_compact_safety.py`,
+  `check_comment_audit.py`, and `check_ticket_dag.py` into their owning skills
+  and CI jobs (AC-1).
+- Added the candidate-name scenario table, operator `STOP` token, why-first
+  question order, pain ranking, and a glossary collision gate (AC-2).
+- Added `workflow-harness/glossary.json` and real ticket fields for the ingest
+  fan-out (AC-3).
+- Added offline issue-body generation to the retro job and documented the QA
+  flow (AC-4).
+- Added `scripts/stack_plan.py` for stack layers and per-layer review chunks
+  (AC-5).
 
 ## What Problem This Solves
 
-Night shift on 2026-11-22 failed `validate_full` and `product_smoke` for agent-harness. Both run pytest. `ChallengePreflightTests.test_unset_vault_calls_no_model` claims the vault is unset, but it left `PRODUCT_VAULT_ROOT` in the environment. The night job exports that variable. Preflight then resolved a vault and called the model stub, so the test raised `glm must not be called during pre-flight`.
-
-`check_repo_hygiene.py` also warned on three fixture strings that are not unfinished work: an ownerless TODO the comment auditor must see, and two markdown headings `# TODO`.
+The harness had five deterministic helpers that no stage called. The ticket DAG
+validator, smart-zone guard, compact-safety gate, comment audit, and retro job
+therefore had no effect on a real ship. Spec interviews also missed the decisions
+that prevent rework: why the work matters, which pain ranks first, whether a
+candidate name survives real scenarios, and whether two glossary rows define the
+same term. `workflow-harness` pointed at a `glossary.json` that did not exist,
+and its ingest ticket had no acceptance criteria or blocking edge. Retro and QA
+findings stayed in session artifacts. Large diffs had no layer plan or review
+chunks.
 
 ## Why This Change Was Made
 
-The production preflight is already correct: no `--vault` and no `PRODUCT_VAULT_ROOT` returns before any model call. The sibling test `test_unset_vault_refuses_instead_of_host_default` already pops the env. This test now does the same.
-
-Smoke argv in `.agents/product_plugin.yaml` was left as it is. `hardcodes` and `scripts/smoke_unit.sh` are valid. They failed only because pytest failed.
-
-The fixture texts still say `# TODO` at runtime. The source splits the token so the hygiene regex does not treat a string literal as an orphan TODO. `edit_guard: allow_test_edits` is set because the defect is the tests, not production code.
+The helpers already encode the intended behavior, so the smallest useful change
+is to invoke them at the stage that owns the risk. The planner reuses the ticket
+DAG parser to avoid a second dependency model. Issue bodies are files first so
+the default path stays offline and deterministic; `gh` is a thin, explicit
+adapter. The spec edits are prose contracts with exact commands, which tests can
+assert without adding a runtime.
 
 ## User Impact
 
-The next night shift can get a green unit smoke and a green `validate.py full` for this repo. No operator-facing product UI. The challenge CLI is unchanged: an unset vault still refuses before a model call.
+Harness operators and agents get fail-closed checks where they already work:
+`/execute_dev`, `/code_review`, `/retrospect`, `/qa_campaign`, and CI. Product
+installs keep working because the helper CLIs are unchanged; only additive flags
+and new commands appear. No user-visible product change.
+
+## Merge Danger
+
+**Door:** two-way
+**Blast Radius:** harness
 
 ## Evidence
 
-Before the edit, with `PRODUCT_VAULT_ROOT` set to a temp directory, `test_unset_vault_calls_no_model` failed in `scripts/challenge.py` at `_rounds` because the glm stub ran. After the edit the same command passes. `python3 scripts/validate.py full` via `.venv/bin/python` passed 6/6. `product_smoke.py` passed 2/2 (`hardcodes`, `unit`) with `PRODUCT_VAULT_ROOT` set.
+New tests in `tests/test_harness_wiring_stack.py` failed before the
+implementation and pass after it. The workflow-harness test file covers the
+glossary and ticket fields in its own tree. Harness smoke and `validate.py full`
+are run before release.
 
 ```text
-red_cmd: .venv/bin/python -c 'from pathlib import Path; t=Path("tests/test_challenge.py").read_text(); start=t.index("def test_unset_vault_calls_no_model"); end=t.index("def test_check_flag_calls_no_model"); body=t[start:end]; raise SystemExit(0 if "os.environ.pop(\"PRODUCT_VAULT_ROOT\"" not in body else 1)'
-green_cmd: env PRODUCT_VAULT_ROOT=/tmp .venv/bin/python -m pytest -q tests/test_challenge.py::ChallengePreflightTests::test_unset_vault_calls_no_model tests/test_enhancement_mechanisms.py tests/test_night_shift_morning_triage.py tests/test_night_shift_kanban_sync.py
+red_cmd: git cat-file -e HEAD~1:tests/test_harness_wiring_stack.py
+green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
 
 ## Evidence pack
 
 | Item | Result |
 |------|--------|
-| pytest | 455 passed, 1 skipped, with `PRODUCT_VAULT_ROOT` set to a temp dir, before the fixture-heading edit. After that edit: 43 passed on the four touched modules. |
-| validate | `.venv/bin/python scripts/validate.py full` — 6/6 gates passed (type, lint, test, hardcodes, hygiene, coverage, dev-log, vault schema). |
-| smoke | `product_smoke.py` 2/2 passed (`hardcodes`, `unit`) with `PRODUCT_VAULT_ROOT` set. |
-| hard_gates | scored by `/pr_review --validate` on this diff. |
+| pytest | `tests/test_harness_wiring_stack.py` — 5 passed |
+| smoke | `product_smoke.py` — 2/2 passed |
+| validate | `validate.py full` — 6/6 gates passed |
+| hard_gates | `hard_gates.py` — pass |
 
 ## Spec
 
-**Spec waiver:** hotfix
+**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
 
 ## Traceability
 
 | AC | Test / smoke |
 |----|----------------|
-| AC-1 unset vault calls no model even when the night job exported `PRODUCT_VAULT_ROOT` | `tests/test_challenge.py::ChallengePreflightTests::test_unset_vault_calls_no_model` |
-| AC-2 comment-auditor fixture still flags one ownerless TODO | `tests/test_enhancement_mechanisms.py::TestCommentAudit::test_flags_history_code_and_ownerless_todo` |
-| AC-3 hygiene prints no orphan-TODO warning for these fixtures | `scripts/check_repo_hygiene.py` (exit 0, no warning lines) |
-| AC-4 plugin smoke stays the existing argv | `scripts/product_smoke.py` (`hardcodes`, `unit`) |
+| AC-1 | `tests/test_harness_wiring_stack.py::test_ac_1_helpers_wired` |
+| AC-2 | `tests/test_harness_wiring_stack.py::test_ac_2_spec_rituals_and_glossary_collision` |
+| AC-3 | `workflow-harness/tests/test_glossary_and_tickets.py` (companion tree) |
+| AC-4 | `tests/test_harness_wiring_stack.py::test_ac_4_issue_bodies_offline` |
+| AC-5 | `tests/test_harness_wiring_stack.py::test_ac_5_stack_plan_layers_and_chunks` |
+| smoke | `product_smoke.py` (`hardcodes`, `unit`) |
 
 ## Threat notes
 
-- secrets: night shift puts the operator vault on `PRODUCT_VAULT_ROOT`. A test that does not clear it can treat that vault as a fixture and would publish a challenge note there if the model stubs returned text. This test now clears the variable before preflight, so the live vault is not the write target.
-- path-traversal: the case uses a temp product root and passes no `--vault`. Leaving the ambient vault set would resolve a path outside that temp root. Clearing the env keeps the refusal on the temp root.
+- **Path traversal:** ticket and glossary inputs are untrusted Markdown/JSON.
+  Parsers keep strict token regexes and resolve paths under the repo root.
+- **Injection:** issue bodies are written as files; `--gh` uses an argv list and
+  never a shell string. Default execution makes no network call.
+- **Secrets:** `check_secrets_diff.py` runs on the ship range before issue
+  bodies are eligible for posting.
 
-## Red-proof
+## Red-proof (process honesty)
+
+The wiring tests did not exist at the base commit and failed on import/collection.
+After implementation the same tests pass.
 
 ```text
-red_cmd: .venv/bin/python -c 'from pathlib import Path; t=Path("tests/test_challenge.py").read_text(); start=t.index("def test_unset_vault_calls_no_model"); end=t.index("def test_check_flag_calls_no_model"); body=t[start:end]; raise SystemExit(0 if "os.environ.pop(\"PRODUCT_VAULT_ROOT\"" not in body else 1)'
-green_cmd: env PRODUCT_VAULT_ROOT=/tmp .venv/bin/python -m pytest -q tests/test_challenge.py::ChallengePreflightTests::test_unset_vault_calls_no_model tests/test_enhancement_mechanisms.py tests/test_night_shift_morning_triage.py tests/test_night_shift_kanban_sync.py
+red_cmd: git cat-file -e HEAD~1:tests/test_harness_wiring_stack.py
+green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
 
 ## Cross-review
 
-Small test-only diff. Code review is the required closeout. No new smoke argv and no production module change.
-
-## Test plan
-
-- `tests/test_challenge.py` with `PRODUCT_VAULT_ROOT` set
-- `tests/test_enhancement_mechanisms.py`
-- `tests/test_night_shift_morning_triage.py`
-- `tests/test_night_shift_kanban_sync.py`
-- `scripts/check_repo_hygiene.py`
-- `scripts/validate.py full`
-- `scripts/product_smoke.py`
+See `.agents/artifacts/CROSS_REVIEW.md` (marker `CROSS-REVIEW`).
 
 ## Things that look bad but are actually fine
 
-1. **The test pops `PRODUCT_VAULT_ROOT`.** That is the contract under test (unset vault), not a skip of the assertion. The return code must still be 1 and the model list must still be empty.
-2. **Fixture `# TODO` text is split in source.** Runtime strings are unchanged. The comment auditor still sees an ownerless TODO. Hygiene no longer matches the source bytes.
-3. **`challenge.py` is untouched.** When the env is truly unset, preflight already refuses. When the env is set, calling models is the real CLI. Only the test was leaking the night-shift env.
-4. **Smoke YAML is untouched.** The unit step's argv was valid. Pytest was the failing process inside it.
+1. **Issue bodies are local files, not GitHub issues.** The ship is deterministic
+   and offline; `--gh` remains an explicit operator action with its own approval.
+2. **The stack planner reads ticket Markdown instead of a new manifest format.**
+   Tickets already carry `Blocked by:` edges, so one parser keeps the DAG and the
+   layers consistent.
+3. **Skill edits are prose rather than Python gates.** The scripts stay the
+   enforcement point; the skill text tells the agent which command to run, and
+   tests assert the command appears.
+4. **`workflow-harness` data ships in a companion repo.** Its glossary and ticket
+   schema belong to that product's tests, so the harness ship references them
+   without editing product code.

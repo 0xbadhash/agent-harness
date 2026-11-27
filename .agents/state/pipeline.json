@@ -1,6 +1,6 @@
 {
   "card_id": null,
-  "phase": "approved",
+  "phase": "init",
   "remediation": [],
   "score": 100,
   "spec_id": null,
