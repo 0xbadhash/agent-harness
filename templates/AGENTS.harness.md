@@ -60,7 +60,8 @@ Plugin: `.agents/product_plugin.yaml` (edit stack + smoke + optional `web_e2e` f
 Full FSM for <task>: /execute_dev then /code_review then (if NEXT_SKILL says)
 /cross_review and/or /behavior_validator then /pr_review --validate
 then (if required) /vps_infra_ops --verify then /release_mgmt then /sync_docs
-then git push origin main --tags then (optional) /qa_campaign
+then push the branch, merge the PR (squash), then git push --tags
+(optional) /qa_campaign
 ```
 
 See `.agents/docs/ship-flow.md` and `.agents/docs/skills-catalog.md`.

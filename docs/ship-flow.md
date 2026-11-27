@@ -274,7 +274,8 @@ Full ship FSM for <task>:
 /execute_dev then /code_review then (if NEXT_SKILL says) /cross_review
 and/or /behavior_validator then /pr_review --validate
 then (if required) /vps_infra_ops --verify then /release_mgmt
-then /sync_docs then git push origin main --tags
+then /sync_docs then git push origin <branch> and merge the PR (squash) then
+git push --tags
 then (optional, after huge release) /qa_campaign
 ```
 

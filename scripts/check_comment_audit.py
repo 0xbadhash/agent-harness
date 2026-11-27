@@ -176,6 +176,31 @@ def check(root: Path, base: str = "HEAD~1", head: str = "HEAD") -> tuple[bool, l
     return True, ["comment_audit: no new history/dead-code/TODO comments"]
 
 
+def comment_counts(text: str) -> tuple[int, int]:
+    """Return (comment lines, code lines) for a source body."""
+    comments = 0
+    code = 0
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        if COMMENT_RE.match(line):
+            comments += 1
+        else:
+            code += 1
+    return comments, code
+
+
+def ratio_report(root: Path, paths: list[Path]) -> tuple[int, int, float]:
+    """Return (comments, code, ratio) over the given paths."""
+    comments = code = 0
+    for path in _source_paths(root, paths):
+        c, n = comment_counts(path.read_text(encoding="utf-8", errors="replace"))
+        comments += c
+        code += n
+    ratio = comments / code if code else 0.0
+    return comments, code, ratio
+
+
 def _load_baseline(path: Path) -> dict[str, int]:
     if not path.is_file():
         return {}
@@ -202,8 +227,32 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--update-baseline", action="store_true", help="Write current counts as the floor"
     )
+    ap.add_argument(
+        "--ratio",
+        action="store_true",
+        help="Print comment lines / code lines and exit",
+    )
     args = ap.parse_args(argv)
     root = args.root.resolve()
+
+    if args.ratio:
+        targets = (
+            [root / p for p in args.path]
+            if args.path
+            else [
+                p
+                for p in root.rglob("*")
+                if p.suffix.lower() in SOURCE_SUFFIXES
+                and ".venv" not in p.parts
+                and ".git" not in p.parts
+                and "__pycache__" not in p.parts
+            ]
+        )
+        comments, code, ratio = ratio_report(root, targets)
+        print(
+            f"comment ratio: {comments} comment / {code} code lines = {ratio:.2f}"
+        )
+        return 0
 
     if args.path or args.diff:
         if args.path:

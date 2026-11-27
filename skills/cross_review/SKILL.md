@@ -47,10 +47,11 @@ When invoked with `/cross_review`:
 
 4. Scope: uncommitted diff, or `--diff A..B`, or named paths from user.
 
-5. Run **three personas** — default report **P0 / blockers only** (material break of flow,
-   outcome, or safety). Include **major** only for concrete security. Nits only if user
-   asks for a wide review. Each persona: ≥1 concrete finding **or** explicit “none”
-   (do not invent filler nits).
+5. Run **four lenses** — three personas plus a process pass. Default report
+   **P0 / blockers only** (material break of flow, outcome, or safety). Include
+   **major** only for concrete security. Nits only if user asks for a wide
+   review. Each lens: ≥1 concrete finding **or** explicit “none” (do not invent
+   filler nits).
 
    - **Security Guru** — auth, CSRF, secrets, injection, SSRF, cache poisoning (`docs/SECURITY.md`)
    - **Maintainability Expert** — coupling, dead code, testability, file boundaries (`GEMINI.md`)
@@ -58,6 +59,12 @@ When invoked with `/cross_review`:
        (touched paths + direct callers/callees only). Tier A/B/C + confidence ∈ [0,1] + evidence.
      - Whole-repo cruft: one line → “run `/sweep`” — do not full-repo scan unless asked.
    - **Domain Specialist** — product domain correctness (`product_plugin.domain_review_hints`)
+   - **Process lens** — how the change was made, not only what it does: session
+     count and handoffs (`python3 scripts/session_context.py --json`), retries and
+     failed commands, review cycles, and whether a decision was lost between
+     sessions. A finding here is a harness improvement, not a code defect; route
+     it to the retro instead of blocking the diff unless it repeats a known gate
+     failure.
 
 6. Merge into a single report with severity: `blocker` | `major` | `nit`  
    Lead with **blocker count**; list follow-ups separately from ship-blockers.

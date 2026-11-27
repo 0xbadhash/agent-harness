@@ -62,3 +62,19 @@ green_cmd: <command that passed>
 - Skill: `skills/execute_dev/SKILL.md`  
 - Policy: `policy/base_constraints.md`  
 - Smoke: `scripts/product_smoke.py`  
+
+## Constraints belong in test names
+
+A constraint that matters belongs in an executable test, not only in a comment.
+When a comment says "must run before the cache warms", the test name says the
+same thing and the assertion proves it:
+
+```python
+def test_must_run_before_cache_warm_keeps_first_write() -> None:
+    ...
+```
+
+If the constraint cannot be tested (an external service limit, for example),
+name the check that owns it beside the comment (`check:_`, `scripts/…`). During
+`/code_review`, an untested constraint stated only in a comment is a finding:
+move it to a test name or bound it to a check.

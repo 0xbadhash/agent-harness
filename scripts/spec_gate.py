@@ -75,6 +75,10 @@ RESERVED_RE = re.compile(r"\*\*Reserved decisions:\*\*\s*(\S.+)", re.IGNORECASE)
 DELEGATED_RE = re.compile(r"\*\*Delegated decisions:\*\*\s*(\S.+)", re.IGNORECASE)
 FLAG_RE = re.compile(r"\*\*Feature flag:\*\*\s*(\S.+)", re.IGNORECASE)
 SURFACE_RE = re.compile(r"\*\*Surface:\*\*\s*user-visible", re.IGNORECASE)
+REPRO_CMD_RE = re.compile(r"\brepro_cmd:\s*\S+", re.IGNORECASE)
+DEFECT_DRAFT_RE = re.compile(
+    r"\*\*(?:Kind|Type):\*\*\s*(?:fix|bug)\b|^#+\s+Bug\b", re.IGNORECASE | re.MULTILINE
+)
 
 
 def _pipeline(root: Path) -> dict:
@@ -426,6 +430,18 @@ def check_decision_record(text: str) -> tuple[bool, list[str]]:
     return True, msgs
 
 
+def check_repro_cmd(text: str) -> tuple[bool, list[str]]:
+    """E26 — a defect fix names the reproduction that failed before the fix."""
+    if DEFECT_DRAFT_RE.search(text) is None:
+        return True, ["ok: not a defect fix — repro_cmd check N/A"]
+    if REPRO_CMD_RE.search(text) is None:
+        return False, [
+            "defect fix requires `repro_cmd:` in the PR draft — the command or "
+            "steps that failed before the change (a new test is not a repro)"
+        ]
+    return True, ["ok: defect reproduction recorded"]
+
+
 def check_feature_flag(text: str) -> tuple[bool, list[str]]:
     """E24 — a user-visible ship names the flag that can turn it off."""
     if SURFACE_RE.search(text) is None:
@@ -521,10 +537,11 @@ def check(
         if not c_ok:
             return False, msgs
         if draft:
-            f_ok, f_msgs = check_feature_flag(draft)
-            msgs.extend(f_msgs)
-            if not f_ok:
-                return False, msgs
+            for draft_checker in (check_repro_cmd, check_feature_flag):
+                d_ok, d_msgs = draft_checker(draft)
+                msgs.extend(d_msgs)
+                if not d_ok:
+                    return False, msgs
         return True, msgs
 
     msgs.append(

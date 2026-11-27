@@ -14,6 +14,19 @@ timeout-seconds: 300
 
 Use when: switching agents/sessions, blocked, or user says “handoff / delegate”.
 
+## Token threshold
+
+Hand off before the session degrades, not after:
+
+- **120,000 context tokens** or **60% of the model window**, whichever comes
+  first, measured with `python3 scripts/session_context.py --json`.
+- Two failed attempts at the same step, or three review cycles on one ticket.
+- A context compaction event, unless the artifact already carries every
+  decision the receiver needs.
+
+`/execute_dev` checks this before each new ticket. When the threshold trips, stop
+cleanly, write the handoff, and continue in a fresh session with the artifact.
+
 ## Workflow
 
 1. Identify task from user text + repo context (branch, kanban card, recent commits).

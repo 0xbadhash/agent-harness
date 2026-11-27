@@ -49,16 +49,22 @@ class MissingDependency(ValueError):
         super().__init__(", ".join(missing))
 
 
-def _metadata(path: Path) -> tuple[str, int]:
+def _metadata(path: Path, default_estimate: int = DEFAULT_ESTIMATE) -> tuple[str, int]:
     text = path.read_text(encoding="utf-8", errors="replace")
     match = TITLE_RE.search(text)
     title = match.group(1).strip() if match else path.stem
     estimate = ESTIMATE_RE.search(text)
-    return title, int(estimate.group(1)) if estimate else DEFAULT_ESTIMATE
+    return title, int(estimate.group(1)) if estimate else default_estimate
 
 
-def build_plan(tickets_dir: Path) -> dict[str, Any]:
-    """Return layers, chunks, titles, and estimates for a ticket directory."""
+def build_plan(
+    tickets_dir: Path, *, default_estimate: int = DEFAULT_ESTIMATE
+) -> dict[str, Any]:
+    """Return layers, chunks, titles, and estimates for a ticket directory.
+
+    ``**Estimate:**`` wins per ticket; ``default_estimate`` is the documented
+    fallback for tickets that do not size themselves.
+    """
     tickets_dir = Path(tickets_dir)
     tickets = load_tickets(tickets_dir)
     cycle = find_cycle(tickets)
@@ -96,7 +102,9 @@ def build_plan(tickets_dir: Path) -> dict[str, Any]:
     titles: dict[str, str] = {}
     estimates: dict[str, int] = {}
     for tid, info in tickets.items():
-        title, estimate = _metadata(Path(cast(Path, info["path"])))
+        title, estimate = _metadata(
+            Path(cast(Path, info["path"])), default_estimate
+        )
         titles[tid] = title
         estimates[tid] = estimate
 
@@ -172,13 +180,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--root", type=Path, default=Path("."))
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument(
+        "--default-estimate",
+        type=int,
+        default=DEFAULT_ESTIMATE,
+        help=f"LOC fallback for tickets without **Estimate:** (default {DEFAULT_ESTIMATE})",
+    )
     args = ap.parse_args(argv)
 
     if not args.tickets.is_dir():
         print(f"❌ not a directory: {args.tickets}", file=sys.stderr)
         return 2
     try:
-        plan = build_plan(args.tickets)
+        plan = build_plan(args.tickets, default_estimate=args.default_estimate)
     except DependencyCycle as exc:
         print(f"❌ ticket dependency cycle: {exc}", file=sys.stderr)
         return 1
