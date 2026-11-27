@@ -256,6 +256,30 @@ night_shift:
   live_expect_code: "200"
   coverage_soft: "1"         # "0" = hard-fail if coverage tooling missing
   autofix: "1"               # "0" = report-only (no mechanical auto-fix)
+  require_automation_ready: "1"  # "1" = autofix refuses without a current readiness artifact
+```
+
+### Automation readiness gate (outer loop)
+
+The outer loop may only touch the tree when the inner loop is proven. Record the
+proof after a green inner loop:
+
+```bash
+python3 scripts/check_automation_ready.py --root . --owner <name> --write
+```
+
+That writes `.agents/artifacts/AUTOMATION_READINESS.md` with an
+`AUTOMATION-READY` marker after checking the lint ratchet, suppression ban,
+correction map, `BEHAVIOR_REPORT.md`, fresh `coverage.json`, and a named owner.
+
+With `night_shift.require_automation_ready: "1"` (or env
+`AUTOFIX_REQUIRE_READY=1`), `attempt_autofix` returns an `autofix_blocked`
+record instead of fixing anything when the artifact is missing, older than 24h,
+or records a failed check. Validate an existing artifact without re-running the
+probes:
+
+```bash
+python3 scripts/check_automation_ready.py --root . --require-artifact
 ```
 
 Vault label for TODO/log:

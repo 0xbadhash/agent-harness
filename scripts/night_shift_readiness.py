@@ -1036,6 +1036,11 @@ def main(argv: list[str] | None = None) -> int:
         not args.no_autofix
         and str(ns_plugin.get("autofix", "1")).lower() not in ("0", "false", "no")
     )
+    require_ready = (
+        str(ns_plugin.get("require_automation_ready", "0")).lower()
+        in ("1", "true", "yes")
+        or os.environ.get("AUTOFIX_REQUIRE_READY", "").lower() in ("1", "true", "yes")
+    )
     if autofix_enabled and any(not r.get("ok") for r in results):
         try:
             from night_shift_autofix import attempt_autofix
@@ -1045,6 +1050,7 @@ def main(argv: list[str] | None = None) -> int:
                 results,
                 dry_run=args.dry_run,
                 product_id=product_id,
+                require_readiness=require_ready,
             )
             if autofix_attempts and not args.dry_run:
                 # Single re-run after mechanical fixes

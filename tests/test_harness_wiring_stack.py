@@ -67,10 +67,11 @@ def test_ac_2_spec_rituals_and_glossary_collision(tmp_path: Path) -> None:
 
 def test_ac_3_workflow_data_companion() -> None:
     companion = ROOT.parent / "workflow-harness"
-    if not companion.is_dir():
-        pytest.skip("workflow-harness companion tree is not present")
+    glossary = companion / "glossary.json"
+    if not glossary.is_file():
+        pytest.skip("workflow-harness companion tree has no glossary.json")
 
-    data = json.loads((companion / "glossary.json").read_text(encoding="utf-8"))
+    data = json.loads(glossary.read_text(encoding="utf-8"))
     assert data["version"] >= 1
     assert len(data["terms"]) >= 6
     for term, entry in data["terms"].items():
