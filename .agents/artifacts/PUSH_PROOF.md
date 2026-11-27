@@ -1,30 +1,22 @@
 # PUSH_PROOF
 
-_Generated 2026-08-03 08:25 UTC by finish_ship.py_
+_Generated 2026-11-27 06:35 UTC by finish_ship.py_
 
-**ok:** `False`
-**phase:** `init`
-**branch:** `main`
-**dirty:** `True`
-**remote_sync:** `ahead`
+**ok:** `True`
+**phase:** `shipped`
+**branch:** `ship/t2088u-docs-v1.4.57`
+**dirty:** `False`
+**remote_sync:** `ok`
 **tag_hint:** `True`
 
 ## NEXT_SKILL plan (run in order — agent executes skills)
 
-1. `execute_dev`
-2. `code_review`
-3. `cross_review`
-4. `behavior_validator`
-5. `pr_review --validate`
-6. `release_mgmt`
-7. `sync_docs`
-8. `git push origin HEAD --tags`
+1. `sync_docs (if not done)`
+2. `finish_ship --require-push`
 
 ## Missing / blockers
 
-- ❌ working tree dirty (commit or stash before push proof)
-- ❌ local commits not pushed (git push)
-- ❌ require-push: remote_sync=ahead
+- (none)
 
 ## Notes
 

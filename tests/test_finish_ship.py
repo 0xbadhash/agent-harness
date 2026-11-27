@@ -57,5 +57,36 @@ class TestFinishShip(unittest.TestCase):
             self.assertEqual(proof.phase, "shipped")
 
 
+    def test_proof_file_does_not_make_tree_dirty(self):
+        with tempfile.TemporaryDirectory() as td:
+            t = Path(td)
+            subprocess.run(["git", "init"], cwd=t, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "config", "user.email", "t@t"],
+                cwd=t,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "t"],
+                cwd=t,
+                check=True,
+                capture_output=True,
+            )
+            proof = t / ".agents" / "artifacts" / "PUSH_PROOF.md"
+            proof.parent.mkdir(parents=True)
+            proof.write_text("old", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=t, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", "i"],
+                cwd=t,
+                check=True,
+                capture_output=True,
+            )
+            proof.write_text("new", encoding="utf-8")
+            result = fs.evaluate(t, require_push=False)
+            self.assertFalse(result.dirty)
+
+
 if __name__ == "__main__":
     unittest.main()
