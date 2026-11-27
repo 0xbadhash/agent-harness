@@ -205,3 +205,22 @@ def test_signal_text_is_one_short_line(tmp_path: Path) -> None:
     line = signal_lines(proc.stdout)[0]
     assert len(line) <= len("SIGNAL: ") + 300
     assert "\n" not in line
+
+
+def test_digest_on_empty_day_reports_zeroes(tmp_path: Path) -> None:
+    proc = run(tmp_path, ["--digest", "--dry", "--now", T0])
+    assert proc.returncode == 0
+    assert proc.stdout.strip() == (
+        "DIGEST: auto-review relay 2026-11-27: "
+        "seen 0, sent 0, reminders 0, errors 0"
+    )
+
+
+def test_digest_counts_seen_once_and_sent(tmp_path: Path) -> None:
+    payload = load_payload("grok_permission_prompt.json")
+    run(tmp_path, ["--hook", "--harness", "grok", "--dry", "--now", T0], payload)
+    # Same key again within the hour: deduped, so it must not bump seen.
+    run(tmp_path, ["--hook", "--harness", "grok", "--dry", "--now", "2026-11-27T06:05:00Z"],
+        payload)
+    proc = run(tmp_path, ["--digest", "--dry", "--now", "2026-11-27T06:10:00Z"])
+    assert "seen 1, sent 1, reminders 0, errors 0" in proc.stdout

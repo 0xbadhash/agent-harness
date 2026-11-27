@@ -1,0 +1,10 @@
+[Unit]
+Description=Auto-review relay digest at 08:00 HKT (00:00 UTC)
+
+[Timer]
+OnCalendar=*-*-* 00:00:00 UTC
+Persistent=true
+Unit=auto-review-relay-digest.service
+
+[Install]
+WantedBy=timers.target

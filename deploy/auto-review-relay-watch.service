@@ -1,0 +1,13 @@
+[Unit]
+Description=Auto-review relay: watch harness panes for approval cards
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/catalyxt/ops/auto-review-relay.py --watch --interval 20
+Restart=on-failure
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

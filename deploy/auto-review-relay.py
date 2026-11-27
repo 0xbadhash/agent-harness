@@ -316,6 +316,40 @@ def deliver(row: dict, state: Path, dt: datetime, dry: bool) -> bool:
     return ok
 
 
+def _daily_path(state: Path, dt: datetime) -> Path:
+    return state / "daily" / f"{dt.astimezone(timezone.utc).strftime('%Y-%m-%d')}.json"
+
+
+def _bump_locked(state: Path, dt: datetime, **fields: int) -> None:
+    path = _daily_path(state, dt)
+    path.parent.mkdir(exist_ok=True)
+    data: dict = {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            data = loaded
+    except (OSError, ValueError):
+        pass
+    for name, amount in fields.items():
+        data[name] = int(data.get(name, 0)) + amount
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def bump(state: Path, dt: datetime, **fields: int) -> None:
+    with Lock(state):
+        _bump_locked(state, dt, **fields)
+
+
+def read_daily(state: Path, dt: datetime) -> dict:
+    try:
+        loaded = json.loads(_daily_path(state, dt).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
 def record_and_deliver(row: dict, state: Path, dt: datetime, dry: bool,
                        source: str) -> bool:
     """Dedupe, cap, persist, then deliver one card. Shared by hook and watch."""
@@ -327,6 +361,7 @@ def record_and_deliver(row: dict, state: Path, dt: datetime, dry: bool,
             save_state(state, data)
             log(state, f"{source} dedupe key={row['key'][:12]}")
             return False
+        _bump_locked(state, dt, seen=1)
         if _capped(data, now_ts):
             data["sends"].append(now_ts)
             save_state(state, data)
@@ -340,7 +375,8 @@ def record_and_deliver(row: dict, state: Path, dt: datetime, dry: bool,
         data["sends"].append(now_ts)
         save_state(state, data)
 
-    deliver(row, state, dt, dry)
+    if deliver(row, state, dt, dry):
+        bump(state, dt, sent=1)
     log(state, f"{source} sent key={row['key'][:12]} harness={row['harness']} label={row['label']}")
     return True
 
@@ -418,6 +454,7 @@ def handle_sweep(args: argparse.Namespace, state: Path, dt: datetime) -> int:
                 else:
                     row["reminded"] = True
                     data["sends"].append(now_ts)
+                    _bump_locked(state, dt, reminded=1)
                     log(state, f"sweep remind key={key[:12]}")
                     deliver(row, state, dt, args.dry)
                 changed = True
@@ -556,9 +593,25 @@ def handle_watch(args: argparse.Namespace, state: Path, dt: datetime) -> int:
                                    args.dry, source="watch")
             else:
                 clear_watch_rows(state, str(pane.get("pane_id") or ""))
+        handle_sweep(args, state, stamp)
         if args.once:
             return 0
         time.sleep(max(1, args.interval))
+
+
+def handle_digest(args: argparse.Namespace, state: Path, dt: datetime) -> int:
+    data = read_daily(state, dt)
+    day = dt.astimezone(timezone.utc).strftime("%Y-%m-%d")
+    text = (
+        f"auto-review relay {day}: seen {int(data.get('seen', 0))}, "
+        f"sent {int(data.get('sent', 0))}, reminders {int(data.get('reminded', 0))}, "
+        f"errors {int(data.get('errors', 0))}"
+    )
+    if args.dry:
+        print(f"DIGEST: {text}")
+        return 0
+    send_signal(text, state, False)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -567,6 +620,7 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--hook", action="store_true")
     mode.add_argument("--sweep", action="store_true")
     mode.add_argument("--watch", action="store_true")
+    mode.add_argument("--digest", action="store_true")
     parser.add_argument("--harness", default="unknown")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--interval", type=int, default=WATCH_INTERVAL)
@@ -582,9 +636,15 @@ def main(argv: list[str] | None = None) -> int:
             return handle_hook(args, state, dt)
         if args.watch:
             return handle_watch(args, state, dt)
+        if args.digest:
+            return handle_digest(args, state, dt)
         return handle_sweep(args, state, dt)
     except Exception as exc:  # noqa: BLE001 - fail quiet: never block the calling agent
         log(state, f"error={type(exc).__name__}")
+        try:
+            bump(state, dt, errors=1)
+        except Exception:  # noqa: BLE001 - the counter must not mask the error
+            pass
         return 0
 
 
