@@ -17,7 +17,7 @@ def _product(td: Path, name: str, overall: str) -> Path:
     root = td / name
     art = root / ".agents" / "artifacts"
     art.mkdir(parents=True)
-    # Heading is split so check_repo_hygiene does not flag this fixture as an orphan TODO.
+    # Heading is split so check_repo_hygiene does not flag this fixture as an orphan marker.
     heading = "# " + "TODO"
     (art / "NIGHT_SHIFT_TODO.md").write_text(
         f"{heading}\n\n**Overall:** **{overall}**\n\n"
