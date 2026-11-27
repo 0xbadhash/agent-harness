@@ -1,59 +1,73 @@
-# Cross-review — T2088U harness wiring and stacked ships
+# Cross-review — harness top-50 completion epic
 
 **Marker:** CROSS-REVIEW
-**Base:** `0336317`
+**Base:** `origin/main` (`6f962df`)
 **Head:** `HEAD`
-**Scope:** `scripts/{stack_plan,retro_job,spec_gate}.py`, five skill files,
-spec references, CI workflow, template, and tests.
+**Scope:** six commits across `scripts/`, `skills/`, `templates/`, `docs/`,
+`.agents/decisions/`, `.agents/policy/`, CI, and five new test modules; plus the
+workflow-harness companion PR #13.
 
 ## Security Guru
 
-Findings: none.
+Findings: none blocking.
 
-- Ticket and glossary content is parsed with strict regexes; no `eval`, no shell
-  interpolation, and no execution of file contents.
-- `stack_plan` resolves the ticket directory through `load_tickets`, which reads
-  only `*.md` under the supplied directory.
-- `retro_job --gh` uses an argv list (`gh issue create --title … --body-file …`)
-  and requires `--file-issues`; the default path makes no network call.
-- No new secrets, credentials, or absolute host paths enter the tree.
+- `retro_job.py` replaces `AKIA…`, `ghp_…` and `xox…` tokens (and drops a PEM
+  begin line) before any transcript or PR-comment text reaches the retro or an
+  issue body. Fixtures assert the secret is absent from both paths.
+- `merge_stack.py` shells to `gh` with an argv list and stops on any check that
+  is not `SUCCESS`/`SKIPPED`/`NEUTRAL`; it never opens a shell with ticket text.
+- `run_tickets.py` now splits the executor command with `shlex` and runs it in a
+  fresh worktree; `shell=True` is gone (the lint ratchet caught it).
+- `check_adr.py`, `check_docs_patterns.py`, `check_prototype_fidelity.py` read
+  files under the repo root only and make no network call.
+- No new credential, absolute home path, or token is written by the new code.
 
 ## Maintainability Expert
 
 Findings: none blocking.
 
-Scoped obsolete/cleanup scan (touched paths + direct callers):
+Scoped obsolete/cleanup scan (touched paths plus direct callers):
 
 | Tier | Item | Evidence | Confidence |
 |------|------|----------|------------|
-| A | none | every new symbol is used by `main()` or a test | 0.9 |
-| B | none | existing `_glossary_terms` still serves `check_glossary` | 0.9 |
-| C | default LOC estimate 150 | `stack_plan.DEFAULT_ESTIMATE`; tickets can add `**Estimate:**` | 0.8 |
+| A | none | each new symbol is used by `main()` or a test | 0.9 |
+| B | none | `context_pack` keeps its old full-pack path; `--compact` is additive | 0.9 |
+| C | `retro_job` action mapping is label-based | unknown labels fall back to `non-action`; the class list is closed | 0.85 |
 
-- Coupling stays one-way: `stack_plan` imports `check_ticket_dag`; the reverse
-  import does not exist.
-- The skill edits name exact commands, matching the scripts.
-- No dead branches; no duplicated DAG parser.
+- Coupling stays one-way: `run_tickets` → `check_ticket_dag` → `stack_plan`;
+  `merge_stack` → `stack_plan`. No reverse imports.
+- The DAG parser exists once. The retro renderer exists once
+  (`framework/retro.py` in the companion); `retro_runs.py` composes it.
+- No dead branch: `--compact`, `--ratio`, `--transcripts`, `--pr-comments`,
+  `--auto-merge`, `--default-estimate` each have a test.
 
 ## Domain Specialist
 
 Findings: none.
 
-- `/execute_dev` now owns ticket-DAG, stack-plan, smart-zone, and compact-safety
-  checks at the stages where they apply.
-- `/code_review` owns the comment audit and per-layer chunks.
-- `/retrospect` and `/qa_campaign` keep issue creation offline by default.
-- The spec rituals match the domain: why-first, pain ranking, `STOP`, and
-  candidate-name scenarios.
+- The review tier table matches the door taxonomy used in the plan and the PR
+  template: two-way = agent gates plus the auto path; one-way = named human plus
+  a rollout/rollback note.
+- The prefactor rule matches the ticket format and turns a shared-component
+  ticket into a real blocking edge.
+- The five retro action classes match the checklist in `skills/retrospect`.
+- The companion canary rule matches the scorecard's "run both side by side,
+  compare, then promote": `hashes_match` is mandatory and a count of runs alone
+  never promotes.
+- The ordered stack matches the video's two-way doors ending in a one-way
+  registry change.
 
-## Intentional oddities
+## Process lens
 
-1. The CI ticket-DAG loop is a no-op in this repo because `.agents` is ignored
-   here; product installs carry the tickets.
-2. Issue bodies are written even when there are no clusters, so the umbrella is
-   always a stable artifact.
-3. `stack_plan` includes done tickets in layer 0 so the plan mirrors history.
+- Sessions: one long session (this one); no mid-epic handoff.
+- Review cycles: one chunked pass. The self-review found the false-cycle bug,
+  the two P2s, and three pre-commit gate issues; all fixed with a named check.
+- Retries: the compliance engine ran twice (type/lint), then green.
+- Handoffs: none during implementation.
+- Remaining risk: advisory gates (flag, cost, comment ratio) become hard only
+  with `--strict`, which this repo uses. Documented in the plan.
 
 ## Verdict
 
-Blockers: 0. Tier A obsolete items: 0. Proceed to behavior validation.
+No P0/P1 cross-review findings. Proceed to behavior validation.
+NEXT_SKILL=/behavior_validator

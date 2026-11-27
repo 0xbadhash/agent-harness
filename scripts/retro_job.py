@@ -56,6 +56,8 @@ ACTION_BY_LABEL = {
     "other": "non-action",
 }
 PR_COMMENT_RE = re.compile(r"^\s*(?:[-*]|review:)\s+(.+)$", re.IGNORECASE)
+SECRET_RE = re.compile(
+    r"(AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]+)")
 
 
 def action_class(label: str) -> str:
@@ -69,13 +71,17 @@ def validate_action_class(value: str) -> bool:
 
 
 def _redact(text: str) -> str:
-    """Drop secret-like lines before evidence is written."""
+    """Replace secret-like tokens before evidence is written.
+
+    A PEM begin line is dropped whole; other matches lose only the token, so a
+    finding keeps its useful context.
+    """
     out: list[str] = []
     for line in text.splitlines():
-        if re.search(r"(BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-)", line):
+        if re.search(r"BEGIN [A-Z ]*PRIVATE KEY", line):
             out.append("[redacted]")
-        else:
-            out.append(line)
+            continue
+        out.append(SECRET_RE.sub("[redacted]", line))
     return "\n".join(out)
 
 
@@ -124,14 +130,16 @@ def collect_pr_comment_findings(path: Path) -> list[tuple[str, str]]:
         data = None
     if isinstance(data, list):
         for row in data:
-            body = str((row or {}).get("body") or "").strip()
+            body = _redact(str((row or {}).get("body") or "").strip())
             if len(body) >= 12:
                 findings.append((path.name, body))
         return findings
     for line in text.splitlines():
         match = PR_COMMENT_RE.match(line)
-        if match and len(match.group(1).strip()) >= 12:
-            findings.append((path.name, match.group(1).strip()))
+        if match:
+            body = _redact(match.group(1).strip())
+            if len(body) >= 12:
+                findings.append((path.name, body))
     return findings
 
 

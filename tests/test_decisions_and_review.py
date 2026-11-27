@@ -102,6 +102,21 @@ def test_prefactor_becomes_a_blocking_edge(tmp_path: Path) -> None:
     assert check_ticket_dag.ready_frontier(tickets) == ["01"]
 
 
+def test_ticket_dag_accepts_a_diamond(tmp_path: Path) -> None:
+    """Two tickets may share one blocker without the DFS reporting a false cycle."""
+    (tmp_path / "01-base.md").write_text("# 01 — base\n\n**Blocked by:** None\n",
+                                         encoding="utf-8")
+    (tmp_path / "02-left.md").write_text("# 02 — left\n\n**Blocked by:** 01\n",
+                                         encoding="utf-8")
+    (tmp_path / "03-right.md").write_text("# 03 — right\n\n**Blocked by:** 01\n",
+                                          encoding="utf-8")
+    (tmp_path / "04-join.md").write_text("# 04 — join\n\n**Blocked by:** 02, 03\n",
+                                         encoding="utf-8")
+    tickets = check_ticket_dag.load_tickets(tmp_path)
+    assert check_ticket_dag.find_cycle(tickets) is None
+    assert check_ticket_dag.ready_frontier(tickets) == ["01"]
+
+
 def test_missing_prefactor_ticket_fails(tmp_path: Path) -> None:
     (tmp_path / "01-use.md").write_text(
         "# 01 — use\n\n**Kind:** shared-component\n**Prefactor:** 09\n"

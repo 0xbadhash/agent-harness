@@ -20,7 +20,7 @@ recorded per-``path::kind`` counts. ``--update-baseline`` records the floor.
 
 Usage::
 
-  python3 scripts/check_comment_audit.py --path scripts/foo.py
+  python3 scripts/check_comment_audit.py --path scripts/<file>.py
   python3 scripts/check_comment_audit.py --diff HEAD~1...HEAD --strict
   python3 scripts/check_comment_audit.py --root . --baseline config/comment_audit_baseline.json
 """

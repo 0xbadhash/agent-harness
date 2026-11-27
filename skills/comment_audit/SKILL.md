@@ -23,7 +23,7 @@ timeout-seconds: 300
 python3 scripts/check_comment_audit.py --diff origin/main...HEAD --strict
 
 # A single file or a short list
-python3 scripts/check_comment_audit.py --path scripts/foo.py --strict
+python3 scripts/check_comment_audit.py --path scripts/<file>.py --strict
 
 # Whole tree against the ratchet
 python3 scripts/check_comment_audit.py --root . \

@@ -54,6 +54,17 @@ def test_missing_pr_comment_file_is_not_a_crash(tmp_path: Path) -> None:
     assert retro_job.collect_pr_comment_findings(tmp_path / "absent.json") == []
 
 
+def test_pr_comments_are_redacted_too(tmp_path: Path) -> None:
+    path = tmp_path / "comments.json"
+    secret = "ghp_" + "b" * 30
+    path.write_text(json.dumps([{"body": f"tests: add a case for {secret}"}]),
+                    encoding="utf-8")
+    findings = retro_job.collect_pr_comment_findings(path)
+    assert findings
+    assert "ghp_" not in findings[0][1]
+    assert "[redacted]" in findings[0][1]
+
+
 def test_transcripts_redact_secret_like_lines(tmp_path: Path) -> None:
     text = "api_key: ghp_" + "a" * 30 + "\nforgot the cache warm\n"
     redacted = retro_job._redact(text)

@@ -37,7 +37,6 @@ def check(root: Path, *, strict: bool = False) -> tuple[bool, list[str]]:
     """Return (ok, messages) for the decisions directory."""
     root = Path(root)
     decisions = root / ".agents" / "decisions"
-    msgs: list[str] = []
     if not decisions.is_dir():
         return False, [f"missing decisions directory: {decisions.relative_to(root)}"]
 

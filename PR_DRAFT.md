@@ -57,15 +57,18 @@ exist.
 
 ## Threat notes
 
+**Tags:** secrets, supply-chain
+
 - **Assets:** the harness itself, tokens and session paths read by the cost and
   transcript helpers, and the operator's PRs that the stack merger acts on.
 - **Abuse cases:** a crafted ticket or transcript injects secrets into an
   artifact; a stack runner merges a PR whose checks are red; an ADR check is
-  passed by a placeholder body. The ingest path redacts secret-like lines, the
-  merger stops on any non-success check, and the ADR check requires all three
-  parts.
+  passed by a placeholder body. Ingest replaces `AKIA…`/`ghp_…`/`xox…` tokens in
+  transcripts and PR comments, the merger stops on any non-success check, and the
+  ADR check requires all three parts.
 - **Boundaries:** no new network calls in the default path; `--gh` stays behind an
-  explicit flag; auto-merge stays opt-in.
+  explicit flag; auto-merge stays opt-in. `run_tickets.py` splits the executor
+  command with `shlex` and runs it in a fresh worktree, with no shell.
 
 ## Traceability
 
@@ -76,22 +79,29 @@ exist.
 | AC-3 | `tests/test_comment_and_docs.py`, `scripts/check_comment_audit.py --ratio` |
 | AC-4 | `tests/test_retro_ingest.py`, `scripts/retro_job.py --transcripts` |
 | AC-5 | `tests/test_stack_runners.py`, `scripts/merge_stack.py`, `scripts/run_tickets.py` |
-| AC-6 | workflow-harness `pytest`, `scripts/check_canary.py` |
+| AC-6 | workflow-harness PR #13: `specs/adr/`, `framework/tickets.py`, `framework/canary.py`, `tools/check_adr.py`, `check_canary.py`, `check_ticket_order.py`, `retro_runs.py` (212 tests) |
 | Smoke | `python3 scripts/validate.py full`, `bash scripts/smoke_unit.sh` |
 
 ## Red-proof
 
-Red: `git cat-file -e origin/main:scripts/check_adr.py` (exit 128 — the checker
-does not exist on the base).
-Green: `python3 -m pytest tests/test_decisions_and_review.py -q` after the change.
+```text
+red_cmd: git cat-file -e origin/main:scripts/check_adr.py
+green_cmd: python3 -m pytest tests/test_decisions_and_review.py -q
+```
+
+Red exits 128 on the base: the checker and the decisions folder do not exist
+there. Green runs the twelve tests that now cover the spine, the tier table, the
+prefactor edge and the diamond case.
 
 ## Evidence pack
 
 - hard_gates: run on `origin/main...HEAD` before review.
-- pytest: full suite plus the four new test modules.
-- validate: `python3 scripts/validate.py full` (ruff, mypy, tests).
-- smoke: `python3 scripts/product_smoke.py --root .`.
-- ticket DAG: 19 tickets, valid, ready frontier recorded.
+- pytest: 584 passed, 3 skipped.
+- validate: `python3 scripts/validate.py full` → 9/9 gates.
+- smoke: `python3 scripts/product_smoke.py --root .` → 2/2.
+- ticket DAG: 19 tickets, valid, frontier `01, 07, 10, 12, 16, 17`.
+- stack plan: 3 layers / 3 chunks.
+- companion: workflow-harness PR #13, 212 tests, its three gates green.
 
 ## Things that look bad but are actually fine
 

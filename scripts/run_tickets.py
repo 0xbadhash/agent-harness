@@ -5,8 +5,10 @@ Reuses the ticket DAG and the stack layers. Tickets in one layer run in
 parallel up to ``--workers``. A failed ticket blocks its dependents.
 
 A real run needs ``--command`` with ``{ticket}`` and ``{worktree}`` placeholders;
-the command is the executor (for example a headless agent invocation). It may
-print ``SESSION=<id>``; the id is recorded in ``.agents/artifacts/TICKET_RUNS.jsonl``.
+the command is the executor (for example a headless agent invocation). It is
+split like a shell line into an argv list, so pipes and ``&&`` are not
+supported; the executor script owns that logic. It may print ``SESSION=<id>``;
+the id is recorded in ``.agents/artifacts/TICKET_RUNS.jsonl``.
 
 Usage::
 
@@ -19,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -138,7 +141,7 @@ def make_runner(root: Path, command: str, base: str) -> Runner:
         worktree = _worktree(root, tid, base)
         argv = command.replace("{ticket}", tid).replace("{worktree}", str(worktree))
         run = subprocess.run(
-            argv, shell=True, cwd=str(worktree), capture_output=True, text=True, check=False
+            shlex.split(argv), cwd=str(worktree), capture_output=True, text=True, check=False
         )
         if run.returncode != 0:
             raise TicketRunError((run.stderr or run.stdout or "executor failed").strip()[:300])

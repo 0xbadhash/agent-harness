@@ -6,7 +6,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
@@ -28,7 +28,8 @@ def _ids(raw: str) -> list[str]:
 
 
 def _short(ticket_id: str) -> str:
-    return re.match(r"^(\d+)", ticket_id).group(1) if re.match(r"^(\d+)", ticket_id) else ticket_id
+    match = re.match(r"^(\d+)", ticket_id)
+    return match.group(1) if match else ticket_id
 
 
 def _ticket_id(path: Path) -> str:
@@ -36,8 +37,8 @@ def _ticket_id(path: Path) -> str:
     return m.group(1) if m else path.stem
 
 
-def load_tickets(directory: Path) -> dict[str, dict[str, object]]:
-    tickets: dict[str, dict[str, object]] = {}
+def load_tickets(directory: Path) -> dict[str, dict[str, Any]]:
+    tickets: dict[str, dict[str, Any]] = {}
     for p in sorted(directory.glob("*.md")):
         tid = _ticket_id(p)
         text = p.read_text(encoding="utf-8", errors="replace")
