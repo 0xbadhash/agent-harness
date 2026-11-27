@@ -65,7 +65,7 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 - Behaviour at the message boundary, not internals: given a hook payload or a captured pane, exactly one message with the expected fields.
 - Fixtures: real hook JSON for a Grok `permission_prompt` and a Grok pane capture under `tests/fixtures/auto_review/`.
 - `--dry` prints the Signal line and webhook body and sends neither, so the suite never touches Signal or the webhook.
-- Seam: `auto-review-relay.py` is a CLI; tests call it as a subprocess with `AUTO_REVIEW_STATE` pointed at a temp dir.
+- Seam: `auto-review-relay.py` is a CLI; tests call it as a subprocess with `AUTO_REVIEW_STATE` pointed at a temp dir. The watcher reads pane lists from `AUTO_REVIEW_TMUX_FIXTURE`, so no test touches a live tmux session.
 - Manual live check: POST one synthetic hook payload with `--dry` first, then once for real with a CEO stamp.
 - Docs-only: TDD N/A.
 
@@ -148,5 +148,6 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 
 - **Slice 1 done (2026-11-27):** `deploy/auto-review-relay.py` (hook ingest, normalisation, redaction, dedupe, hourly cap, rendering, dry/real delivery, reminder sweep) with `tests/test_auto_review_relay.py` (13 passed) and `tests/fixtures/auto_review/`. Nothing installed on the box; no live send.
 - **Slice 2 done (2026-11-27):** `deploy/hooks/grok-auto-review-relay.sh` (stdin passthrough, 8 s timeout, silent, always exit 0) and `deploy/hooks/grok-notification.json` (Notification registration, no matcher so the relay does the filtering). `tests/test_auto_review_hook_wrapper.py` covers passthrough, argv, dry flag, missing relay, a hung relay, and both end-to-end paths.
-- Next: slice 3 tmux watcher, slice 4 units + digest, slice 5 dry run on the box.
+- **Slice 3 done (2026-11-27):** `--watch` mode — 20 s pass, pane list from tmux or `AUTO_REVIEW_TMUX_FIXTURE`, skips hook-covered harnesses (`grok`), shells and viewer panes; matches numbered options and `[y/N]` prompts; redacts titles; clears a row when its card resolves. `tests/test_auto_review_watch.py` (8 tests). Live one-pass dry run on the box: 15 panes, 8 `grok` skipped, 2 `agy` watched, 3 shells and 1 `herdr` skipped, no card up.
+- Next: slice 4 units + digest, slice 5 dry run on the box.
 - Then: `/cross_review` (if large) → `/pr_review` → `/release_mgmt` → `/sync_docs`

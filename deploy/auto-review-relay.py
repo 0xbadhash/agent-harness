@@ -28,6 +28,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO
@@ -49,6 +50,24 @@ REMIND_AFTER = 600
 CLIP = 200
 SIGNAL_MAX = 300
 KIND = "auto-review-card"
+
+HOOKED_HARNESSES = {"grok"}
+SKIP_COMMANDS = {
+    "bash", "zsh", "sh", "dash", "fish", "ksh",
+    "less", "more", "man", "vim", "nvim", "nano", "emacs",
+    "tmux", "ssh", "top", "htop", "watch", "tail", "journalctl",
+    "herdr",
+}
+SKIP_WINDOWS = {"herdr", "viewer"}
+WATCH_INTERVAL = 20
+STRONG_OPTION = re.compile(r"^\s*(?:[❯>]\s*)?\d+\s*[.)]?\s*(?:yes|no)\b", re.IGNORECASE)
+YES_NO_PROMPT = re.compile(r"\[[yYnN]/[yYnN]\]|\([yYnN]/[yYnN]\)")
+FOOTER_LINE = re.compile(r"^\s*(?:\d/\d+:\w+|esc\b|enter\b|tab\b|↑/↓|space\b)", re.IGNORECASE)
+BORDER_LINE = re.compile(r"^[\s─━═╭╮╰╯┌┐└┘│|+*_=-]+$")
+PANES_FORMAT = "\t".join([
+    "#{pane_id}", "#{session_name}", "#{window_index}",
+    "#{window_name}", "#{pane_current_command}",
+])
 
 PERMISSION_HINT = re.compile(r"permission|approv|needs your", re.IGNORECASE)
 
@@ -297,6 +316,35 @@ def deliver(row: dict, state: Path, dt: datetime, dry: bool) -> bool:
     return ok
 
 
+def record_and_deliver(row: dict, state: Path, dt: datetime, dry: bool,
+                       source: str) -> bool:
+    """Dedupe, cap, persist, then deliver one card. Shared by hook and watch."""
+    with Lock(state):
+        data = load_state(state)
+        now_ts = dt.timestamp()
+        if row["key"] in data["rows"]:
+            data["rows"][row["key"]]["last_seen"] = now_ts
+            save_state(state, data)
+            log(state, f"{source} dedupe key={row['key'][:12]}")
+            return False
+        if _capped(data, now_ts):
+            data["sends"].append(now_ts)
+            save_state(state, data)
+            log(state, f"{source} capped key={row['key'][:12]}")
+            return False
+        row["first_seen"] = now_ts
+        row["last_seen"] = now_ts
+        row["reminded"] = False
+        row["source"] = source
+        data["rows"][row["key"]] = row
+        data["sends"].append(now_ts)
+        save_state(state, data)
+
+    deliver(row, state, dt, dry)
+    log(state, f"{source} sent key={row['key'][:12]} harness={row['harness']} label={row['label']}")
+    return True
+
+
 def handle_hook(args: argparse.Namespace, state: Path, dt: datetime) -> int:
     if (state / "DISABLED").exists():
         log(state, "disabled event=hook")
@@ -313,28 +361,7 @@ def handle_hook(args: argparse.Namespace, state: Path, dt: datetime) -> int:
     if row is None:
         return 0
 
-    with Lock(state):
-        data = load_state(state)
-        now_ts = dt.timestamp()
-        if row["key"] in data["rows"]:
-            data["rows"][row["key"]]["last_seen"] = now_ts
-            save_state(state, data)
-            log(state, f"hook dedupe key={row['key'][:12]}")
-            return 0
-        if _capped(data, now_ts):
-            data["sends"].append(now_ts)
-            save_state(state, data)
-            log(state, f"hook capped key={row['key'][:12]}")
-            return 0
-        row["first_seen"] = now_ts
-        row["last_seen"] = now_ts
-        row["reminded"] = False
-        data["rows"][row["key"]] = row
-        data["sends"].append(now_ts)
-        save_state(state, data)
-
-    deliver(row, state, dt, args.dry)
-    log(state, f"hook sent key={row['key'][:12]} harness={row['harness']} label={row['label']}")
+    record_and_deliver(row, state, dt, args.dry, source="hook")
     return 0
 
 
@@ -403,12 +430,146 @@ def handle_sweep(args: argparse.Namespace, state: Path, dt: datetime) -> int:
     return 0
 
 
+def _tmux(*args: str, timeout: int = 5) -> str | None:
+    try:
+        proc = subprocess.run(["tmux", *args], capture_output=True, text=True,
+                              timeout=timeout, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout or ""
+
+
+def list_panes() -> list[dict]:
+    fixture = os.environ.get("AUTO_REVIEW_TMUX_FIXTURE")
+    if fixture:
+        try:
+            doc = json.loads(Path(fixture).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        panes = doc.get("panes") if isinstance(doc, dict) else doc
+        return [pane for pane in (panes or []) if isinstance(pane, dict)]
+    out = _tmux("list-panes", "-a", "-F", PANES_FORMAT)
+    if out is None:
+        return []
+    panes = []
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        panes.append({
+            "pane_id": parts[0], "session": parts[1], "window": parts[2],
+            "window_name": parts[3], "command": parts[4],
+        })
+    return panes
+
+
+def pane_body(pane: dict) -> str | None:
+    if "text" in pane:
+        return str(pane["text"])
+    pane_id = str(pane.get("pane_id") or "")
+    if not pane_id:
+        return None
+    return _tmux("capture-pane", "-p", "-t", pane_id, "-S", "-30")
+
+
+def card_title(lines: list[str], upto: int) -> str:
+    for line in reversed(lines[:upto]):
+        text = line.strip().strip("│|").strip()
+        if not text or BORDER_LINE.match(text) or FOOTER_LINE.match(text):
+            continue
+        return redact(text)
+    return ""
+
+
+def question_above(lines: list[str], upto: int) -> str:
+    for line in reversed(lines[max(0, upto - 6):upto]):
+        text = line.strip().strip("│|").strip()
+        if text.endswith("?") and len(text) <= 200:
+            return redact(text)
+    return ""
+
+
+def find_card(body: str) -> dict | None:
+    """Return the card title when the pane shows an approval prompt."""
+    lines = body.splitlines()[-40:]
+    for index, line in enumerate(lines):
+        if STRONG_OPTION.match(line) and len(line.strip()) <= 90:
+            title = card_title(lines, index) or redact(line.strip())
+            if title:
+                return {"title": title, "evidence": line.strip()}
+            return None
+    for index, line in enumerate(lines):
+        if YES_NO_PROMPT.search(line):
+            title = question_above(lines, index) or card_title(lines, index)
+            if title:
+                return {"title": title, "evidence": line.strip()}
+    return None
+
+
+def watch_row(pane: dict, title: str) -> dict:
+    label = f"{pane.get('session', '')}:{pane.get('window', '')}"
+    pane_id = str(pane.get("pane_id") or "")
+    key_src = f"watch|{label}|{pane_id}|{title}"
+    return {
+        "key": hashlib.sha256(key_src.encode()).hexdigest(),
+        "harness": str(pane.get("command") or "unknown"),
+        "label": label,
+        "pane": pane_id,
+        "title": title,
+        "tool": "",
+        "command": "",
+    }
+
+
+def clear_watch_rows(state: Path, pane_id: str) -> None:
+    with Lock(state):
+        data = load_state(state)
+        stale = [key for key, row in data["rows"].items()
+                 if row.get("source") == "watch" and row.get("pane") == pane_id]
+        for key in stale:
+            del data["rows"][key]
+            log(state, f"watch resolved key={key[:12]}")
+        if stale:
+            save_state(state, data)
+
+
+def handle_watch(args: argparse.Namespace, state: Path, dt: datetime) -> int:
+    if (state / "DISABLED").exists():
+        log(state, "disabled event=watch")
+        return 0
+    while True:
+        stamp = dt if args.now else datetime.now(timezone.utc)
+        for pane in list_panes():
+            command = str(pane.get("command") or "")
+            if command in HOOKED_HARNESSES or command in SKIP_COMMANDS:
+                continue
+            if str(pane.get("window_name") or "").lower() in SKIP_WINDOWS:
+                continue
+            body = pane_body(pane)
+            if body is None:
+                continue
+            found = find_card(body)
+            if found:
+                record_and_deliver(watch_row(pane, found["title"]), state, stamp,
+                                   args.dry, source="watch")
+            else:
+                clear_watch_rows(state, str(pane.get("pane_id") or ""))
+        if args.once:
+            return 0
+        time.sleep(max(1, args.interval))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--hook", action="store_true")
     mode.add_argument("--sweep", action="store_true")
+    mode.add_argument("--watch", action="store_true")
     parser.add_argument("--harness", default="unknown")
+    parser.add_argument("--once", action="store_true")
+    parser.add_argument("--interval", type=int, default=WATCH_INTERVAL)
     parser.add_argument("--dry", action="store_true")
     parser.add_argument("--now", default=None)
     parser.add_argument("--state", default=None)
@@ -419,6 +580,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.hook:
             return handle_hook(args, state, dt)
+        if args.watch:
+            return handle_watch(args, state, dt)
         return handle_sweep(args, state, dt)
     except Exception as exc:  # noqa: BLE001 - fail quiet: never block the calling agent
         log(state, f"error={type(exc).__name__}")
