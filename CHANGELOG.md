@@ -1,4 +1,4 @@
-## v1.4.52 — 2026-11-27
+## v1.4.53 — 2026-11-27
 
 ### feat(harness): wire orphaned helpers and plan stacked ships
 
@@ -7,6 +7,17 @@
 - `retro_job.py --file-issues` writes per-cluster and umbrella issue bodies offline; `--gh` is opt-in.
 - `scripts/stack_plan.py` emits dependency layers and review chunks; unknown dependencies exit non-zero.
 - Restores four pieces the base commit tested but left uncommitted: the diagnosing-bugs skill, review axes, the Merge Danger template block, and `GLOSSARY.md` references.
+
+## v1.4.52 — 2026-11-27
+
+### feat(gates): corrections become deterministic checks
+
+- `hard_gates` now runs the lint ratchet, a diff-scoped comment audit, and a
+  correction → check map for non-prose ships; prose-only ships record explicit skips.
+- `check_correction_checks.py` requires one line per accepted finding under
+  `## Correction checks`, mapping to a check or a signed `no-check` reason.
+- `/code_review` documents the rule; an older product artifact gets a named fix.
+- Routing tests isolate the local green checkpoint so release smoke is hermetic.
 
 ## v1.4.51 — 2026-11-09
 

@@ -1,45 +1,61 @@
-# Release runbook — v1.4.52 (T2088U)
+# Release runbook — v1.4.53 (T2088U)
 
-**Version:** 1.4.52
+**Version:** 1.4.53
 **Date:** 2026-11-27
 **Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
-**Base:** `0336317`
-**Head:** `12de719` (review artifacts included)
+**Base:** `origin/main` at `158ca1e` (v1.4.52 already shipped as T2087U)
+**Head:** the merge of `origin/main` into `ship/t2088u-fsm-1-5`
+**Ship PR:** https://github.com/0xbadhash/agent-harness/pull/56
+
+The version moved from 1.4.52 to 1.4.53 because main shipped its own
+`v1.4.52` (correction → check wiring) while this branch was in review.
 
 ## Smoke
 
 | Step | Command | Exit |
 |------|---------|------|
-| hardcodes | `python3 scripts/check_hardcodes.py` | 0 |
-| unit | `bash scripts/smoke_unit.sh` | 0 |
+| hardcodes | `python3 scripts/product_smoke.py --root .` → `scripts/check_hardcodes.py` | 0 |
+| unit | `python3 scripts/product_smoke.py --root .` → `bash scripts/smoke_unit.sh` | 0 |
 | product smoke | `python3 scripts/product_smoke.py --root .` | 0 (2/2) |
 | web E2E | `python3 scripts/check_web_e2e.py --root .` | 0 (skipped: no website) |
+| validate full | `python3 scripts/validate.py full` | 0 (6/6 gates) |
+| pytest | `python3 -m pytest -q` | 0 (483 passed, 1 skipped) |
+
+## Infra
+
+No infra surface. `product_plugin.yaml` has no infra skill and `traits.web` is
+false. Infra verify skipped.
 
 ## Evidence pack
 
 | Item | Result |
 |------|--------|
-| hard_gates | `hard_gates.py --diff 0336317...HEAD` → pass |
+| hard_gates | `hard_gates.py --diff origin/main...HEAD` → pass |
 | smoke | 2/2 steps |
-| pytest | 436 passed, 1 skipped |
+| pytest | 483 passed, 1 skipped |
 | validate | `validate.py full` → 6/6 |
 | coverage | `check_module_coverage` passed |
-| secrets | clean on `0336317...HEAD` |
+| secrets | clean on `origin/main...HEAD` |
+| correction checks | 4 findings mapped in `CODE_REVIEW.md` |
 
-## Infra
+## GitHub PR gate
 
-No `vps_infra_ops` surface for this product; infra gate skipped.
+`gh pr list --state open` returns three pre-existing PRs unrelated to this ship,
+plus this ship's PR:
 
-## Open pull requests at release time
+- #56 `ship/t2088u-fsm-1-5` — this ship (open until squash merge)
+- #40 `chore/ops-ceo-waits-buzz-leftovers`
+- #21 `fix/figure-it-out-night-product-id`
+- #19 `feat/night-shift-atom-learning-family`
 
-`gh pr list --repo 0xbadhash/agent-harness --state open`:
+None of #40, #21, #19 touch the harness scripts in this ship. They are recorded
+because the release policy expects open PRs to be documented. Merging #56 first
+is the intended order.
 
-- #40 `chore: ops dashboard CEO-waits + buzz teardown leftovers`
-- #21 `fix(night): figure-it-out product_id for schema strict-warn`
-- #19 `Register atom-learning-family on night shift`
+## Tag
 
-None of these touch the harness scripts in this ship. They are recorded here
-because the release policy expects open PRs to be documented.
+`v1.4.53` lands on the squash-merge commit on `main`, not on this branch. Main is
+protected, so the tag cannot be created from here before the merge.
 
 ## Merge danger
 
@@ -49,7 +65,7 @@ because the release policy expects open PRs to be documented.
 ## Rollback
 
 1. `git revert <squash-merge-sha>` on `main` and open a revert PR.
-2. Re-tag the prior `v1.4.51` if the release tag already points at the bad commit.
+2. Delete tag `v1.4.53` if it already points at the bad commit.
 3. No data migration or persistent state is involved; product installs keep the
    previous skill text until the next reinstall.
 
@@ -58,7 +74,11 @@ because the release policy expects open PRs to be documented.
 1. **The release tag is not local yet.** Main is protected, so the tag must land
    on the squash-merge commit rather than the feature-branch commit.
 2. **Three older PRs are open.** They predate this ship and touch other areas.
-3. **`workflow-harness` ships separately.** Its glossary and ticket fields are
-   committed on `ship/t2088u-glossary-tickets` with its own 128-test suite.
-4. **`STACK_PLAN.md` is generated.** It is evidence, not source; rerun
+3. **`workflow-harness` ships separately.** Its glossary and ticket fields are on
+   `ship/t2088u-glossary-tickets-pr` with its own 128-test suite
+   (https://github.com/0xbadhash/workflow-harness/pull/5).
+4. **The branch carries commit `0336317`, which is not on main.** It is the base
+   repair that main's committed tests already expected (diagnosing-bugs skill,
+   review axes, Merge Danger template block, `GLOSSARY.md` references).
+5. **`STACK_PLAN.md` is generated.** It is evidence, not source; rerun
    `scripts/stack_plan.py --write` when tickets change.

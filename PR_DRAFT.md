@@ -1,6 +1,6 @@
 # PR Draft: Wire orphaned harness helpers, tighten spec rituals, plan stacked ships
 
-**Range:** `0336317..HEAD`
+**Range:** `origin/main..HEAD`
 **Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
 **Plan:** `.agents/specs/2026-11-27-harness-wiring-stack-issues-plan.md`
 **Tickets:** `.agents/specs/2026-11-27-harness-wiring-stack-issues/tickets`
@@ -90,14 +90,14 @@ $ .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 New tests in `tests/test_harness_wiring_stack.py` failed before the
 implementation and pass after it. The workflow-harness test file covers the
-glossary and ticket fields in its own tree. The full harness suite (436 passed,
+glossary and ticket fields in its own tree. The full harness suite (483 passed,
 1 skipped), `validate.py full` (6/6), and product smoke (2/2) are green. This
 ship also restores four pieces that the base commit tested but left
 uncommitted: the diagnosing-bugs skill, the two review axes, the Merge Danger
 template block, and the `GLOSSARY.md` references.
 
 ```text
-red_cmd: git cat-file -e 0336317:tests/test_harness_wiring_stack.py
+red_cmd: git cat-file -e origin/main:tests/test_harness_wiring_stack.py
 green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
 
@@ -105,7 +105,7 @@ green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 | Item | Result |
 |------|--------|
-| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 436 passed, 1 skipped |
+| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 483 passed, 1 skipped |
 | smoke | `product_smoke.py` — 2/2 passed |
 | validate | `validate.py full` — 6/6 gates passed |
 | hard_gates | `hard_gates.py` — pass |
@@ -136,11 +136,11 @@ green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 ## Red-proof (process honesty)
 
-The wiring tests did not exist at the base commit and failed on import/collection.
+The wiring tests do not exist on `origin/main` and failed on import/collection.
 After implementation the same tests pass.
 
 ```text
-red_cmd: git cat-file -e 0336317:tests/test_harness_wiring_stack.py
+red_cmd: git cat-file -e origin/main:tests/test_harness_wiring_stack.py
 green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
 

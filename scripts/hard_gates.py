@@ -596,6 +596,54 @@ def evaluate(
         skipped.append("stale_agent_config (prose-only)")
         skipped.append("edit_guard (prose-only)")
 
+    # T2087U item 1: correction -> check. Existing checks now fail the local pack.
+    if not prose_only:
+        try:
+            from check_lint_ratchet import check as _ratchet_check  # type: ignore
+
+            rt_ok, rt_msgs = _ratchet_check(root)
+            if not rt_ok:
+                for msg in rt_msgs:
+                    violations.append(f"hard_gates: lint_ratchet — {msg}")
+            else:
+                skipped.append(
+                    "lint_ratchet (" + (rt_msgs[0] if rt_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: lint_ratchet error: {e}")
+
+        try:
+            from check_comment_audit import check as _comment_check  # type: ignore
+
+            ca_ok, ca_msgs = _comment_check(root, base_g, head_g)
+            if not ca_ok:
+                for msg in ca_msgs:
+                    violations.append(f"hard_gates: comment_audit — {msg}")
+            else:
+                skipped.append(
+                    "comment_audit (" + (ca_msgs[0] if ca_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: comment_audit error: {e}")
+
+        try:
+            from check_correction_checks import check as _correction_check  # type: ignore
+
+            cc_ok, cc_msgs = _correction_check(root)
+            if not cc_ok:
+                for msg in cc_msgs:
+                    violations.append(f"hard_gates: correction_checks — {msg}")
+            else:
+                skipped.append(
+                    "correction_checks (" + (cc_msgs[0] if cc_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: correction_checks error: {e}")
+    else:
+        skipped.append("lint_ratchet (prose-only)")
+        skipped.append("comment_audit (prose-only)")
+        skipped.append("correction_checks (prose-only)")
+
     return HardGatesResult(
         ok=len(violations) == 0,
         violations=violations,

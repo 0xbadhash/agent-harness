@@ -70,11 +70,18 @@ P0 count: 0. Follow-ups: 2.
 
 ## Evidence
 
-- Secrets: `check_secrets_diff.py --base 0336317 --head HEAD` → clean.
-- Comment audit: `check_comment_audit.py --diff 0336317...HEAD --strict` → clean.
-- Tests: targeted 5/5; full suite 436 passed, 1 skipped.
+- Secrets: `check_secrets_diff.py --base origin/main --head HEAD` → clean.
+- Comment audit: `check_comment_audit.py --diff origin/main...HEAD --strict` → clean.
+- Tests: targeted 5/5; full suite 483 passed, 1 skipped.
 - Smoke: `product_smoke.py` 2/2; `validate.py full` 6/6.
-- Lint/type: ruff clean; mypy success on 214 files.
+- Lint/type: ruff clean; mypy success on 216 files.
+
+## Correction checks
+
+- P1 unknown ticket dependency was rendered as `ready` → `tests/test_harness_wiring_stack.py::test_ac_5_stack_plan_layers_and_chunks` asserts exit 1 on a missing dependency.
+- P1 `--gh` could post issue bodies without an explicit call → `tests/test_harness_wiring_stack.py::test_ac_4_issue_bodies_offline` asserts `--gh` alone exits 2 and the default path writes files only.
+- P2 default LOC estimate of 150 → no-check: estimate text is evidence only and never gates a merge.
+- P2 CI ticket DAG step scans `.agents/specs/*/tickets` only → no-check: product ticket roots belong to product CI and are documented in `execute_dev`.
 
 ## Handoff
 
