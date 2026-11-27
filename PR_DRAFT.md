@@ -1,6 +1,6 @@
 # PR Draft: Wire orphaned harness helpers, tighten spec rituals, plan stacked ships
 
-**Range:** `HEAD~1..HEAD`
+**Range:** `0336317..HEAD`
 **Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
 **Plan:** `.agents/specs/2026-11-27-harness-wiring-stack-issues-plan.md`
 **Tickets:** `.agents/specs/2026-11-27-harness-wiring-stack-issues/tickets`
@@ -63,7 +63,7 @@ uncommitted: the diagnosing-bugs skill, the two review axes, the Merge Danger
 template block, and the `GLOSSARY.md` references.
 
 ```text
-red_cmd: git cat-file -e HEAD~1:tests/test_harness_wiring_stack.py
+red_cmd: git cat-file -e 0336317:tests/test_harness_wiring_stack.py
 green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
 
@@ -106,7 +106,7 @@ The wiring tests did not exist at the base commit and failed on import/collectio
 After implementation the same tests pass.
 
 ```text
-red_cmd: git cat-file -e HEAD~1:tests/test_harness_wiring_stack.py
+red_cmd: git cat-file -e 0336317:tests/test_harness_wiring_stack.py
 green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
 

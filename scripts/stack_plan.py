@@ -41,6 +41,14 @@ class DependencyCycle(ValueError):
         super().__init__(" -> ".join(trail))
 
 
+class MissingDependency(ValueError):
+    """Raised when a ticket names a blocking edge that has no ticket file."""
+
+    def __init__(self, missing: list[str]) -> None:
+        self.missing = missing
+        super().__init__(", ".join(missing))
+
+
 def _metadata(path: Path) -> tuple[str, int]:
     text = path.read_text(encoding="utf-8", errors="replace")
     match = TITLE_RE.search(text)
@@ -56,6 +64,16 @@ def build_plan(tickets_dir: Path) -> dict[str, Any]:
     cycle = find_cycle(tickets)
     if cycle:
         raise DependencyCycle(cycle)
+    missing = sorted(
+        {
+            dep
+            for info in tickets.values()
+            for dep in cast(list[str], info["deps"])
+            if dep not in tickets
+        }
+    )
+    if missing:
+        raise MissingDependency(missing)
 
     remaining = set(tickets)
     resolved: set[str] = set()
@@ -163,6 +181,9 @@ def main(argv: list[str] | None = None) -> int:
         plan = build_plan(args.tickets)
     except DependencyCycle as exc:
         print(f"❌ ticket dependency cycle: {exc}", file=sys.stderr)
+        return 1
+    except MissingDependency as exc:
+        print(f"❌ ticket dependency has no ticket: {exc}", file=sys.stderr)
         return 1
 
     if args.json:

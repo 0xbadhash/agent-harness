@@ -150,6 +150,16 @@ def test_ac_5_stack_plan_layers_and_chunks(tmp_path: Path) -> None:
     )
     assert stack_plan.main(["--tickets", str(tickets), "--root", str(tmp_path)]) == 1
 
+    (tickets / "01-root.md").write_text(
+        "# 01\n\n**Blocked by:** 99\n\n**Status:** ready-for-agent\n",
+        encoding="utf-8",
+    )
+    (tickets / "02-second.md").write_text(
+        "# 02\n\n**Blocked by:** None\n\n**Status:** ready-for-agent\n",
+        encoding="utf-8",
+    )
+    assert stack_plan.main(["--tickets", str(tickets), "--root", str(tmp_path)]) == 1
+
     execute = _read("skills/execute_dev/SKILL.md")
     review = _read("skills/code_review/SKILL.md")
     assert "stack_plan.py" in execute
