@@ -9,11 +9,18 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import green_checkpoint as gc  # noqa: E402
 import next_skill as ns  # noqa: E402
 import pipeline_state as ps  # noqa: E402
 
 
 class TestFsmConformance(unittest.TestCase):
+    def setUp(self):
+        # Routing tests must not read the operator's local checkpoint.
+        patcher = mock.patch.object(gc, "head_is_green", return_value=(False, ""))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_illegal_phase_rejected(self):
         with self.assertRaises(ValueError):
             ps.set_phase("not_a_phase")
