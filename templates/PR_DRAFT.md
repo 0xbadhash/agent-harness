@@ -24,6 +24,11 @@ Why **this** approach (and not alternatives)? Link to decision, spike, or constr
 
 Who notices, and how? (desk operator, agent session, ops, none if harness-only). Call out breaking changes or “no user-visible change.”
 
+## Merge Danger
+
+**Door:** <one-way | two-way>
+**Blast Radius:** <one-word scope, e.g. local | module | portfolio>
+
 ## Evidence
 
 [description]

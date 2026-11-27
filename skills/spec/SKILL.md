@@ -114,7 +114,7 @@ Use `references/spec-template.md`. Status: `draft` until grill + clarify complet
 
 Rules:
 
-- Domain language over fragile paths.
+- Domain language over fragile paths (consult `GLOSSARY.md` when present).
 - Acceptance criteria **checkable** (pass/fail).
 - Align with constitution (call out any tension under Further Notes).
 - **`## Grill-me` section required** before `ready-for-agent`.

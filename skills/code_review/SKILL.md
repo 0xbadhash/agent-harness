@@ -79,8 +79,10 @@ lightweight read of the diff only and record skip in handoff.
 
 ## Report artifact
 
-Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with:
+Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with two separated axes (do not merge or rerank across axes):
 
+- `## Standards` — repo coding standards + Fowler smell baseline (`Mysterious Name`, `Duplicated Code`, `Feature Envy`, `Data Clumps`, `Primitive Obsession`, `Repeated Switches`, `Shotgun Surgery`, `Divergent Change`, `Speculative Generality`, `Message Chains`, `Middle Man`, `Refused Bequest`)
+- `## Spec` — AC-by-AC fidelity against the spec/PR_DRAFT (missing requirements, scope creep, wrong behavior)
 - command / base / head
 - secrets scan result
 - findings accepted / rejected (brief why)

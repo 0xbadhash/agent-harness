@@ -34,6 +34,7 @@ When invoked with `/execute_dev`:
    - If user args specify a task → use that (acceptance must be clear).
    - Else product: first open priority item in the product roadmap file (see `product_plugin.yaml` → `product_roadmap`).
    - Else harness: first open row in `.agents/BACKLOG.md`.
+   - Consult `GLOSSARY.md` (when present) so symbol and test names match project domain vocabulary.
    - CHANGELOG Open work is the fallback when that backlog row is empty.
    - If none → `✅ ROADMAP EMPTY.`
 2. **Spec check:** Missing acceptance criteria → `🛑 SPEC MISSING.` and halt.
