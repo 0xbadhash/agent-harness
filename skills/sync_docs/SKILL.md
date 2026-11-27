@@ -54,6 +54,6 @@ model: none
 
 ## Do not
 
-- Hardcode vault host paths into public harness defaults  
-- Mirror full `.agents/skills` trees under every product vault (SoT is harness)  
-- Edit vault mirrors as source of truth  
+- Hardcode vault host paths into public harness defaults — check: `scripts/check_hardcodes.py`.
+- Mirror full `.agents/skills` trees under every product vault (SoT is harness) — check: `scripts/check_stale_agent_config.py` reads the harness tree only.
+- Edit vault mirrors as source of truth — check: `scripts/check_dev_log_contract.py` and `scripts/vault_schema_lint.py`.

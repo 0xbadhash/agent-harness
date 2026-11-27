@@ -171,6 +171,25 @@ def main() -> int:
         if not args.skip_hardcodes:
             exits.append(_run([py, str(SCRIPTS / "check_hardcodes.py")], "check_hardcodes"))
         exits.append(_run([py, str(SCRIPTS / "check_repo_hygiene.py")], "check_repo_hygiene"))
+        exits.append(
+            _run(
+                [
+                    py,
+                    str(SCRIPTS / "check_comment_audit.py"),
+                    "--root",
+                    str(ROOT),
+                    "--baseline",
+                    str(ROOT / "config" / "comment_audit_baseline.json"),
+                ],
+                "check_comment_audit",
+            )
+        )
+        exits.append(
+            _run(
+                [py, str(SCRIPTS / "check_markdown_audit.py"), "--root", str(ROOT)],
+                "check_markdown_audit",
+            )
+        )
         exits.append(_run([py, str(SCRIPTS / "check_module_coverage.py")], "check_module_coverage"))
         if not args.skip_dev_log_contract:
             exits.append(_dev_log_contract_gate())

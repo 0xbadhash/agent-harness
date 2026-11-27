@@ -1,0 +1,8 @@
+{
+  "install_into_product.sh::history": 2,
+  "scripts/night_shift_readiness.py::history": 1,
+  "scripts/check_stale_agent_config.py::history": 1,
+  "scripts/night_shift_all_lib.py::todo": 1,
+  "scripts/retro_job.py::history": 1,
+  "tests/test_sync_docs_root.py::history": 1
+}
