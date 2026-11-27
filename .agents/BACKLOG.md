@@ -2,7 +2,7 @@
 
 ## Open work
 ### Auto-review relay — mid-run approval cards to Signal + Boss (2026-11-27)
-Spec: `.agents/specs/2026-11-27-auto-review-relay.md`. When any harness pane raises an approval card, send one Signal line and one Boss POST (`kind=auto-review-card`); one reminder at 10 min; notify only, never a keystroke. Hybrid detection: native attention hooks (Grok/Claude `Notification`, Codex `notify`) plus a tmux watcher for the rest. Status: ready-for-agent.
+Spec: `.agents/specs/2026-11-27-auto-review-relay.md`. When any harness pane raises an approval card, send one Signal line and one Boss POST (`kind=auto-review-card`); one reminder at 10 min; notify only, never a keystroke. Hybrid detection: native attention hooks (`Grok` `Notification`) plus a tmux watcher for the rest. Status: installed 2026-11-27 10:24 UTC — watch service active, digest timer next 2026-11-28 00:00 UTC. Claude and Codex lanes are out of scope until a spec change.
 
 ## Done
 ### [DONE] Night validate_full: mission-feeds registration and product label (2026-11-08)
