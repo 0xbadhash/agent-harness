@@ -1,168 +1,116 @@
-# PR Draft: Wire orphaned harness helpers, tighten spec rituals, plan stacked ships
+# PR Draft: Harness top-50 completion — decisions, prototype, review rigor, retro, stacked execution
 
-**Range:** `origin/main..HEAD`
-**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
-**Plan:** `.agents/specs/2026-11-27-harness-wiring-stack-issues-plan.md`
-**Tickets:** `.agents/specs/2026-11-27-harness-wiring-stack-issues/tickets`
+**Range:** `origin/main...HEAD`
 
-## Summary
-
-- Wired `retro_job.py`, `smart_zone_guard.py`, `check_compact_safety.py`,
-  `check_comment_audit.py`, and `check_ticket_dag.py` into their owning skills
-  and CI jobs (AC-1).
-- Added the candidate-name scenario table, operator `STOP` token, why-first
-  question order, pain ranking, and a glossary collision gate (AC-2).
-- Added `workflow-harness/glossary.json` and real ticket fields for the ingest
-  fan-out (AC-3).
-- Added offline issue-body generation to the retro job and documented the QA
-  flow (AC-4).
-- Added `scripts/stack_plan.py` for stack layers and per-layer review chunks
-  (AC-5).
-
-Released as `v1.4.57`: main shipped `v1.4.52` through `v1.4.56` while this
-branch was in review, and all of them are merged and re-verified here.
+**Spec:** `.agents/specs/2026-11-27-harness-top50-completion.md`
+**Plan:** `.agents/specs/2026-11-27-harness-top50-completion-plan.md`
+**Tickets:** `.agents/specs/2026-11-27-harness-top50-completion/tickets`
 
 ## What Problem This Solves
 
-The harness had five deterministic helpers that no stage called. The ticket DAG
-validator, smart-zone guard, compact-safety gate, comment audit, and retro job
-therefore had no effect on a real ship. Spec interviews also missed the decisions
-that prevent rework: why the work matters, which pain ranks first, whether a
-candidate name survives real scenarios, and whether two glossary rows define the
-same term. `workflow-harness` pointed at a `glossary.json` that did not exist,
-and its ingest ticket had no acceptance criteria or blocking edge. Retro and QA
-findings stayed in session artifacts. Large diffs had no layer plan or review
-chunks.
+Thirty-five improvements from the 2026-11-21 harness scorecard were still prose
+or absent. Operators lost decisions between sessions, shape questions were settled
+by debate, review depth was flat, retros did not read their own evidence, and a
+large stack needed manual merging and ticket-by-ticket babysitting.
 
 ## Why This Change Was Made
 
-The helpers already encode the intended behavior, so the smallest useful change
-is to invoke them at the stage that owns the risk. The planner reuses the ticket
-DAG parser to avoid a second dependency model. Issue bodies are files first so
-the default path stays offline and deterministic; `gh` is a thin, explicit
-adapter. The spec edits are prose contracts with exact commands, which tests can
-assert without adding a runtime.
+The first fifteen scorecard items shipped in v1.4.57. The remainder is mostly
+independent and already has partial helpers (`prototype_variants.py`,
+`agent_transcript.py`, `check_comment_audit.py`, `session_context.py`,
+`context_pack.py`, `stack_plan.py`). This ship wires those helpers and adds the
+missing gate or template beside each one, so every item becomes checkable instead
+of advisory prose.
 
 ## User Impact
 
-Harness operators and agents get fail-closed checks where they already work:
-`/execute_dev`, `/code_review`, `/retrospect`, `/qa_campaign`, and CI. Product
-installs keep working because the helper CLIs are unchanged; only additive flags
-and new commands appear. No user-visible product change.
-
-## Smallest visual change
-
-The smallest slice is one command in this repo:
-
-```bash
-python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-wiring-stack-issues/tickets
-```
-
-It prints the dependency layers and review chunks for the five ship tickets.
-Every other item is the same pattern: one existing helper invoked from the skill
-or CI step that owns the risk.
-
-## Before/after
-
-**Before:** the helper scripts existed, but no skill or CI job named them, so a
-real ship never ran them. The base commit had no stack planner at all.
-
-```text
-$ git grep -l "check_ticket_dag" 0336317 -- skills .github || echo "no skill/CI caller"
-no skill/CI caller
-$ git cat-file -e 0336317:scripts/stack_plan.py; echo $?
-128
-```
-
-**After:** each helper has a named caller, and the planner runs offline:
-
-```text
-$ python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-wiring-stack-issues/tickets
-### CHUNK 1 — tickets 01, 02
-### CHUNK 2 — tickets 03, 04, 05
-$ .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
-5 passed in 0.07s
-```
-
-## Merge Danger
-
-**Door:** two-way
-**Blast Radius:** harness
+- `/spec` reads ADRs, records reserved versus delegated decisions, offers
+  prototype variants for shape questions, writes a compact grill handoff, and can
+  run a read-only research subagent.
+- Review reports a comment ratio, adds a Process lens, and requires a
+  reproduction for defect fixes; the PR template carries door-aware fields.
+- Retro ingests local transcripts and PR comments and classifies findings.
+- `merge_stack.py` and `run_tickets.py` land a stack in order and run the
+  unblocked frontier in parallel.
+- Feature flags are required for user-visible large ships; token and context cost
+  are recorded per ship.
 
 ## Evidence
 
-New tests in `tests/test_harness_wiring_stack.py` failed before the
-implementation and pass after it. The workflow-harness test file covers the
-glossary and ticket fields in its own tree. The full harness suite (492 passed,
-1 skipped), `validate.py full` (9/9), and product smoke (2/2) are green. This
-ship also restores four pieces that the base commit tested but left
-uncommitted: the diagnosing-bugs skill, the two review axes, the Merge Danger
-template block, and the `GLOSSARY.md` references.
+- `python3 -m pytest tests/ -q`
+- `python3 scripts/validate.py full`
+- `python3 scripts/hard_gates.py --diff origin/main...HEAD`
+- `python3 scripts/product_smoke.py --root .`
+- `python3 scripts/check_ticket_dag.py .agents/specs/2026-11-27-harness-top50-completion/tickets`
+- `python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-top50-completion/tickets`
+- `python3 scripts/check_adr.py --root .`
+- `python3 scripts/check_docs_patterns.py --root .`
+- `python3 scripts/check_comment_audit.py --diff origin/main...HEAD --strict`
 
-```text
-red_cmd: git cat-file -e origin/main:tests/test_harness_wiring_stack.py
-green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
-```
+## Merge Danger
 
-## Evidence pack
-
-| Item | Result |
-|------|--------|
-| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 532 passed, 2 skipped |
-| smoke | `product_smoke.py` — 2/2 passed |
-| validate | `validate.py full` — 9/9 gates passed |
-| hard_gates | `hard_gates.py` — pass |
-| lint ratchet | `check_lint_ratchet.py` — B904/B905/BLE001/C901 held |
-| type ignores | `check_type_ignores.py` — every suppression owned |
-
-## Spec
-
-**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
-
-## Traceability
-
-| AC | Test / smoke |
-|----|----------------|
-| AC-1 | `tests/test_harness_wiring_stack.py::test_ac_1_helpers_wired` |
-| AC-2 | `tests/test_harness_wiring_stack.py::test_ac_2_spec_rituals_and_glossary_collision` |
-| AC-3 | `workflow-harness/tests/test_glossary_and_tickets.py` (companion tree) |
-| AC-4 | `tests/test_harness_wiring_stack.py::test_ac_4_issue_bodies_offline` |
-| AC-5 | `tests/test_harness_wiring_stack.py::test_ac_5_stack_plan_layers_and_chunks` |
-| smoke | `product_smoke.py` (`hardcodes`, `unit`) |
+**Door:** one-way
+**Blast Radius:** Harness-wide. Every skill and several gates change, and the
+agent-harness PR also adds new scripts. Reverting is a normal revert of the squash
+commit, but a partial revert leaves skills pointing at commands that no longer
+exist.
 
 ## Threat notes
 
-- **Path traversal:** ticket and glossary inputs are untrusted Markdown/JSON.
-  Parsers keep strict token regexes and resolve paths under the repo root.
-- **Injection:** issue bodies are written as files; `--gh` uses an argv list and
-  never a shell string. Default execution makes no network call.
-- **Secrets:** `check_secrets_diff.py` runs on the ship range before issue
-  bodies are eligible for posting.
+**Tags:** secrets, supply-chain
 
-## Red-proof (process honesty)
+- **Assets:** the harness itself, tokens and session paths read by the cost and
+  transcript helpers, and the operator's PRs that the stack merger acts on.
+- **Abuse cases:** a crafted ticket or transcript injects secrets into an
+  artifact; a stack runner merges a PR whose checks are red; an ADR check is
+  passed by a placeholder body. Ingest replaces `AKIA…`/`ghp_…`/`xox…` tokens in
+  transcripts and PR comments, the merger stops on any non-success check, and the
+  ADR check requires all three parts.
+- **Boundaries:** no new network calls in the default path; `--gh` stays behind an
+  explicit flag; auto-merge stays opt-in. `run_tickets.py` splits the executor
+  command with `shlex` and runs it in a fresh worktree, with no shell.
 
-The wiring tests do not exist on `origin/main` and failed on import/collection.
-After implementation the same tests pass.
+## Traceability
+
+| AC | Test / command |
+|----|----------------|
+| AC-1 | `tests/test_decisions_and_review.py`, `scripts/check_adr.py`, `scripts/check_ticket_dag.py` |
+| AC-2 | `tests/test_prototype_and_handoff.py`, `scripts/check_prototype_fidelity.py` |
+| AC-3 | `tests/test_comment_and_docs.py`, `scripts/check_comment_audit.py --ratio` |
+| AC-4 | `tests/test_retro_ingest.py`, `scripts/retro_job.py --transcripts` |
+| AC-5 | `tests/test_stack_runners.py`, `scripts/merge_stack.py`, `scripts/run_tickets.py` |
+| AC-6 | workflow-harness PR #13: `specs/adr/`, `framework/tickets.py`, `framework/canary.py`, `tools/check_adr.py`, `check_canary.py`, `check_ticket_order.py`, `retro_runs.py` (212 tests) |
+| Smoke | `python3 scripts/validate.py full`, `bash scripts/smoke_unit.sh` |
+
+## Red-proof
 
 ```text
-red_cmd: git cat-file -e origin/main:tests/test_harness_wiring_stack.py
-green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
+red_cmd: git cat-file -e origin/main:scripts/check_adr.py
+green_cmd: python3 -m pytest tests/test_decisions_and_review.py -q
 ```
 
-## Cross-review
+Red exits 128 on the base: the checker and the decisions folder do not exist
+there. Green runs the twelve tests that now cover the spine, the tier table, the
+prefactor edge and the diamond case.
 
-See `.agents/artifacts/CROSS_REVIEW.md` (marker `CROSS-REVIEW`).
+## Evidence pack
+
+- hard_gates: run on `origin/main...HEAD` before review.
+- pytest: 584 passed, 3 skipped.
+- validate: `python3 scripts/validate.py full` → 9/9 gates.
+- smoke: `python3 scripts/product_smoke.py --root .` → 2/2.
+- ticket DAG: 19 tickets, valid, frontier `01, 07, 10, 12, 16, 17`.
+- stack plan: 3 layers / 3 chunks.
+- companion: workflow-harness PR #13, 212 tests, its three gates green.
 
 ## Things that look bad but are actually fine
 
-1. **Issue bodies are local files, not GitHub issues.** The ship is deterministic
-   and offline; `--gh` remains an explicit operator action with its own approval.
-2. **The stack planner reads ticket Markdown instead of a new manifest format.**
-   Tickets already carry `Blocked by:` edges, so one parser keeps the DAG and the
-   layers consistent.
-3. **Skill edits are prose rather than Python gates.** The scripts stay the
-   enforcement point; the skill text tells the agent which command to run, and
-   tests assert the command appears.
-4. **`workflow-harness` data ships in a companion repo.** Its glossary and ticket
-   schema belong to that product's tests, so the harness ship references them
-   without editing product code.
+- The diff is large. It is one epic with a ticket per scorecard item and a
+  chunked review; each chunk maps to a batch.
+- Several checks are advisory unless `--strict` is passed. That keeps product
+  repos without a declared surface from failing on fields they do not use; this
+  repo runs them with `--strict`.
+- `retro_job.py` reads local session files best-effort. When nothing is found it
+  writes `unknown` rather than failing the retro.
+- The workflow-harness changes ship in a separate PR so the two suites stay
+  independent.

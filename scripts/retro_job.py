@@ -46,6 +46,103 @@ CLUSTERS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 
+ACTION_CLASSES = ("fix-now", "add-gate", "add-test", "doc", "non-action")
+ACTION_BY_LABEL = {
+    "tests": "add-test",
+    "spec": "add-gate",
+    "review": "add-gate",
+    "runtime": "fix-now",
+    "docs": "doc",
+    "other": "non-action",
+}
+PR_COMMENT_RE = re.compile(r"^\s*(?:[-*]|review:)\s+(.+)$", re.IGNORECASE)
+SECRET_RE = re.compile(
+    r"(AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]+)")
+
+
+def action_class(label: str) -> str:
+    """Return the action class for a cluster label."""
+    return ACTION_BY_LABEL.get(label, "non-action")
+
+
+def validate_action_class(value: str) -> bool:
+    """Return True when value is one of the five action classes."""
+    return value in ACTION_CLASSES
+
+
+def _redact(text: str) -> str:
+    """Replace secret-like tokens before evidence is written.
+
+    A PEM begin line is dropped whole; other matches lose only the token, so a
+    finding keeps its useful context.
+    """
+    out: list[str] = []
+    for line in text.splitlines():
+        if re.search(r"BEGIN [A-Z ]*PRIVATE KEY", line):
+            out.append("[redacted]")
+            continue
+        out.append(SECRET_RE.sub("[redacted]", line))
+    return "\n".join(out)
+
+
+def collect_transcript_findings(root: Path, since_days: int = 14) -> list[tuple[str, str]]:
+    """Render the most recent local session with the existing helper."""
+    helper = Path(__file__).resolve().parent / "agent_transcript.py"
+    if not helper.is_file():
+        return []
+    find = subprocess.run(
+        [sys.executable, str(helper), "find", "--cwd", str(root), "--since-days", str(since_days)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    sessions = [line.strip() for line in find.stdout.splitlines() if line.strip()]
+    if find.returncode != 0 or not sessions:
+        return []
+    session = sessions[-1]
+    out = root / ARTIFACTS / "SESSION_TRANSCRIPT.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    render = subprocess.run(
+        [sys.executable, str(helper), "render", "--session", session, "--out", str(out)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if render.returncode != 0 or not out.is_file():
+        return []
+    out.write_text(_redact(out.read_text(encoding="utf-8", errors="replace")), encoding="utf-8")
+    findings: list[tuple[str, str]] = []
+    for line in out.read_text(encoding="utf-8", errors="replace").splitlines():
+        if re.search(r"\b(should have|forgot|missed|root cause|retry|failed)\b", line, re.I):
+            findings.append((out.name, line.strip(" -")[:300]))
+    return findings
+
+
+def collect_pr_comment_findings(path: Path) -> list[tuple[str, str]]:
+    """Read a saved PR review-comment dump (JSON or markdown)."""
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8", errors="replace")
+    findings: list[tuple[str, str]] = []
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = None
+    if isinstance(data, list):
+        for row in data:
+            body = _redact(str((row or {}).get("body") or "").strip())
+            if len(body) >= 12:
+                findings.append((path.name, body))
+        return findings
+    for line in text.splitlines():
+        match = PR_COMMENT_RE.match(line)
+        if match:
+            body = _redact(match.group(1).strip())
+            if len(body) >= 12:
+                findings.append((path.name, body))
+    return findings
+
+
 def collect_findings(root: Path) -> list[tuple[str, str]]:
     """Return (source, line) for review findings already on disk."""
     out: list[tuple[str, str]] = []
@@ -119,9 +216,14 @@ def _proposal(label: str, examples: list[str]) -> str:
     return f"Ratchet: inspect this finding and choose a gate sink. Example: {sample}"
 
 
-def build_retro(root: Path, when: datetime | None = None) -> str:
+def build_retro(
+    root: Path,
+    when: datetime | None = None,
+    *,
+    extra_findings: list[tuple[str, str]] | None = None,
+) -> str:
     when = when or datetime.now(UTC)
-    findings = collect_findings(root)
+    findings = collect_findings(root) + list(extra_findings or [])
     waivers = collect_waivers(root)
     clusters = cluster_lessons(findings)
     waiver_types = Counter(str(row.get("waiver_type") or "?") for row in waivers)
@@ -141,6 +243,8 @@ def build_retro(root: Path, when: datetime | None = None) -> str:
         lines.extend(
             [
                 f"### {label} ({len(examples)})",
+                "",
+                f"**Action class:** {action_class(label)}",
                 "",
                 f"**Proposal:** {_proposal(label, examples)}",
                 "",
@@ -162,6 +266,7 @@ def build_retro(root: Path, when: datetime | None = None) -> str:
             "",
             "## Promotion checklist",
             "",
+            "- [ ] Every cluster carries one of: fix-now, add-gate, add-test, doc, non-action",
             "- [ ] Each cluster has one gate or ratchet-baseline change proposed",
             "- [ ] No finding is closed by prose alone",
             "- [ ] Baseline updated with `python3 scripts/check_lint_ratchet.py --update` when a rule improves",
@@ -187,6 +292,7 @@ def _cluster_body(label: str, examples: list[str], when: datetime) -> str:
         f"# [retro] {label}: {len(examples)} finding(s)",
         "",
         f"**Source:** retro {when:%Y-%m-%d}",
+        f"**Action class:** {action_class(label)}",
         f"**Proposal:** {_proposal(label, examples)}",
         "",
         "## Examples",
@@ -274,12 +380,55 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--repo", default=None, help="owner/name passed to gh issue create")
     ap.add_argument("--issues-dir", type=Path, default=None)
+    ap.add_argument(
+        "--transcripts",
+        action="store_true",
+        help="Render the most recent local session as retro evidence (redacted)",
+    )
+    ap.add_argument(
+        "--pr-comments",
+        type=Path,
+        default=None,
+        help="Saved PR review-comment dump (JSON list or markdown)",
+    )
+    ap.add_argument(
+        "--fetch-pr-comments",
+        action="store_true",
+        help="Fetch review threads with gh (requires --pr and --gh approval)",
+    )
+    ap.add_argument("--pr", type=int, default=None, help="PR number for --fetch-pr-comments")
     args = ap.parse_args(argv)
     if args.gh and not args.file_issues:
         print("❌ --gh requires --file-issues", file=sys.stderr)
         return 2
+    if args.fetch_pr_comments and args.pr is None:
+        print("❌ --fetch-pr-comments requires --pr", file=sys.stderr)
+        return 2
     root = args.root.resolve()
-    text = build_retro(root)
+
+    extra: list[tuple[str, str]] = []
+    if args.transcripts:
+        extra.extend(collect_transcript_findings(root))
+        if not extra:
+            print("note: no local session transcript found — transcripts skipped", file=sys.stderr)
+    if args.pr_comments is not None:
+        extra.extend(collect_pr_comment_findings(args.pr_comments))
+    if args.fetch_pr_comments:
+        fetched = root / ARTIFACTS / "PR_COMMENTS.json"
+        fetched.parent.mkdir(parents=True, exist_ok=True)
+        run = subprocess.run(
+            ["gh", "pr", "view", str(args.pr), "--json", "reviews,comments"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if run.returncode != 0:
+            print(run.stderr.strip() or "gh pr view failed", file=sys.stderr)
+            return run.returncode
+        fetched.write_text(_redact(run.stdout), encoding="utf-8")
+        extra.extend(collect_pr_comment_findings(fetched))
+
+    text = build_retro(root, extra_findings=extra)
     if args.dry_run:
         print(text)
         return 0

@@ -40,6 +40,13 @@ When invoked with `/spec` (args: idea text, `--from-conversation`, `--plan`,
    - Hold principles for the whole run (quality, TDD, security, scope discipline).
    - If none found and not `--skip-constitution-warn` → print once:  
      `⚠️ No CONSTITUTION.md — using policy defaults. Consider adding .agents/CONSTITUTION.md (see templates/CONSTITUTION.example.md).`
+4b. **ADR read (required when the spine exists):** if `.agents/decisions/` is
+   present, read `README.md` and the records that touch this area before asking.
+   Carry the decision numbers into the draft. Propose a new ADR only when the
+   choice is hard to reverse, surprising to a reader, and a real tradeoff, and
+   only with the operator's agreement; `python3 scripts/check_adr.py --root .`
+   validates the result. Use `--no-adr` to record why no record applies.
+
 5. **Spec Kit detect (optional bridge):** if `.specify/` exists → read `references/speckit-bridge.md` and either:
    - Hand off to Spec Kit commands for specify/clarify/plan/tasks, then resume at §7 (roadmap OPEN pointing at `specs/…`), **or**
    - Stay on this skill but prefer Spec Kit artifact paths if the user already produced them.
@@ -55,6 +62,8 @@ When invoked with `/spec` (args: idea text, `--from-conversation`, `--plan`,
 | `--spike` | **Only** allowed skip of full grill; must set `## Grill-me` **Status:** `spike-skipped` + reason ≥20 chars; still need checkable AC or halt |
 | `--plan` | Also write technical plan file **after** grill + clarify |
 | `--tickets` | Write ticket files **after** grill + clarify (and plan if any) |
+| `--mode batch` | Ask themes in batches; record the mode and any switch |
+| `--mode serial` | Default: one question at a time |
 | `--roadmap-from-gap` | Structure product roadmap from gap analysis (ex-`/plan_backend`) |
 
 **Removed (do not honor as free skips):**
@@ -70,6 +79,20 @@ If an agent or user passes those flags, print:
 Look up facts in the product tree (`stack.app_layout` / `product_path_prefixes`).  
 **Ask only decisions and unknowns.** Use product domain vocabulary.  
 Do **not** invent user preferences.
+
+**Read-only research subagent.** While the operator answers a theme, launch one
+read-only research subagent bounded to the question (library behavior, prior art,
+a competing surface). It may read files and the web, and it writes only
+`.agents/artifacts/RESEARCH_NOTES.md`; it makes no product decision. Fold the
+result into the spec under `## Research` with the sources it found. If the
+subagent is unavailable, record `research: not-run (reason)` rather than
+inventing findings.
+
+**Prototype for shape questions.** If a question is "which shape should this
+take?", run `python3 scripts/prototype_variants.py new --slug <slug> --question
+"<question>"`, compare the variants in the grill, and record the chosen variant
+under `**Prototype verdict:**` in the spec. Prototypes are disposable and never
+the implementation (see `skills/prototype/SKILL.md`).
 
 ## 3. Grill-me interview (**mandatory** unless `--spike`)
 
@@ -91,6 +114,10 @@ Rules:
 8. **Operator stop token:** reply `STOP` → status `rejected`; halt
    `🛑 GRILL REJECTED`; no plan/tickets.
 9. If grill **rejects** the idea → status `rejected`; halt `🛑 GRILL REJECTED`; no plan/tickets.
+10. **Mode switch.** Start in `serial` unless `--mode batch` was passed. If the
+    operator asks to batch or to slow down, switch immediately and record
+    `**Grill mode:** batch|serial (switched at theme G<n>)` under `## Grill-me`.
+    Do not switch back without a request.
 
 Minimum coverage still includes outcome, scope, surfaces, constraints, risks, verify, priority — fold into G1–G7 rather than a separate optional interview.
 
@@ -124,6 +151,11 @@ Rules:
 - Acceptance criteria **checkable** (pass/fail).
 - Align with constitution (call out any tension under Further Notes).
 - **`## Grill-me` section required** before `ready-for-agent`.
+- **Reserved versus delegated.** Fill `**Reserved decisions:**` with the choices
+  only the operator may make and `**Delegated decisions:**` with what the agent
+  may settle. An empty list is written as `none (state why)`.
+- **Door and flag.** Set `**Door:**` and, when the change is user-visible,
+  `**Feature flag:**` with the off-path; otherwise write `not-applicable` and why.
 
 ## 5. Clarify pass (**required** after draft)
 
@@ -197,10 +229,14 @@ Do **not** invent gap findings — only structure what the analysis already stat
 
 After grill + clarify (and plan if any):
 
-1. Vertical tracer bullets + blockers.  
-2. User approves granularity when ambiguous.  
-3. `.agents/specs/<slug>/tickets/01-….md`  
-4. Roadmap lists ticket dir; `/execute_dev` one unblocked ticket at a time.
+1. Vertical tracer bullets + blockers. Each ticket carries `**Kind:**` and
+   `**Prefactor:**` (`none` when it stands alone).
+2. A `shared-component` ticket must name a prefactor ticket; it becomes a
+   blocking edge, so `python3 scripts/check_ticket_dag.py <dir>` fails without it.
+3. User approves granularity when ambiguous.  
+4. `.agents/specs/<slug>/tickets/01-….md`  
+5. Roadmap lists ticket dir; `/execute_dev` one unblocked ticket at a time
+   (`python3 scripts/run_tickets.py --tickets <dir> --workers 2 --dry-run`).
 
 ## 10. Optional tracker publish
 

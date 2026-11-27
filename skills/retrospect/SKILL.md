@@ -25,6 +25,10 @@ timeout-seconds: 600
    python3 scripts/retro_job.py --root .
    python3 scripts/retro_job.py --root . --file-issues
    ```
+   - `--transcripts` renders the most recent local session as evidence and
+     redacts secret-like lines before writing `SESSION_TRANSCRIPT.md`.
+   - `--pr-comments <path>` reads a saved PR review-comment dump;
+     `--fetch-pr-comments --pr <n>` fetches it with `gh` (operator approval).
    - `--file-issues` writes one issue body per cluster plus an umbrella body under
      `.agents/artifacts/issues/`.
    - `--gh` posts those bodies; run it only with the operator's explicit approval.
@@ -34,6 +38,10 @@ timeout-seconds: 600
    - **Harness improvements** (skills/scripts/docs)
    - **Product improvements** (tests/smoke/plugin)
    - Explicit non-actions
+   - **Action class for every finding:** `fix-now` (a real bug), `add-gate` (a
+     mechanical violation becomes a check), `add-test` (a missing regression
+     test), `doc` (a doc correction), or `non-action` (accepted risk). An
+     unknown class is rejected by `retro_job.py`.
 3. Optional vault note: `sync_vault_devlog.py --note "Retro …"`
 4. Do **not** set `pipeline.json` phase.
 

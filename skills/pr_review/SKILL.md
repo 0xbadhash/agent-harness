@@ -42,6 +42,21 @@ When invoked with `/pr_review --validate`:
 
 4. **PR_DRAFT narrative:** What Problem / Why / User Impact / Evidence + §9 (≥3).
 
+4b. **Review tier (door-aware):**
+
+   Read `**Door:**` from the PR draft. It selects the review depth; it does not
+   change the rubric weights.
+
+   | Door | Required depth |
+   |------|----------------|
+   | two-way | agent gates + rollback line; one reviewer pass |
+   | one-way | agent gates + explicit human sign-off + named rollout and rollback |
+   | missing | `🛑 REVIEW TIER UNKNOWN` — add `**Door:**` before merging |
+
+   A user-visible ship also needs `**Feature flag:**` (or a stated reason it is
+   not applicable); `python3 scripts/spec_gate.py --root . --strict` enforces the
+   field.
+
 5. **Cross-review (soft unless `--strict-cross-review`):** large diffs prefer CROSS-REVIEW artifact.
 
 6. Run:

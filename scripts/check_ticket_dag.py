@@ -6,10 +6,30 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+KIND_RE = re.compile(r"^\*\*Kind:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+PREFACTOR_RE = re.compile(r"^\*\*Prefactor:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+NONE_VALUES = {"none", "n/a", "na", "-", "none."}
+
+
+def _ids(raw: str) -> list[str]:
+    """Split a dependency field into ticket-id tokens."""
+    if raw.strip().lower() in NONE_VALUES:
+        return []
+    out: list[str] = []
+    for token in re.split(r"[,\s]+", raw.strip()):
+        token = token.strip().strip("#`[]().")
+        if token and re.match(r"^[A-Za-z0-9_-]+$", token):
+            out.append(token)
+    return out
+
+
+def _short(ticket_id: str) -> str:
+    match = re.match(r"^(\d+)", ticket_id)
+    return match.group(1) if match else ticket_id
 
 
 def _ticket_id(path: Path) -> str:
@@ -17,24 +37,46 @@ def _ticket_id(path: Path) -> str:
     return m.group(1) if m else path.stem
 
 
-def load_tickets(directory: Path) -> dict[str, dict[str, object]]:
-    tickets: dict[str, dict[str, object]] = {}
+def load_tickets(directory: Path) -> dict[str, dict[str, Any]]:
+    tickets: dict[str, dict[str, Any]] = {}
     for p in sorted(directory.glob("*.md")):
         tid = _ticket_id(p)
         text = p.read_text(encoding="utf-8", errors="replace")
         bm = BLOCKED_RE.search(text)
-        deps: list[str] = []
-        if bm:
-            raw = bm.group(1).strip()
-            if not raw.lower().startswith("none"):
-                for tok in re.split(r"[,\s]+", raw):
-                    tok = tok.strip().strip("#")
-                    if tok and re.match(r"^[A-Za-z0-9_-]+$", tok):
-                        deps.append(tok)
+        deps: list[str] = _ids(bm.group(1)) if bm else []
+        # A prefactor ticket is a blocking edge: it must land first.
+        pm = PREFACTOR_RE.search(text)
+        prefactor = _ids(pm.group(1)) if pm else []
+        deps.extend(p for p in prefactor if p not in deps)
+        km = KIND_RE.search(text)
+        kind = km.group(1).strip().lower() if km else ""
         sm = STATUS_RE.search(text)
         status = sm.group(1).strip().lower() if sm else "ready-for-agent"
-        tickets[tid] = {"deps": deps, "status": status, "path": p}
+        tickets[tid] = {
+            "deps": deps,
+            "status": status,
+            "path": p,
+            "kind": kind,
+            "prefactor": prefactor,
+        }
     return tickets
+
+
+def validate_prefactors(tickets: dict[str, dict[str, object]]) -> list[str]:
+    """E25 — a shared-component ticket names a prefactor that exists."""
+    by_short = {_short(tid): tid for tid in tickets}
+    failures: list[str] = []
+    for tid, info in sorted(tickets.items()):
+        kind = str(info.get("kind") or "")
+        prefactor = cast(list[str], info.get("prefactor") or [])
+        if kind == "shared-component" and not prefactor:
+            failures.append(
+                f"{tid}: **Kind:** shared-component needs a **Prefactor:** ticket"
+            )
+        for ref in prefactor:
+            if ref not in tickets and _short(ref) not in by_short:
+                failures.append(f"{tid}: prefactor {ref!r} has no ticket file")
+    return failures
 
 
 def find_cycle(tickets: dict[str, dict[str, object]]) -> list[str] | None:
@@ -88,6 +130,11 @@ def main(argv: list[str] | None = None) -> int:
     cyc = find_cycle(tickets)
     if cyc:
         print(f"❌ ticket dependency cycle detected: {' -> '.join(cyc)}", file=sys.stderr)
+        return 1
+    prefactor_failures = validate_prefactors(tickets)
+    if prefactor_failures:
+        for failure in prefactor_failures:
+            print(f"❌ {failure}", file=sys.stderr)
         return 1
     frontier = ready_frontier(tickets)
     print(f"✅ ticket DAG valid ({len(tickets)} tickets); ready frontier: {', '.join(frontier) or 'none'}")

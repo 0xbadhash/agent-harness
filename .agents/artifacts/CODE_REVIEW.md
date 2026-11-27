@@ -1,89 +1,119 @@
-# Code review — T2088U harness wiring, spec rituals, issue flows, stack plan
+# Code review — harness top-50 completion epic
 
 **Marker:** CODE-REVIEW
-**Command:** `/code_review` closeout pass
-**Base:** `0336317`
-**Head:** `HEAD` (3 commits)
-**Scope:** 24 files, +1,063 / −75, non-test LOC 931, large diff
+**Command:** `/code_review` closeout pass, chunked A–F
+**Base:** `origin/main` (`6f962df`, release v1.4.57)
+**Head:** `HEAD` (6 commits)
+**Scope:** 68 files, +3,121 / −208, non-test LOC ~1,900; large diff
 
 ## Standards
 
 Reviewed against the repo style (typed Python, deterministic scripts, no host
-paths) and the Fowler smell baseline:
+paths, one check per accepted finding) and the Fowler baseline:
 
-- `Mysterious Name` — none. `stack_plan`, `write_issue_bodies`, and
-  `check_glossary_collisions` name their effect.
-- `Duplicated Code` — the ticket DAG is parsed once; `stack_plan` imports
-  `check_ticket_dag` instead of copying the parser.
-- `Feature Envy` — `retro_job` owns issue bodies because it already owns the
-  clusters.
-- `Data Clumps` — the plan dict is a deliberate output shape consumed by the
-  Markdown and JSON writers.
-- `Primitive Obsession` — ticket ids stay strings because the on-disk format is
-  numeric-prefixed Markdown.
-- `Repeated Switches` — none.
-- `Shotgun Surgery` — skill edits are one line per stage; no cross-cutting edit.
-- `Divergent Change` — `spec_gate` gained one checker beside the existing ones.
-- `Speculative Generality` — no unused flags; every new branch has a test.
-- `Message Chains`, `Middle Man`, `Refused Bequest` — none.
+- `Mysterious Name` — none. `check_adr`, `check_prototype_fidelity`,
+  `merge_stack`, `run_tickets` name their effect.
+- `Duplicated Code` — `run_tickets` imports `check_ticket_dag`; `merge_stack`
+  imports `stack_plan`; `retro_runs` reuses `framework/retro.py` in the
+  companion. No second DAG parser or scoring model in this tree.
+- `Feature Envy` — the reviewer tier lives in `spec_gate` because it already
+  reads the plan and the door; no new module for one helper.
+- `Data Clumps` — ticket fields stay a dict because the on-disk format is
+  Markdown with `**Field:**` lines.
+- `Primitive Obsession` — ticket ids stay strings; the numeric prefix is the
+  identity.
+- `Repeated Switches` — the review tier is one table in `pr_review`, not a
+  branch per door.
+- `Shotgun Surgery` — each skill edit is one stage block; no cross-cutting
+  rewrite.
+- `Speculative Generality` — every new flag has a test, and `--default-estimate`
+  exists because a ticket may omit the field.
 
 Verdict: pass. No standing refactor required.
 
 ## Spec
 
-AC-by-AC fidelity:
+- **AC-1 (decisions/doors):** `.agents/decisions/README.md`,
+  `000-template.md`, `001-review-tiers-by-door.md`, `scripts/check_adr.py`,
+  `tests/test_decisions_and_review.py`.
+- **AC-2 (prototype and handoff):** `skills/prototype/SKILL.md`,
+  `scripts/check_prototype_fidelity.py`, `context_pack.py --compact`
+  (`GRILL_HANDOFF.md`), `tests/test_prototype_and_handoff.py`.
+- **AC-3 (review rigor):** `.agents/policy/comment-policy.md`,
+  `skills/comment_audit/SKILL.md`, `check_comment_audit.py --ratio`,
+  `templates/eslint-ratchet/`, `docs/tdd.md`, `scripts/session_context.py`
+  (`SESSION_COST.md`), `skills/handoff/SKILL.md`, `skills/cross_review/SKILL.md`
+  (Process lens), `scripts/check_docs_patterns.py`,
+  `tests/test_comment_and_docs.py`.
+- **AC-4 (retro):** `scripts/retro_job.py --transcripts/--pr-comments`, five
+  action classes, `skills/retrospect/SKILL.md`,
+  `tests/test_retro_ingest.py`.
+- **AC-5 (stacked execution):** `scripts/merge_stack.py`,
+  `scripts/run_tickets.py`, `skills/release_mgmt/SKILL.md`,
+  `tests/test_stack_runners.py`.
+- **AC-6 (workflow companion):** PR #13 in workflow-harness
+  (`specs/adr/`, `framework/tickets.py`, `framework/canary.py`,
+  `tools/check_adr.py`, `check_canary.py`, `check_ticket_order.py`,
+  `retro_runs.py`), 212 tests green there.
 
-- AC-1: wired, `test_ac_1_helpers_wired` asserts the skill and CI commands.
-- AC-2: wired, `test_ac_2_spec_rituals_and_glossary_collision` asserts the four
-  rituals and both collision outcomes.
-- AC-3: companion tree, `workflow-harness/tests/test_glossary_and_tickets.py`
-  plus the harness companion test.
-- AC-4: `test_ac_4_issue_bodies_offline` proves file output and no subprocess
-  call; `--gh` without `--file-issues` returns 2.
-- AC-5: `test_ac_5_stack_plan_layers_and_chunks` proves layers, chunks, write,
-  cycle, and unknown-dependency failure.
-
-Scope creep: the four base-repair pieces (diagnosing-bugs skill, review axes,
-Merge Danger template, GLOSSARY references) restore tests that the base commit
-already carried. Verdict: pass.
+Scope creep: none. The two P2 follow-ups from v1.4.57 are closed by E3
+(`--default-estimate`) and the ticket-root CI change.
 
 ## Findings
 
-1. **P1 — unknown ticket dependency was silently satisfied.** Accepted and
-   fixed: `stack_plan` now raises `MissingDependency` and exits 1; the test
-   covers the `**Blocked by:** 99` case.
-2. **P1 — `--gh` can publish untrusted issue text.** Accepted as existing risk;
-   mitigated by an argv list, an explicit flag, `--file-issues` as a
-   prerequisite, and the secrets scan before release. No code change.
-3. **P2 — default LOC estimate is 150.** Follow-up: read a real estimate when
-   tickets add one. Not blocking.
-4. **P2 — CI ticket DAG step scans `.agents/specs/*/tickets` only.** Follow-up:
-   product repos with another ticket root need their own invocation. Documented.
+1. **P1 — ticket DAG reported a false cycle** on the real epic (11→07,08→07).
+   The DFS never popped its stack. Accepted and fixed with a color-state DFS;
+   `tests/test_decisions_and_review.py::test_ticket_dag_accepts_a_diamond`
+   covers the diamond.
+2. **P2 — CI ticket step scanned one root.** Accepted and fixed: the workflow
+   globs `.agents/specs/*/tickets` and honours a configured root.
+3. **P2 — LOC estimate was hard-coded 150.** Accepted and fixed:
+   `stack_plan.py` reads `**Estimate:**` and takes `--default-estimate`.
+4. **Pre-commit gate findings (not review findings, recorded for honesty):**
+   an unused variable in `check_adr.py`, `shell=True` in `run_tickets.py`, and
+   two mypy narrowing errors. All fixed before the review commit; `ruff`,
+   `mypy`, and the lint ratchet are green.
 
-P0 count: 0. Follow-ups: 2.
+P0 count: 0. Open follow-ups: 0.
 
 ## Review chunks
 
-- **CHUNK 1 (tickets 01, 02):** skills, CI, `spec_gate` collision. Verdict: pass.
-- **CHUNK 2 (tickets 03, 04, 05):** workflow-harness data, `retro_job` issue
-  bodies, `stack_plan`. Verdict: pass after the P1 dependency fix.
+- **A (tickets 01–03):** ADR spine, review tiers, prefactor. Pass after the
+  false-cycle fix.
+- **B (04–06):** prototype, grill handoff, modes/data model. Pass.
+- **C (07–11):** comment policy, ratchet, cost/handoff, process lens, docs
+  sweep. Pass.
+- **D (12–13):** retro ingest and action classes. Pass.
+- **E (14–16):** merge stack, ticket runner, P2 fixes. Pass.
+- **F (17–19, companion):** workflow-harness PR #13. Pass; its own CI is
+  authoritative for that tree.
 
 ## Evidence
 
-- Secrets: `check_secrets_diff.py --base origin/main --head HEAD` → clean.
+- Tests: `python3 -m pytest tests -q` → **584 passed, 3 skipped**.
+- Validate: `python3 scripts/validate.py full` → **9/9 gates**.
+- Compliance: type_checker, linter, test_runner all exit 0.
+- Smoke: `python3 scripts/product_smoke.py --root .` → 2/2.
+- ADR: `check_adr.py --root . --strict` → 1 ADR indexed and complete.
+- Docs patterns: `check_docs_patterns.py --root .` → clean.
+- Ticket DAG: 19 tickets valid; frontier `01, 07, 10, 12, 16, 17`.
+- Stack plan: 3 layers / 3 chunks written to `.agents/artifacts/STACK_PLAN.md`.
 - Comment audit: `check_comment_audit.py --diff origin/main...HEAD --strict` → clean.
-- Tests: targeted 5/5; full suite 483 passed, 1 skipped.
-- Smoke: `product_smoke.py` 2/2; `validate.py full` 6/6.
-- Lint/type: ruff clean; mypy success on 216 files.
+- Secrets: `check_secrets_diff.py --base origin/main --head HEAD` → clean.
+- Companion: workflow-harness suite 212 passed; its three new gates green.
 
 ## Correction checks
 
-- P1 unknown ticket dependency was rendered as `ready` → `tests/test_harness_wiring_stack.py::test_ac_5_stack_plan_layers_and_chunks` asserts exit 1 on a missing dependency.
-- P1 `--gh` could post issue bodies without an explicit call → `tests/test_harness_wiring_stack.py::test_ac_4_issue_bodies_offline` asserts `--gh` alone exits 2 and the default path writes files only.
-- P2 default LOC estimate of 150 → no-check: estimate text is evidence only and never gates a merge.
-- P2 CI ticket DAG step scans `.agents/specs/*/tickets` only → no-check: product ticket roots belong to product CI and are documented in `execute_dev`.
+- P1 the ticket DAG reported a false cycle → tests/test_decisions_and_review.py::test_ticket_dag_accepts_a_diamond
+- P2 CI scanned one ticket root → tests/test_stack_runners.py::test_ci_scans_every_ticket_root
+- P2 the LOC estimate was hard-coded → tests/test_comment_and_docs.py::test_stack_plan_default_estimate_is_configurable
+- A gate could pass on a placeholder ADR → scripts/check_adr.py --strict (three-part test)
+- A prototype could be copied instead of referenced → tests/test_prototype_and_handoff.py::test_copied_prototype_code_fails
+- A retro could leak a secret from a transcript → tests/test_retro_ingest.py::test_transcripts_redact_secret_like_lines
+- A PR comment could leak a secret into an issue body → tests/test_retro_ingest.py::test_pr_comments_are_redacted_too
+- A stack merge could proceed on a red PR → tests/test_stack_runners.py::test_merge_stops_when_a_check_is_red
 
 ## Handoff
 
-✅ CODE-REVIEW DONE  p0=0  follow_ups=2
+CODE-REVIEW DONE  p0=0  follow_ups=0
 NEXT_SKILL=/cross_review

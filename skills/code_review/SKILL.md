@@ -71,7 +71,13 @@ lightweight read of the diff only and record skip in handoff.
    ```
 
    Fail closed on history comments, commented-out code, and ownerless TODOs.
+   For a defect fix, confirm the PR draft carries `repro_cmd:` — a new test that
+   fails first is evidence for the fix, not a reproduction of the user-visible
+   defect.
    Comments explain constraints (why), not the change history.
+   Record the metric in the report: `python3 scripts/check_comment_audit.py --ratio`.
+   A constraint that exists only in a comment belongs in a test name; flag it
+   under `## Standards` when the test suite cannot show it.
 
 5. **Engine.** Prefer a **different model** than the implementer when available:
 

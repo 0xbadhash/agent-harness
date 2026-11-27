@@ -28,6 +28,10 @@ Who notices, and how? (desk operator, agent session, ops, none if harness-only).
 
 **Door:** <one-way | two-way>
 **Blast Radius:** <one-word scope, e.g. local | module | portfolio>
+**Surface:** <internal | user-visible>
+**Feature flag:** <name and off-path | not-applicable (state why)>
+**Prototype:** <`.agents/prototypes/<slug>` | none>
+**Prototype verdict:** <chosen variant and why | not-applicable>
 
 ## Evidence
 
@@ -74,11 +78,12 @@ Required when the ship has **runtime surface** (≥2 bullets):
 
 ## Red-proof (process honesty)
 
-Same commands as Evidence when TDD applies. Not scored by pr_validator; required by team policy when enabled.
+Same commands as Evidence when TDD applies. Not scored by pr_validator; required by team policy when enabled. A defect fix also names the reproduction that failed first.
 
 ```text
 red_cmd: <exact command that failed>
 green_cmd: <exact command that passed after fix>
+repro_cmd: <command or steps that reproduced the defect before the fix>
 ```
 
 Or write: `TDD N/A (docs-only)`.

@@ -74,6 +74,17 @@ When invoked with `/execute_dev`:
    ```
    - Implement layers in order; keep each layer green before starting the next.
    - `.agents/artifacts/STACK_PLAN.md` also supplies the review chunks for `/code_review`.
+
+3c. **Context budget (before each new ticket):**
+   ```bash
+   python3 scripts/session_context.py --root . --json
+   ```
+   - Hand off at 120,000 context tokens, 60% of the model window, two failed
+     attempts at one step, or a compaction event. Run `/handoff`, record the
+     threshold in the dev log, and continue in a fresh session.
+   - Record the observed cost with
+     `python3 scripts/session_context.py --record-tokens N --record-context N --record-cost USD`;
+     `unknown` is acceptable, an invented number is not.
 4. **Implement constraints + scope governor:**
    - **UI is allowed** when the product task is user-facing UI (use the product's own stack from `product_plugin.yaml`). Prefer progressive enhancement over unnecessary SPA rewrites unless the product already is an SPA.
    - Non-UI product work: APIs, services, CLIs, data paths as the product defines.

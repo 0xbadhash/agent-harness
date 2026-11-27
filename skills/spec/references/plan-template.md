@@ -26,10 +26,23 @@ Short prose: how we implement the acceptance criteria.
 
 ## Architecture decisions
 
+- **Reserved decisions:** choices only the operator may make
+- **Delegated decisions:** choices the agent may make without asking
 - Modules / packages / routes
 - Data flow (if any)
 - Integration points (EmailJS, APIs, …)
 - Explicit non-decisions (deferred)
+
+## Data model
+
+Every entity name comes from `GLOSSARY.md` when one exists (E14). A term with no
+entity is either UI copy or a missing glossary row.
+
+| Glossary term | Entity / field | Owner |
+|---------------|----------------|-------|
+| … | … | … |
+
+**Deletion policy:** <hard delete with what guard | soft delete and retention | not-applicable>
 
 ## File / surface map (indicative)
 

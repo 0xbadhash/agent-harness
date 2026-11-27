@@ -54,9 +54,13 @@ jobs:
           python scripts/check_comment_audit.py --diff "$BASE...HEAD" --strict
       - name: Ticket DAG
         run: |
-          for d in .agents/specs/*/tickets; do
-            if [ -d "$d" ]; then python scripts/check_ticket_dag.py "$d"; fi
+          # Every ticket root, not only the fixed specs/*/tickets depth.
+          find .agents/specs -type d -name tickets -print 2>/dev/null | while read -r d; do
+            python scripts/check_ticket_dag.py "$d"
           done
+          if [ -d tickets ]; then python scripts/check_ticket_dag.py tickets; fi
+      - name: Rejected docs patterns
+        run: python scripts/check_docs_patterns.py --root .
   skill-conformance:
     runs-on: ubuntu-latest
     steps:
