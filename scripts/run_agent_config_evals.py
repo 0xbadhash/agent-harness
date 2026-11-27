@@ -46,7 +46,7 @@ def run_evals(harness: Path) -> tuple[bool, list[str]]:
         g_ok, _ = eg.check(harness, fix_task=False)
     rec("edit_guard_env", not g_ok)
 
-    from agent_eval_checklist import evaluate as _ev  # type: ignore
+    from agent_eval_checklist import evaluate as _ev
 
     ev = _ev(harness, run_tests=False)
     rec("checklist", ev.ok)

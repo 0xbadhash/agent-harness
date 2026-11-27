@@ -52,7 +52,7 @@ class HardGatesResult:
 def _scope_flags(root: Path, diff: str | None) -> tuple[bool, bool]:
     """Return (prose_only, runtime_surface)."""
     try:
-        from review_scope import (  # type: ignore
+        from review_scope import (
             build_baseline,
             should_skip_heavy_review,
         )
@@ -337,7 +337,7 @@ def evaluate(
     # HSQ-3 P0 G1: AC → test map (non-prose feature ships)
     if not prose_only:
         try:
-            from check_ac_traceability import check as _ac_check  # type: ignore
+            from check_ac_traceability import check as _ac_check
 
             ac_ok, ac_msgs = _ac_check(root, pr_draft)
             if not ac_ok:
@@ -353,7 +353,7 @@ def evaluate(
     # HSQ-3 P0 G14: py_compile changed .py (disk is truth)
     if not prose_only:
         try:
-            from check_diff_compile import check as _compile_check  # type: ignore
+            from check_diff_compile import check as _compile_check
 
             base, head = "HEAD~1", "HEAD"
             if diff:
@@ -377,7 +377,7 @@ def evaluate(
     # HSQ-3 P2 G2/G10/G7/G8 — spec hash, waiver budget, threat tags, security paths
     if not prose_only:
         try:
-            from check_spec_hash import check as _spec_hash  # type: ignore
+            from check_spec_hash import check as _spec_hash
 
             sh_ok, sh_msgs = _spec_hash(root, pr_draft)
             if not sh_ok:
@@ -388,7 +388,7 @@ def evaluate(
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: spec_hash error: {e}")
         try:
-            from check_waiver_budget import check as _wbudget  # type: ignore
+            from check_waiver_budget import check as _wbudget
 
             wb_ok, wb_msgs = _wbudget(root, pr_draft)
             if not wb_ok:
@@ -400,7 +400,7 @@ def evaluate(
             violations.append(f"hard_gates: waiver_budget error: {e}")
         if runtime:
             try:
-                from check_threat_tags import check as _threat  # type: ignore
+                from check_threat_tags import check as _threat
 
                 th_ok, th_msgs = _threat(draft_text, runtime=True)
                 if not th_ok:
@@ -429,7 +429,7 @@ def evaluate(
 
     if not prose_only:
         try:
-            from check_changed_path_tests import check as _path_tests  # type: ignore
+            from check_changed_path_tests import check as _path_tests
 
             p_ok, p_msgs = _path_tests(root, base_g, head_g, pr_draft)
             if not p_ok:
@@ -441,7 +441,7 @@ def evaluate(
             violations.append(f"hard_gates: path_tests error: {e}")
 
         try:
-            from check_red_green_cmds import check as _rg  # type: ignore
+            from check_red_green_cmds import check as _rg
 
             rg_ok, rg_msgs = _rg(root, pr_draft)
             if not rg_ok:
@@ -456,7 +456,7 @@ def evaluate(
         skipped.append("red_green (prose-only)")
 
     try:
-        from check_lockfile_audit import check as _lock_audit  # type: ignore
+        from check_lockfile_audit import check as _lock_audit
 
         l_ok, l_msgs = _lock_audit(root, base_g, head_g)
         if not l_ok:
@@ -469,7 +469,7 @@ def evaluate(
 
     if not prose_only:
         try:
-            from check_security_paths import check as _sec_paths  # type: ignore
+            from check_security_paths import check as _sec_paths
 
             sp_ok, sp_msgs = _sec_paths(root, base_g, head_g)
             if not sp_ok:
@@ -482,7 +482,7 @@ def evaluate(
 
         # J14 property_tests modules from product_plugin
         try:
-            from check_property_tests import check as _prop  # type: ignore
+            from check_property_tests import check as _prop
 
             pr_ok, pr_msgs = _prop(root)
             if not pr_ok:
@@ -499,7 +499,7 @@ def evaluate(
     # Web E2E + Comet contract when product has a website (fail closed)
     if not prose_only:
         try:
-            from web_e2e_contract import validate_web_e2e  # type: ignore
+            from web_e2e_contract import validate_web_e2e
 
             we = validate_web_e2e(root)
             if we.get("has_website"):
@@ -515,7 +515,7 @@ def evaluate(
 
         # Product traits → required test categories (web3 isolation, client_secrets, …)
         try:
-            from check_product_traits import check as _traits  # type: ignore
+            from check_product_traits import check as _traits
 
             tr_ok, tr_msgs = _traits(root)
             if not tr_ok:
@@ -535,7 +535,7 @@ def evaluate(
     # Outer loop: plan / tickets / PLAN_REVIEW for large non-waiver ships
     if not prose_only:
         try:
-            from check_outer_loop import check as _outer  # type: ignore
+            from check_outer_loop import check as _outer
 
             o_ok, o_msgs = _outer(root, pr_draft, base=base_g, head=head_g)
             if not o_ok:
@@ -554,7 +554,7 @@ def evaluate(
     # Stale agent-config refs (AGENTS / skills / plugin / ship_skills)
     if not prose_only:
         try:
-            from check_stale_agent_config import check as _stale  # type: ignore
+            from check_stale_agent_config import check as _stale
 
             st_ok, st_msgs = _stale(root)
             if not st_ok:
@@ -569,7 +569,7 @@ def evaluate(
             violations.append(f"hard_gates: stale_agent_config error: {e}")
 
         try:
-            from check_edit_guard import check as _eg  # type: ignore
+            from check_edit_guard import check as _eg
 
             eg_ok, eg_msgs = _eg(root, base=base_g, head=head_g)
             if not eg_ok:
@@ -589,7 +589,7 @@ def evaluate(
     # T2087U item 1: correction -> check. Existing checks now fail the local pack.
     if not prose_only:
         try:
-            from check_lint_ratchet import check as _ratchet_check  # type: ignore
+            from check_lint_ratchet import check as _ratchet_check
 
             rt_ok, rt_msgs = _ratchet_check(root)
             if not rt_ok:
@@ -603,7 +603,7 @@ def evaluate(
             violations.append(f"hard_gates: lint_ratchet error: {e}")
 
         try:
-            from check_comment_audit import check as _comment_check  # type: ignore
+            from check_comment_audit import check as _comment_check
 
             ca_ok, ca_msgs = _comment_check(root, base_g, head_g)
             if not ca_ok:
@@ -617,7 +617,7 @@ def evaluate(
             violations.append(f"hard_gates: comment_audit error: {e}")
 
         try:
-            from check_correction_checks import check as _correction_check  # type: ignore
+            from check_correction_checks import check as _correction_check
 
             cc_ok, cc_msgs = _correction_check(root)
             if not cc_ok:
@@ -631,7 +631,7 @@ def evaluate(
             violations.append(f"hard_gates: correction_checks error: {e}")
 
         try:
-            from check_repo_hygiene import check as _hygiene_check  # type: ignore
+            from check_repo_hygiene import check as _hygiene_check
 
             hy_ok, hy_msgs = _hygiene_check(root, require_clean=True)
             if not hy_ok:
@@ -646,7 +646,7 @@ def evaluate(
             violations.append(f"hard_gates: repo_hygiene error: {e}")
 
         try:
-            from check_markdown_audit import check as _markdown_check  # type: ignore
+            from check_markdown_audit import check as _markdown_check
 
             md_ok, md_msgs = _markdown_check(root)
             if not md_ok:
@@ -659,12 +659,28 @@ def evaluate(
                 )
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: markdown_audit error: {e}")
+
+        try:
+            from check_type_ignores import check as _ignore_check
+
+            ti_ok, ti_msgs = _ignore_check(root)
+            if not ti_ok:
+                for msg in ti_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: type_ignores — {msg}")
+            else:
+                skipped.append(
+                    "type_ignores (" + (ti_msgs[0] if ti_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: type_ignores error: {e}")
     else:
         skipped.append("lint_ratchet (prose-only)")
         skipped.append("comment_audit (prose-only)")
         skipped.append("correction_checks (prose-only)")
         skipped.append("repo_hygiene (prose-only)")
         skipped.append("markdown_audit (prose-only)")
+        skipped.append("type_ignores (prose-only)")
 
     return HardGatesResult(
         ok=len(violations) == 0,

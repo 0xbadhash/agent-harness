@@ -1,89 +1,92 @@
-# PR Draft: Markdown escape hatch — prose must name a check
+# PR Draft: Categorical lint bans and typed suppressions
 
 **Range:** `origin/main..HEAD`
 
 ## What Problem This Solves
 
-Agents wrote justifications into comments, skills, and `AGENTS.md` (“for now”,
-“temporary”, “safe to ignore”). Those lines were not enforceable, `AGENTS.md` had
-no hard line cap on this branch, and `## Do not` bullets named no check. The
-comment audit also ran only in `hard_gates`, not `validate.py`.
+`ruff.toml` selected only `E`, `F`, and `W`, so blind exceptions, mutable
+defaults, `shell=True`, and runaway complexity passed the local gate. The tree
+carried 95 type suppressions with no owner or expiry, and raw `ruff check` in
+`compliance_engine.py` would fail as soon as new families were enabled.
 
 ## Why This Change Was Made
 
-The gate pack should refuse prose that justifies skipping a check. The Markdown
-audit names the offending line and the edited sections now cite the check that
-enforces each prohibition.
+The gate should eliminate a construct category in configuration instead of asking
+reviewers to catch it. The ratchet freezes the legacy counts, the suppression ban
+is absolute, and the eight real mypy errors are fixed with typed annotations.
 
 ## User Impact
 
-- `/pr_review --validate` and `validate.py full` fail on a new escape-hatch
-  comment or an unenforced `## Do not` bullet.
-- `AGENTS.md` above 250 lines fails `check_stale_agent_config` and `validate.py`.
-- The legacy comment set is frozen in `config/comment_audit_baseline.json`; new
-  findings fail, declines are welcome.
-- `[DEBUG-…]` tags in Python now fail repo hygiene, matching the existing skill
-  promise.
+- A new blind except, over-complex function, mutable default, or `shell=True` call
+  fails `check_lint_ratchet.py` and `validate.py full`.
+- A new type suppression must name `[code]`, `owner=…`, and a future
+  `expires=…`; expired suppressions fail.
+- `compliance_engine.py` uses the ratchet as the lint gate, so local and CI signals
+  agree.
+- 87 unnecessary suppressions are gone; no runtime behavior changes.
 
 ## Evidence pack
 
 | Gate | Command | Result |
 |------|---------|--------|
-| Red proof | `python3 -m pytest tests/test_markdown_audit.py tests/test_comment_audit.py -q` | `ModuleNotFoundError: check_markdown_audit`; `escape_hatch` assertion failed |
-| Targeted tests | same command after implementation | 42 passed, 11 subtests |
-| Full suite | `python3 -m pytest -q` | 497 passed, 2 skipped |
+| Red proof | `python3 -m pytest tests/test_type_ignores.py tests/test_lint_config.py -q` | `ModuleNotFoundError: check_type_ignores` before implementation |
+| Targeted tests | same command after implementation | 24 passed |
+| Mypy | `python3 -m mypy scripts tests` | Success: no issues in 217 files |
+| Lint ratchet | `python3 scripts/check_lint_ratchet.py` | four rules held at baseline |
+| Full suite | `python3 -m pytest -q` | 507 passed, 2 skipped |
 | Smoke | `python3 scripts/product_smoke.py --root .` | 2/2 steps passed |
-| Validate | `python3 scripts/validate.py full` | 8/8 gates passed |
+| Validate | `python3 scripts/validate.py full` | 9/9 gates passed |
 | Hard gates | `python3 scripts/pr_validator.py --diff origin/main...HEAD` | pr_validator score 100 |
 
-**Spec:** `.agents/specs/2026-11-27-markdown-escape-hatch-audit.md`
-**Plan:** `.agents/specs/2026-11-27-markdown-escape-hatch-audit-plan.md`
+**Spec:** `.agents/specs/2026-11-27-categorical-lint-bans.md`
+**Plan:** `.agents/specs/2026-11-27-categorical-lint-bans-plan.md`
 
 ## Traceability
 
 | AC | Test / smoke |
 |----|----------------|
-| AC-1 escape-hatch comments fail | `tests/test_comment_audit.py::TestJustificationAudit` |
-| AC-2 baseline ratchet | `tests/test_comment_audit.py::test_baseline_ratchet` |
-| AC-3 AGENTS.md cap | `tests/test_markdown_audit.py::TestAgentsBloat` |
-| AC-4 `## Do not` enforcement | `tests/test_markdown_audit.py::TestDoNotEnforcement` |
-| AC-5 bullets vs table rows | `tests/test_markdown_audit.py::TestEscapeHatches` |
-| AC-6 validate wiring | `python3 scripts/validate.py full` → 8/8 |
-| AC-7 DEBUG tags fail | `tests/test_repo_hygiene.py::test_debug_tag_fails` |
-| AC-8 suite/smoke/validate + secrets | full pytest 497 passed; smoke 2/2; `check_secrets_diff.py` |
+| AC-1 families and threshold | `tests/test_lint_config.py` |
+| AC-2 ratchet floor | `tests/test_lint_ratchet.py`, `check_lint_ratchet.py` |
+| AC-3 suppression ban | `tests/test_type_ignores.py` |
+| AC-4 tree has no suppressions | `mypy scripts tests` success; grep finds none |
+| AC-5 gate wiring | `tests/test_hard_gates.py::test_type_ignores_blocks_code_ship` |
+| AC-6 compliance/validate | `validate.py full` 9/9 |
+| AC-7 suite/smoke/secrets | full pytest 507 passed; smoke 2/2; `check_secrets_diff.py` |
 
 ## Threat notes
 
-Security tags: `secrets`, `supply-chain`, `injection`.
+Security tags: `supply-chain`, `secrets`, `injection`.
 
-- Asset / trust boundary: the scanners read repository text only; they execute no
-  network call and no shell from scanned content.
-- Abuse case: prose that names a `scripts/…` file to bypass the `escape_hatch`
-  class could cite a nonexistent check; `check_stale_agent_config` resolves
-  `scripts/` references and fails on missing files (`supply-chain` integrity).
-- Abuse case: an `AGENTS.md` cap could be gamed by moving prose into skills;
-  skills carry the same justification rule and the `## Do not` requirement.
-- Abuse case: baseline could hide new findings in a known file; the ratchet is
-  per `path::kind`, so a new finding in a known file raises its key count.
-- Abuse case: debug tags could leak payloads; the new `[DEBUG-` rule fails the
-  diff before commit, alongside the `secrets` scan.
+- Asset / trust boundary: lint and mypy run locally on repository text; no network
+  or credential access.
+- Abuse case: a blanket suppression could hide a future injection defect; the ban
+  forces a code, owner, and expiry so the suppression is reviewable
+  (`supply-chain` integrity).
+- Abuse case: `shell=True` was the named danger; `S602` is selected, and the tree
+  has zero occurrences.
+- Abuse case: a ratchet could hide new findings in an already-counted rule; the
+  count is per rule and any increase fails.
+- Abuse case: an expired suppression could mask a real type error; the checker
+  compares `expires=` with today (`secrets`-adjacent reviewability).
 
 ## Red-proof (process honesty)
 
 Red was observed before implementation: the targeted run failed collection with
-`ModuleNotFoundError: No module named 'check_markdown_audit'`, and the
-`escape_hatch` assertion failed because the class did not exist. The retained
-green command is executable:
+`ModuleNotFoundError: No module named 'check_type_ignores'`, and `ruff check
+--select B,BLE,S602,C90` reported 60 findings before the baseline was recorded.
+The retained green command is executable:
 
 ```text
-green_cmd: python3 -m pytest tests/test_markdown_audit.py tests/test_comment_audit.py tests/test_repo_hygiene.py tests/test_hard_gates.py -q
+green_cmd: python3 -m pytest tests/test_type_ignores.py tests/test_lint_config.py tests/test_hard_gates.py -q
 ```
 
 ## Things that look bad but are actually fine
 
-1. `config/comment_audit_baseline.json` lists seven legacy findings. It is a
-   ratchet floor, not an allowlist for new prose.
-2. `check_markdown_audit.py` prints `ok: no AGENTS.md` in this repo. The cap is
-   exercised by tests and applies to products that carry the file.
-3. The comment audit prints excess keys without line text; the follow-up is named
-   in CODE_REVIEW.md and does not change the pass/fail result.
+1. `BLE001=44` and `C901=14` remain in the baseline. The ratchet freezes them; the
+   spec names the follow-up.
+2. Removing 87 suppressions looks large; `mypy` is clean and the full suite is
+   green, so the annotations were already unnecessary.
+3. `compliance_engine` no longer calls raw `ruff check` when the ratchet exists;
+   products without the script keep the old path.
+4. `check_type_ignores.py` skips `.agents`, `.venv`, and cache directories, so
+   generated trees do not fail.

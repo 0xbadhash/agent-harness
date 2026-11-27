@@ -52,8 +52,9 @@ def demo(root: Path) -> tuple[bool, list[str]]:
     if str(again.get("phase")) != phase:
         return False, msgs + ["phase changed unexpectedly"]
     try:
-        from next_skill import suggest  # type: ignore
+        import next_skill
 
+        suggest = getattr(next_skill, "suggest", None)
         hint = suggest(root) if callable(suggest) else None
         if hint:
             msgs.append(f"next_skill hint: {hint}")

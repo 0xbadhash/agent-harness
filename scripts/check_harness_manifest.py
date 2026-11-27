@@ -19,7 +19,7 @@ REQUIRED_PROJECT = ("name", "license")
 def _load(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     try:
-        import yaml  # type: ignore
+        import yaml
 
         data = yaml.safe_load(text) or {}
         if isinstance(data, dict) and data.get("capabilities"):

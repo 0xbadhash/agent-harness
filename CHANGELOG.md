@@ -1,3 +1,16 @@
+## v1.4.55 — 2026-11-27
+
+### feat(lint): categorical bans and typed suppressions
+
+- `ruff.toml` selects `B`, `BLE`, `S602`, and `C90` (mccabe 20) alongside `E`,
+  `F`, `W`; the ratchet records `B904=1, B905=2, BLE001=44, C901=14`.
+- `compliance_engine.py` uses the ratchet as the lint gate, so local and CI agree.
+- New `check_type_ignores` bans blanket suppressions: every one names `[code]`,
+  `owner=…`, and a future `expires=…`.
+- 87 unnecessary suppressions are removed and the eight real mypy errors get typed
+  fixes; `mypy scripts tests` is clean with no suppressions.
+- `hard_gates` and `validate.py full` run the suppression check.
+
 ## v1.4.54 — 2026-11-27
 
 ### feat(gates): Markdown escape hatch — prose must name a check

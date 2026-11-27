@@ -23,7 +23,7 @@ REQUIRED_IMPORTS = ("pytest",)
 def _venv_python(root: Path) -> Path | None:
     """Prefer product venv without collapsing Unix symlinks (absolute, not resolve)."""
     try:
-        from product_venv import product_venv_python  # type: ignore
+        from product_venv import product_venv_python
 
         return product_venv_python(root)
     except ImportError:

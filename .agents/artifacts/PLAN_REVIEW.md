@@ -1,22 +1,23 @@
-# PLAN-REVIEW — markdown escape-hatch audit
+# PLAN-REVIEW — categorical lint bans
 
 **Marker:** PLAN-REVIEW
-**Plan:** `.agents/specs/2026-11-27-markdown-escape-hatch-audit-plan.md`
+**Plan:** `.agents/specs/2026-11-27-categorical-lint-bans-plan.md`
 **Reviewer:** self-review against the spec and the live gate pack
 
 ## Findings
 
-- The plan extends two existing checkers instead of adding a second gate pack.
+- Enabling families with a ratchet avoids a 60-finding cleanup blocking the ship.
   Approve.
-- The baseline ratchet keeps the whole-tree audit from failing on legacy comments
-  while still blocking new prose. Approve.
-- The Markdown scanner reads the harness `skills/` tree first, so installed copies
-  cannot create duplicate findings. Approve.
-- The DEBUG-tag check makes the existing `diagnosing-bugs` promise true instead of
-  deleting the promise. Approve.
-- Three implementation steps, so no ticket directory is needed.
+- Using the ratchet in `compliance_engine.py` keeps `validate.py full` and CI on
+  one lint signal. Approve.
+- Removing suppressions that mypy does not need is behavior-neutral and shrinks
+  the suppression surface to zero. Approve.
+- The eight real errors get typed fixes (`Any` for `fcntl`, `Callable | None`,
+  `cast`) instead of new blanket suppressions. Approve.
+- The suppression ban is absolute because the tree is already at zero; no second
+  baseline is needed.
 
 ## Verdict
 
-Approve. The approach is the smallest change that makes the escape-hatch rule
-deterministic, with a baseline rollback path.
+Approve. The change eliminates a category in configuration and code, with a named
+rollback.

@@ -108,7 +108,7 @@ def try_ensure_dev_env(root: Path, *, dry_run: bool) -> dict[str, Any] | None:
     if target.name == "ensure_product_dev_env.py":
         sys.path.insert(0, str(target.parent))
         try:
-            from ensure_product_dev_env import ensure_product_dev_env  # type: ignore
+            from ensure_product_dev_env import ensure_product_dev_env
 
             out = ensure_product_dev_env(root, dry_run=False)
             return {
@@ -305,7 +305,7 @@ def try_fix_surface_inventory_hardcodes(
     if not dry_run:
         try:
             try:
-                from vault_fs import write_text as _vw  # type: ignore
+                from vault_fs import write_text as _vw
 
                 _vw(path, new)
             except ImportError:

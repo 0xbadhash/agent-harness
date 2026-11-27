@@ -1,19 +1,19 @@
 # BEHAVIOR-REPORT
 
 **Marker:** BEHAVIOR-REPORT
-**Contract:** prose that justifies skipping a check fails the local gate unless it names the check; `AGENTS.md` cannot grow past 250 lines
-**Surface:** `scripts/check_comment_audit.py`, `scripts/check_markdown_audit.py`, `scripts/check_stale_agent_config.py`, `scripts/hard_gates.py`, `scripts/validate.py`, `scripts/check_repo_hygiene.py`
+**Contract:** categorical lint families are on and ratcheted; every type suppression is coded, owned, and current
+**Surface:** `ruff.toml`, `config/lint_ratchet_baseline.json`, `scripts/check_type_ignores.py`, `scripts/compliance_engine.py`, `scripts/hard_gates.py`, `scripts/validate.py`
 
 ## Results
 
 | Clause | Status | Evidence |
 |--------|--------|----------|
-| 1 Escape-hatch comments fail | pass | `tests/test_comment_audit.py::TestJustificationAudit` covers four phrases plus the check-reference exemption. |
-| 2 Baseline ratchet holds | pass | `--update-baseline` recorded 7 legacy findings; `--baseline … --strict` exits 0, and a new file raises the count and exits 1. |
-| 3 AGENTS.md cap is real | pass | `TestAgentsBloat` checks 251 fails, 250 passes, absent skips; `check_stale_agent_config` reports the breach. |
-| 4 `## Do not` bullets name checks | pass | The live tree passes `check(ROOT)`; the three edited sections cite `challenge.py`, `pipeline_state.py`, `check_secrets_diff.py`, `next_skill.py`, `check_hardcodes.py`, `check_dev_log_contract.py`, and `vault_schema_lint.py`. |
-| 5 Gate wiring | pass | `tests/test_hard_gates.py::test_markdown_audit_blocks_code_ship`; `validate.py full` prints `check_comment_audit` and `check_markdown_audit` as passing gates. |
-| 6 Debug tags fail | pass | `tests/test_repo_hygiene.py::test_debug_tag_fails`; the live tree prints no DEBUG findings. |
+| 1 Families selected | pass | `tests/test_lint_config.py` asserts `B`, `BLE`, `S602`, `C90`, and `max-complexity = 20`. |
+| 2 Ratchet floor | pass | `check_lint_ratchet.py --update` wrote `B904=1, B905=2, BLE001=44, C901=14`; the check prints four held lines and exits 0. |
+| 3 Suppression ban | pass | `tests/test_type_ignores.py` covers blanket, missing owner, expired, annotated, and skip dirs. |
+| 4 Tree has no suppressions | pass | `grep '# type:'` finds none in `scripts/` or `tests/`; `mypy scripts tests` reports success in 217 files. |
+| 5 Gate wiring | pass | `tests/test_hard_gates.py::test_type_ignores_blocks_code_ship`; `validate.py full` prints `check_type_ignores`. |
+| 6 Compliance agrees | pass | `compliance_engine.py` prints type_checker/linter/test_runner all exit 0; `validate.py full` is 9/9. |
 
 ## Summary
 

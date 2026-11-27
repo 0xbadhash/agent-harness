@@ -50,7 +50,7 @@ def board_lock(board: Path, *, timeout_sec: float = 30.0) -> Iterator[None]:
 def write_text(path: Path, text: str, *, user: str = "secondbrain") -> None:
     """Prefer vault_fs write-gateway; fall back to direct/sudo tee."""
     try:
-        from vault_fs import write_text as _vault_write  # type: ignore
+        from vault_fs import write_text as _vault_write
     except ImportError as exc:
         raise RuntimeError("vault_fs required; refusing sudo tee") from exc
     _vault_write(path, text)
@@ -60,7 +60,7 @@ def append_line(path: Path, line: str, *, user: str = "secondbrain") -> None:
     if not line.endswith("\n"):
         line = line + "\n"
     try:
-        from vault_fs import append_text as _vault_append  # type: ignore
+        from vault_fs import append_text as _vault_append
     except ImportError as exc:
         raise RuntimeError("vault_fs required; refusing sudo tee") from exc
     _vault_append(path, line)

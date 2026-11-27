@@ -25,7 +25,7 @@ from typing import Any, Callable
 
 def _vw(path: Path, text: str) -> None:
     try:
-        from vault_fs import write_text as _w  # type: ignore
+        from vault_fs import write_text as _w
     except ImportError:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
@@ -154,7 +154,7 @@ def _load_plugin_mirrors() -> list[str]:
 
 def _runbook_scope() -> str:
     sys.path.insert(0, str(SCRIPTS))
-    import sync_vault_devlog as svd  # type: ignore
+    import sync_vault_devlog as svd
 
     rb = svd._parse_release_runbook(ROOT / "RELEASE_RUNBOOK.md")
     scope = (rb.get("scope") or rb.get("theme") or "").strip()
@@ -399,7 +399,7 @@ def _post_hook_python(root: Path) -> tuple[str, str]:
     try:
         if str(SCRIPTS) not in sys.path:
             sys.path.insert(0, str(SCRIPTS))
-        from product_venv import product_venv_python  # type: ignore
+        from product_venv import product_venv_python
 
         vpy = product_venv_python(root)
     except ImportError:

@@ -17,6 +17,7 @@ Cancel/accept remain human (see agent-tasks/kanban-protocol.md).
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 import json
 import os
 import re
@@ -31,15 +32,15 @@ ROOT = SCRIPTS.parent
 sys.path.insert(0, str(SCRIPTS))
 
 try:
-    from kanban_schema import (  # type: ignore[import-not-found]
+    from kanban_schema import (
         KanbanCard,
         parse_board,
         render_board,
     )
 except ImportError:  # pragma: no cover — schema lives in second-brain product
-    KanbanCard = Any  # type: ignore[misc,assignment]
-    parse_board = None  # type: ignore[assignment]
-    render_board = None  # type: ignore[assignment]
+    KanbanCard = Any
+    parse_board = None
+    render_board = None
 
 PREFERRED_LANES = ["Backlog", "Spec", "Doing", "Blocked", "Done", "Archive"]
 SPEC_LANE = "Spec"
@@ -88,10 +89,11 @@ def _slug(title: str, card_id: str) -> str:
 
 
 def _write(path: Path, text: str) -> None:
+    _vault_write: Callable[[Path, str], None] | None
     try:
-        from vault_fs import write_text as _vault_write  # type: ignore
+        from vault_fs import write_text as _vault_write
     except ImportError:
-        _vault_write = None  # type: ignore
+        _vault_write = None
     if _vault_write is not None:
         _vault_write(path, text)
         return

@@ -19,12 +19,13 @@ import argparse
 import re
 import subprocess
 from pathlib import Path
+from typing import cast
 
-from product_plugin import (  # type: ignore
+from product_plugin import (
     load_product_path_prefixes,
     path_matches_product_prefixes,
 )
-from review_scope import (  # type: ignore
+from review_scope import (
     LARGE_FILES,
     LARGE_LINES,
     ScopeBaseline,
@@ -76,11 +77,9 @@ def has_cross_review_evidence(
     *,
     artifact: Path | None | object = _UNSET,
 ) -> bool:
-    art: Path | None
-    if artifact is _UNSET:
-        art = CROSS_ARTIFACT
-    else:
-        art = artifact  # type: ignore[assignment]
+    art: Path | None = (
+        CROSS_ARTIFACT if artifact is _UNSET else cast(Path | None, artifact)
+    )
     if art is not None and art.is_file() and art.read_text(encoding="utf-8").strip():
         return True
     if pr_draft.is_file():
@@ -94,12 +93,12 @@ def is_large_diff(diff: str | None) -> tuple[bool, str]:
     raw = _git_diff_stat(diff)
     # Accept legacy 2-tuple mocks (paths, churn) used in older product tests
     if isinstance(raw, tuple) and len(raw) == 2:
-        paths, churn = raw  # type: ignore[misc]
+        paths, churn = raw
         non_test = int(churn) if not isinstance(churn, int) else churn
         if not isinstance(non_test, int):
             non_test = 0
     else:
-        paths, churn, non_test = raw  # type: ignore[misc]
+        paths, churn, non_test = raw
     n = len(paths)
     prefixes = load_product_path_prefixes(ROOT)
     product = [p for p in paths if path_matches_product_prefixes(p, prefixes)]

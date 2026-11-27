@@ -91,7 +91,7 @@ def remediate_product(
     # Build synthetic results for autofix
     results = [{"name": g or "validate_full", "ok": False, "tail": ""} for g in (gates or ["validate_full", "product_smoke"])]
     try:
-        from night_shift_autofix import attempt_autofix  # type: ignore
+        from night_shift_autofix import attempt_autofix
 
         att = attempt_autofix(root, results, dry_run=dry_run, product_id=pid)
         for a in att:

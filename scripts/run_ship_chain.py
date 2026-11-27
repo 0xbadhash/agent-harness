@@ -157,7 +157,7 @@ def run_chain(
         )
     # scope for cross/behavior
     try:
-        from next_skill import decide  # type: ignore
+        from next_skill import decide
 
         nxt, meta = decide("code_review", base=base, head=head, repo=root)
     except Exception:

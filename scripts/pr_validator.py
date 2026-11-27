@@ -144,7 +144,7 @@ def score(
 
     # Hard gates pack (fail closed)
     try:
-        from hard_gates import evaluate as _hg_eval  # type: ignore
+        from hard_gates import evaluate as _hg_eval
 
         hg = _hg_eval(
             ROOT,
@@ -165,7 +165,7 @@ def score(
 
     # Soft cross_review
     try:
-        from cross_review_gate import evaluate as _xrev_eval  # type: ignore
+        from cross_review_gate import evaluate as _xrev_eval
 
         xrev = _xrev_eval(diff, pr_draft)
         if xrev.get("soft_warn"):
@@ -239,13 +239,13 @@ def main() -> int:
 
     if args.strict_cross_review:
         try:
-            from cross_review_gate import evaluate as _xrev_eval  # type: ignore
+            from cross_review_gate import evaluate as _xrev_eval
 
             xrev = _xrev_eval(args.diff, Path(args.pr_draft))
             if xrev.get("soft_warn"):
                 print("❌ strict cross_review gate failed")
                 if args.update_pipeline:
-                    import pipeline_state  # type: ignore
+                    import pipeline_state
 
                     pipeline_state._ROOT_OVERRIDE = ROOT
                     pipeline_state.set_phase("blocked", score=result["score"])
@@ -255,7 +255,7 @@ def main() -> int:
             print(f"⚠️ strict cross_review check error: {e}")
 
     if args.update_pipeline:
-        import pipeline_state  # type: ignore
+        import pipeline_state
 
         pipeline_state._ROOT_OVERRIDE = ROOT
         phase = "approved" if result["score"] >= 95 else "blocked"
@@ -263,7 +263,7 @@ def main() -> int:
         print(f"✅ pipeline → {phase} (score {result['score']})")
         if result["score"] >= 95:
             try:
-                from green_checkpoint import write as _gc_write  # type: ignore
+                from green_checkpoint import write as _gc_write
                 from pathlib import Path as _P
 
                 _gc_write(_P("."), score=float(result["score"]))
