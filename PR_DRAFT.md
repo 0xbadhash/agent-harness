@@ -23,7 +23,7 @@ the uncommitted entries.
   `python3 scripts/check_repo_hygiene.py` keeps the clean check off by default.
 - `.gitignore` now lists the backup/scratch patterns.
 
-## Evidence
+## Evidence pack
 
 | Gate | Command | Result |
 |------|---------|--------|
@@ -35,6 +35,7 @@ the uncommitted entries.
 | Hard gates | `python3 scripts/pr_validator.py --diff origin/main...HEAD` | see PR body |
 
 **Spec:** `.agents/specs/2026-11-27-pristine-garden-hygiene.md`
+**Plan:** `.agents/specs/2026-11-27-pristine-garden-hygiene-plan.md`
 
 ## Traceability
 
@@ -50,21 +51,30 @@ the uncommitted entries.
 
 ## Threat notes
 
+Security tags: `secrets`, `path-traversal`, `supply-chain`.
+
 - Asset / trust boundary: the gate runs as the operator and executes only
-  `git status --porcelain`; it reads no network and no credentials.
-- Abuse case: scratch files with novel suffixes could slip through; mitigation is
-  the explicit pattern list plus `.gitignore`, and new suffixes are one-line
-  additions to `SCRATCH_PATTERNS`.
+  `git status --porcelain`; it reads no network and no credentials, so the
+  `secrets` surface stays unchanged.
+- Abuse case: a scratch path such as `../../x.bak-1` could aim at a resolved path
+  outside the root; mitigation is `relative_to(root)` on every hit and
+  `path-traversal` is covered by the pattern tests.
+- Abuse case: a compromised tool could drop a `signal-cli-canary-*` or `.coverage*`
+  file to mask state; the gate fails on those names and `.gitignore` keeps them
+  out of the `supply-chain` commit surface.
 - Abuse case: a dirty-tree block could stall local iteration; mitigation is
   `require_clean=False` as the default for manual runs, with the clean requirement
   enabled only inside `/pr_review --validate`.
 - Abuse case: a non-repo fixture would fail closed incorrectly; mitigation is the
   warning-not-failure path covered by `test_non_repo_is_a_warning`.
 
-## Red-proof
+## Red-proof (process honesty)
+
+Red was observed before implementation: the same targeted command exited with
+`15 failed, 12 passed`, including `AttributeError: module 'check_repo_hygiene' has
+no attribute 'check'`. The retained green command is executable:
 
 ```text
-red_cmd: python3 -m pytest tests/test_repo_hygiene.py tests/test_hard_gates.py -q
 green_cmd: python3 -m pytest tests/test_repo_hygiene.py tests/test_hard_gates.py -q
 ```
 

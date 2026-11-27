@@ -5,7 +5,7 @@
 - **Status:** ready-for-agent
 - **Priority:** P1
 - **Roadmap:** CHANGELOG.md → Open work
-- **Plan:** none
+- **Plan:** `.agents/specs/2026-11-27-pristine-garden-hygiene-plan.md`
 - **Tracker:** local
 - **Constitution:** `.agents/policy/base_constraints.md` + workspace `AGENTS.md`
 - **Grill-me:** complete
