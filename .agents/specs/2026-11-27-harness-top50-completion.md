@@ -49,10 +49,8 @@ silently rot.
 
 ## Implementation Decisions
 
-- **Reserved decisions:** the release version, whether auto-merge is enabled,
-  and whether any live GitHub issue is created stay with the operator.
-- **Delegated decisions:** file names, script interfaces, test seams, and the
-  exact wording of skill rules are delegated to the agent.
+- **Reserved decisions:** release version, auto-merge enablement, and live GitHub issue creation.
+- **Delegated decisions:** file names, script interfaces, test seams, and skill wording.
 - New mechanisms live in `scripts/` with unit tests under `tests/`.
 - Skill text changes are one rule per stage; every rule names the script or gate
   that enforces it.
@@ -159,7 +157,7 @@ silently rot.
 
 The scorecard's per-item statuses were re-checked against `origin/main` at
 `6f962df`; items 1, 4, 11, 12, 15, 20, 33, 35, 36, 37, 40, 41, 42, 45, 47 are
-already wired.
+already wired. Review depth follows ADR 001 (tier by door class).
 
 ## Handoff
 

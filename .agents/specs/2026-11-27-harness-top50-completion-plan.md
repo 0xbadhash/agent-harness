@@ -45,6 +45,18 @@ checker reports and exits 0 unless `--strict` is passed.
 - **Explicit non-decisions:** no hosted queue, no new model provider, no change
   to the existing hard-gate rubric weights.
 
+## Data model
+
+| Glossary term | Entity / field | Owner |
+|---------------|----------------|-------|
+| Ticket | Markdown ticket: `id`, `kind`, `prefactor`, `status`, deps | `scripts/check_ticket_dag.py` |
+| ADR | `.agents/decisions/NNN-*.md` | `scripts/check_adr.py` |
+| Prototype | `.agents/prototypes/<slug>/variant-*.md` | `scripts/prototype_variants.py` |
+| Review tier | PR `**Door:**` → tier row | `skills/pr_review` |
+| Session cost | `.agents/artifacts/SESSION_COST.md` | `scripts/session_context.py` |
+
+**Deletion policy:** not-applicable — the harness stores no user records; generated artifacts are replaced on each run.
+
 ## File / surface map (indicative)
 
 | Area | Change |

@@ -67,6 +67,10 @@ REPRO_HEADER_RE = re.compile(
 
 # E23/E24: a spec names which decisions are the operator's and which are
 # delegated, and a user-visible ship names its feature flag.
+PLAN_RE = re.compile(r"\*\*Plan:\*\*\s*(\S+)", re.IGNORECASE)
+DATA_MODEL_RE = re.compile(
+    r"^##\s+Data model\b(.*?)(?=^##\s|\Z)", re.IGNORECASE | re.MULTILINE | re.DOTALL
+)
 RESERVED_RE = re.compile(r"\*\*Reserved decisions:\*\*\s*(\S.+)", re.IGNORECASE)
 DELEGATED_RE = re.compile(r"\*\*Delegated decisions:\*\*\s*(\S.+)", re.IGNORECASE)
 FLAG_RE = re.compile(r"\*\*Feature flag:\*\*\s*(\S.+)", re.IGNORECASE)
@@ -345,6 +349,63 @@ def check_repro_requirement(text: str) -> tuple[bool, list[str]]:
     return True, ["ok: bug-fix reproduction recorded (went red first)"]
 
 
+def _plan_path(root: Path, text: str) -> Path | None:
+    match = PLAN_RE.search(text)
+    if match is None:
+        return None
+    token = match.group(1).strip().strip("`")
+    if token.lower() in {"none", "n/a", "na", "-", "archived"}:
+        return None
+    path = (root / token).resolve()
+    if path.is_file() and str(path).startswith(str(Path(root).resolve())):
+        return path
+    return None
+
+
+def check_plan_data_model(root: Path, text: str) -> tuple[bool, list[str]]:
+    """E30 — plan entities come from glossary terms, and deletion is decided."""
+    plan = _plan_path(Path(root), text)
+    if plan is None:
+        return True, ["ok: no plan — data-model check N/A"]
+    body = plan.read_text(encoding="utf-8", errors="replace")
+    section = DATA_MODEL_RE.search(body)
+    if section is None:
+        return True, [
+            "warn: plan missing ## Data model — derive entities from glossary terms"
+        ]
+    block = section.group(1)
+    terms: list[str] = []
+    for line in block.splitlines():
+        if not line.strip().startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if not cells:
+            continue
+        term = cells[0]
+        if not term or set(term) <= set("-: "):
+            continue
+        if term.lower() in {"glossary term", "term"}:
+            continue
+        terms.append(term)
+    msgs: list[str] = []
+    if not terms:
+        msgs.append("warn: plan ## Data model has no term rows")
+    if "**Deletion policy:**" not in block:
+        msgs.append("warn: plan missing **Deletion policy:** — state the delete guard")
+    known_terms, glossary = _glossary_terms(Path(root))
+    if glossary is not None:
+        known = {term.lower() for term in known_terms}
+        unknown = [term for term in terms if term.lower() not in known]
+        if unknown:
+            return False, [
+                f"plan data-model term(s) {', '.join(unknown)} not in {glossary.name} — "
+                "use the glossary name or add the row"
+            ]
+    if not msgs:
+        msgs.append(f"ok: {len(terms)} data-model term(s) resolved")
+    return True, msgs
+
+
 def check_decision_record(text: str) -> tuple[bool, list[str]]:
     """E23 — write down which decisions are reserved and which are delegated."""
     reserved = RESERVED_RE.search(text)
@@ -447,6 +508,7 @@ def check(
             (check_ticket_blocking_edges, (root, spec_path, spec_text)),
             (check_repro_requirement, (spec_text,)),
             (check_decision_record, (spec_text,)),
+            (check_plan_data_model, (root, spec_text)),
             (check_feature_flag, (spec_text,)),
         ):
             c_ok, c_msgs = checker(*args)
