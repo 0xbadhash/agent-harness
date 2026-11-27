@@ -29,9 +29,9 @@ Use when: switching agents/sessions, blocked, or user says “handoff / delegate
 
 ## Do not
 
-- Advance pipeline phases
-- Invent secrets or host topology
-- Command the receiver to skip `/code_review` on code ships
+- Advance pipeline phases — check: `scripts/pipeline_state.py` enforces `ALLOWED_TRANSITIONS`.
+- Invent secrets or host topology — check: `scripts/check_secrets_diff.py`.
+- Command the receiver to skip `/code_review` on code ships — check: `scripts/next_skill.py` routes and `scripts/check_stale_agent_config.py` verifies the refs.
 
 ## Handoff
 

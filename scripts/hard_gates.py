@@ -644,11 +644,27 @@ def evaluate(
                 )
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: repo_hygiene error: {e}")
+
+        try:
+            from check_markdown_audit import check as _markdown_check  # type: ignore
+
+            md_ok, md_msgs = _markdown_check(root)
+            if not md_ok:
+                for msg in md_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: markdown_audit — {msg}")
+            else:
+                skipped.append(
+                    "markdown_audit (" + (md_msgs[0] if md_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: markdown_audit error: {e}")
     else:
         skipped.append("lint_ratchet (prose-only)")
         skipped.append("comment_audit (prose-only)")
         skipped.append("correction_checks (prose-only)")
         skipped.append("repo_hygiene (prose-only)")
+        skipped.append("markdown_audit (prose-only)")
 
     return HardGatesResult(
         ok=len(violations) == 0,

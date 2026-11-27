@@ -1,3 +1,19 @@
+## v1.4.54 — 2026-11-27
+
+### feat(gates): Markdown escape hatch — prose must name a check
+
+- `check_comment_audit` gains an `escape_hatch` class for justification prose
+  unless the line names the check that bounds it, plus a per-`path::kind`
+  baseline ratchet (`config/comment_audit_baseline.json`).
+- New `check_markdown_audit` caps `AGENTS.md` at 250 lines and requires every
+  `## Do not` bullet in a skill to name an enforcing check; the harness tree is
+  clean.
+- `check_stale_agent_config` calls the cap; `validate.py full` runs the comment
+  audit (baseline) and the Markdown audit; `hard_gates` reports
+  `markdown_audit` for non-prose ships.
+- `check_repo_hygiene` fails on `[DEBUG-…]` tags, matching the diagnosing-bugs
+  skill.
+
 ## v1.4.53 — 2026-11-27
 
 ### feat(gates): pristine garden — scratch state fails the pack

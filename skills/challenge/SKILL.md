@@ -53,10 +53,10 @@ written to `.agents/artifacts/CHALLENGE.md` and the vault note is lost.
 
 ## Do not
 
-- Apply a patch from the decision.
-- Replace `/code_review`, `/cross_review`, or `/pr_review`.
-- Invent a missing model's side. Exit 1 means stop. The vault stays unchanged.
-- If the vault write fails after both critiques, the decision is still printed and the exit code is 1. Say that. Do not claim it was logged.
+- Apply a patch from the decision — check: `scripts/challenge.py` writes only the decision and has no patch path.
+- Replace `/code_review`, `/cross_review`, or `/pr_review` — check: `scripts/next_skill.py` owns the route.
+- Invent a missing model's side. Exit 1 means stop; `scripts/challenge.py` leaves the vault unchanged.
+- If the vault write fails after both critiques, the decision is still printed and the exit code is 1. Say that. Do not claim it was logged — check: `scripts/challenge.py` returns 1.
 
 ## Models
 

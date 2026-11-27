@@ -125,6 +125,15 @@ def check(root: Path) -> tuple[bool, list[str]]:
     if not (root / "scripts" / "next_skill.py").is_file():
         missing.append("scripts/next_skill.py missing")
 
+    # AGENTS.md hard cap: prose cannot grow without a check
+    try:
+        from check_markdown_audit import check_agents_bloat  # type: ignore
+
+        bloat_ok, bloat_msgs = check_agents_bloat(root)
+        if not bloat_ok:
+            missing.extend(m.removeprefix("fail: ") for m in bloat_msgs)
+    except ImportError:
+        missing.append("scripts/check_markdown_audit.py missing")
 
     if missing:
         # cap noise

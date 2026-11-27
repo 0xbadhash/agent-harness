@@ -61,6 +61,25 @@ class TestScratchArtifacts(unittest.TestCase):
             ok, msgs = crh.check(root)
             self.assertTrue(ok, msgs)
 
+    def test_debug_tag_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "scripts").mkdir()
+            (root / "scripts" / "debug.py").write_text(
+                'print("' + "[DEBUG-" + 'a4f2] payload")\n', encoding="utf-8"
+            )
+            ok, msgs = crh.check(root)
+            self.assertFalse(ok, msgs)
+            self.assertTrue(any("[DEBUG-" in m for m in msgs), msgs)
+
+    def test_debug_tag_in_skill_text_passes(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "skills").mkdir()
+            (root / "skills" / "S.md").write_text("tag `[DEBUG-<id>]`", encoding="utf-8")
+            ok, msgs = crh.check(root)
+            self.assertTrue(ok, msgs)
+
 
 class TestDirtyTree(unittest.TestCase):
     def _git(self, root: Path, *args: str) -> subprocess.CompletedProcess:
