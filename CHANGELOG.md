@@ -1,3 +1,16 @@
+## v1.4.53 — 2026-11-27
+
+### feat(gates): pristine garden — scratch state fails the pack
+
+- `check_repo_hygiene` gains `check(root, require_clean=False)`: backup/scratch
+  artifacts (`*.bak-*`, `*.orig`, `*.rej`, `.coverage*`, `.venv-*bak*`,
+  `signal-cli-canary-*`) fail, and a dirty git tree fails when the clean
+  requirement is on.
+- `hard_gates` runs the hygiene gate for non-prose ships and reports
+  `hard_gates: repo_hygiene`; prose-only ships record an explicit skip.
+- `.gitignore` lists the scratch patterns; the live
+  `config/night_shift_runtime.yaml.bak-t1659u` is removed.
+
 ## v1.4.52 — 2026-11-27
 
 ### feat(gates): corrections become deterministic checks

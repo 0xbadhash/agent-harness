@@ -1,19 +1,20 @@
 # BEHAVIOR-REPORT
 
 **Marker:** BEHAVIOR-REPORT
-**Contract:** `hard_gates` fails closed on a lint regression, a new history comment, and a review without a correction → check map
-**Surface:** `scripts/hard_gates.py`, `scripts/check_lint_ratchet.py`, `scripts/check_comment_audit.py`, `scripts/check_correction_checks.py`
+**Contract:** `hard_gates` fails closed when scratch state, a `.bak` sibling, or an uncommitted path is present
+**Surface:** `scripts/check_repo_hygiene.py`, `scripts/hard_gates.py`
 
 ## Results
 
 | Clause | Status | Evidence |
 |--------|--------|----------|
-| 1 Missing correction map fails | pass | On the pre-change `CODE_REVIEW.md` (no `## Correction checks`), `python3 scripts/check_correction_checks.py --root .` printed the missing-section message and exited 1. With the section added it exits 0. |
-| 2 Ratchet holds at baseline | pass | `python3 scripts/check_lint_ratchet.py` printed `ratchet: E701 improved 3 → 0` and two more held/improved lines; exit 0. |
-| 3 Diff comment audit clean | pass | `python3 scripts/check_comment_audit.py --diff 0336317...HEAD --strict` reports no new history/dead-code/TODO comments on the added lines. |
-| 4 Gate wiring exercised | pass | `tests/test_hard_gates.py::test_new_checks_block_code_ship` asserts all three `hard_gates:` violations; `test_new_checks_skip_for_prose` asserts the prose skip list. |
+| 1 Scratch patterns fail | pass | `tests/test_repo_hygiene.py::TestScratchArtifacts::test_each_scratch_pattern_fails` covers `x.bak-1`, `x.orig`, `x.rej`, `.coverage`, `.coverage.abc123`, `.venv-oldbak`, `signal-cli-canary-1`; all report `fail: scratch artifact present`. |
+| 2 Dirty tree fails, commit clears it | pass | `test_dirty_repo_fails_when_required` initializes a temp repo, leaves an untracked file, sees the failure, commits it, and observes a pass. |
+| 3 Non-repo warns | pass | `test_non_repo_is_a_warning` asserts ok plus a `warn:` message. |
+| 4 Gate wiring exercised | pass | `tests/test_hard_gates.py::test_repo_hygiene_blocks_code_ship` asserts `hard_gates: repo_hygiene`; `::test_repo_hygiene_skips_for_prose` asserts the prose skip. |
+| 5 Live repo is clean of scratch | pass | `python3 scripts/check_repo_hygiene.py` reports `repo hygiene ok` with only the pre-existing TODO warnings. |
 
 ## Summary
 
-- pass: 4 · fail: 0 · blocked: 0 · out_of_scope: 0
+- pass: 5 · fail: 0 · blocked: 0 · out_of_scope: 0
 - NEXT_SKILL=/pr_review --validate

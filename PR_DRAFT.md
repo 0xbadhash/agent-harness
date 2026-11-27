@@ -1,121 +1,78 @@
-# PR Draft: Correction → check (T2087U item 1)
+# PR Draft: Pristine garden: scratch artifacts and dirty tree fail the pack
 
 **Range:** `origin/main..HEAD`
 
-## Summary
-
-- Wire the existing lint ratchet and comment audit into the fail-closed `hard_gates` pack.
-- Add `scripts/check_correction_checks.py`: every accepted review finding names a check or a signed `no-check` reason.
-- Document the rule and the `## Correction checks` artifact section in `skills/code_review/SKILL.md`.
-- Includes one prior commit that lands skill text already expected by main's committed T2086U tests, so main is green before this ship.
-
 ## What Problem This Solves
 
-Before this change, `/pr_review --validate` could pass with a lint regression, a new history/dead-code comment, or review findings recorded only as prose. The ratchet ran only in daytime CI, the comment audit ran only in unit tests, and nothing connected an accepted finding to a deterministic check. Corrections therefore stayed in review notes, where the next agent reads them as optional.
+The harness asked product repos for a clean tree while its own tree carried
+backup files, a coverage database, and uncommitted cross-window edits.
+`check_repo_hygiene.py` only looked for `MagicMock` imports and orphan TODOs, so
+scratch files passed the gate and agents copied what looked established.
 
 ## Why This Change Was Made
 
-The source talk's rule at 3:10 is to turn each correction into a deterministic check. Both checks already existed; this change wires them into the local ship gate and adds the missing finding → check map. The alternative (leave the ratchet in CI) was rejected because the local `/pr_review --validate` pack is what blocks a push.
+`/pr_review --validate` should refuse a ship whose working tree still holds
+scratch state. The gate now names the offending path and, for the validate path,
+the uncommitted entries.
 
 ## User Impact
 
-Harness operators and agents see earlier, named failures from `/pr_review --validate`. A product with an older `CODE_REVIEW.md` must add a `## Correction checks` section; the failure message states the heading. No runtime API or product behavior changes.
-
-## Merge Danger
-
-**Door:** two-way
-**Blast Radius:** local
-
-## Smallest visual change
-
-The smallest slice is one command: `python3 scripts/check_correction_checks.py --root .` exits 1 when the review map is missing and 0 when every finding is mapped.
-
-## Before/after
-
-Before, the new checks did not exist in the pack:
-
-```text
-$ python3 -m pytest tests/test_correction_checks.py -q
-E   ModuleNotFoundError: No module named 'check_correction_checks'
-```
-
-After, the same tests and the integration test pass:
-
-```text
-$ python3 -m pytest tests/test_correction_checks.py tests/test_comment_audit.py \
-    tests/test_lint_ratchet.py tests/test_hard_gates.py -q
-79 passed
-```
+- Operators see `hard_gates: repo_hygiene — fail: scratch artifact present: …`
+  while scratch state remains.
+- `/pr_review --validate` fails on a dirty tree; manual
+  `python3 scripts/check_repo_hygiene.py` keeps the clean check off by default.
+- `.gitignore` now lists the backup/scratch patterns.
 
 ## Evidence
 
-```text
-targeted: 79 passed (checker + hard_gates tests)
-suite: 477 passed, 2 skipped
-smoke: bash scripts/smoke_unit.sh
-```
+| Gate | Command | Result |
+|------|---------|--------|
+| Red proof | `python3 -m pytest tests/test_repo_hygiene.py tests/test_hard_gates.py -q` | `15 failed, 12 passed` before implementation |
+| Targeted tests | same command after implementation | `20 passed, 7 subtests passed` |
+| Full suite | `python3 -m pytest -q` | `479 passed, 2 skipped` |
+| Smoke | `python3 scripts/product_smoke.py --root .` | 2/2 steps passed |
+| Validate | `python3 scripts/validate.py full` | 6/6 gates passed |
+| Hard gates | `python3 scripts/pr_validator.py --diff origin/main...HEAD` | see PR body |
 
-## Evidence pack
-
-| Item | Result |
-|------|--------|
-| hard_gates | run in `/pr_review --validate` |
-| pytest | 477 passed, 2 skipped |
-| smoke | `bash scripts/smoke_unit.sh` exits 0 with the repaired suite |
-| lint ratchet | `python3 scripts/check_lint_ratchet.py` holds at baseline |
-
-## Spec
-
-**Spec:** `.agents/specs/2026-11-27-correction-checks.md`
-**Plan:** `.agents/specs/2026-11-27-correction-checks-plan.md`
+**Spec:** `.agents/specs/2026-11-27-pristine-garden-hygiene.md`
 
 ## Traceability
 
 | AC | Test / smoke |
 |----|----------------|
-| AC-1 ratchet regression fails | `tests/test_lint_ratchet.py` |
-| AC-2 diff comment audit | `tests/test_comment_audit.py` |
-| AC-3 correction map | `tests/test_correction_checks.py` |
-| AC-4 hard_gates wiring | `tests/test_hard_gates.py::test_new_checks_block_code_ship` |
-| AC-5 skill documentation | `python3 scripts/verify_skills.py` + review of `skills/code_review/SKILL.md` |
-| AC-6 unit tests | `python3 -m pytest -q` |
-| AC-7 smoke | `bash scripts/smoke_unit.sh` |
-| AC-8 no secrets | `python3 scripts/check_secrets_diff.py` in hard_gates |
+| AC-1 `check` fails on each scratch pattern | `tests/test_repo_hygiene.py::TestScratchArtifacts::test_each_scratch_pattern_fails` |
+| AC-2 dirty repo fails, committed repo passes | `tests/test_repo_hygiene.py::TestDirtyTree::test_dirty_repo_fails_when_required` |
+| AC-3 hard_gates reports `repo_hygiene`; prose skips | `tests/test_hard_gates.py::test_repo_hygiene_blocks_code_ship`, `::test_repo_hygiene_skips_for_prose` |
+| AC-4 `.gitignore` + no live `.bak-*` | `cat .gitignore`; `python3 scripts/check_repo_hygiene.py` (no scratch hits) |
+| AC-5 full suite green | `python3 -m pytest -q` → 479 passed, 2 skipped |
+| AC-6 smoke and validate | `product_smoke.py --root .` 2/2; `validate.py full` 6/6 |
+| AC-7 no secrets | `check_secrets_diff.py` inside `hard_gates` |
 
 ## Threat notes
 
-- Asset / trust boundary: **secrets** in the diff stay covered by `check_secrets_diff.py`; the new checks read repo-local files and run `git diff` and `ruff` with fixed arguments.
-- Abuse case / mitigation: a reviewer can write `no-check: <reason>`, but the reason is length-checked and stays visible in the artifact; the map itself cannot be omitted.
-- Failure mode / **supply-chain**: a missing `ruff` fails the gate closed with an install/`--report` message; the gate never downloads a tool.
+- Asset / trust boundary: the gate runs as the operator and executes only
+  `git status --porcelain`; it reads no network and no credentials.
+- Abuse case: scratch files with novel suffixes could slip through; mitigation is
+  the explicit pattern list plus `.gitignore`, and new suffixes are one-line
+  additions to `SCRATCH_PATTERNS`.
+- Abuse case: a dirty-tree block could stall local iteration; mitigation is
+  `require_clean=False` as the default for manual runs, with the clean requirement
+  enabled only inside `/pr_review --validate`.
+- Abuse case: a non-repo fixture would fail closed incorrectly; mitigation is the
+  warning-not-failure path covered by `test_non_repo_is_a_warning`.
 
-## Red-proof (process honesty)
-
-Red was observed before implementation: `python3 -m pytest tests/test_correction_checks.py -q`
-exited with `ModuleNotFoundError: No module named 'check_correction_checks'`.
-The retained green command is executable:
+## Red-proof
 
 ```text
-green_cmd: python3 -m pytest tests/test_lint_ratchet.py tests/test_correction_checks.py tests/test_comment_audit.py tests/test_hard_gates.py -q
+red_cmd: python3 -m pytest tests/test_repo_hygiene.py tests/test_hard_gates.py -q
+green_cmd: python3 -m pytest tests/test_repo_hygiene.py tests/test_hard_gates.py -q
 ```
-
-## Cross-review
-
-**Marker:** CROSS-REVIEW
-
-Self-check for this small harness slice: the new gate calls use the same
-`(ok, messages)` contract as the existing pack; no product code is touched; the
-prerequisite commit only lands text that main's committed tests already assert.
-
-## Test plan
-
-- [x] Targeted checker tests (red → green)
-- [x] Full `pytest` suite
-- [x] `bash scripts/smoke_unit.sh`
-- [x] `python3 scripts/check_lint_ratchet.py`
 
 ## Things that look bad but are actually fine
 
-1. `CODE_REVIEW.md` now requires a new section. That is the contract change; the gate names the exact heading, and reviews with no findings write `- none`.
-2. The comment audit runs on added diff lines only. Pre-existing tree comments stay out of scope so an unrelated ship is not blocked.
-3. `check_lint_ratchet.check` fails when `ruff` is absent. Failing closed matches the rest of the pack; the repo ships ruff in `.venv` and on PATH.
-4. The first commit lands T2086U skill text. It resolves a red main (tests already committed, text left uncommitted) and adds no new T2087U scope.
+1. `check_repo_hygiene.py` still warns on three ticket-less TODOs in tests; the
+   spec keeps that warning non-failing on purpose.
+2. `bin/restore_product_venvs.sh` stays untracked and locally excluded; it is a
+   restore tool, not scratch state.
+3. The clean-tree check warns on a non-git fixture root so product fixtures that
+   copy scripts keep working.

@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_comment_audit as cca
 import check_correction_checks as ccc
 import check_lint_ratchet as clr
+import check_repo_hygiene as crh
 import hard_gates as hg
 
 
@@ -240,6 +241,41 @@ class TestHardGates(unittest.TestCase):
             self.assertTrue(any("lint_ratchet" in s for s in r.skipped))
             self.assertTrue(any("comment_audit" in s for s in r.skipped))
             self.assertTrue(any("correction_checks" in s for s in r.skipped))
+
+    def test_repo_hygiene_blocks_code_ship(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = self._valid_code_draft(root)
+            with (
+                mock.patch.object(hg, "_scope_flags", return_value=(False, False)),
+                mock.patch.object(hg, "_secrets_ok", return_value=True),
+                mock.patch.object(clr, "check", return_value=(True, ["ok"])),
+                mock.patch.object(cca, "check", return_value=(True, ["ok"])),
+                mock.patch.object(ccc, "check", return_value=(True, ["ok"])),
+                mock.patch.object(
+                    crh, "check", return_value=(False, ["fail: scratch artifact x.bak-1"])
+                ),
+            ):
+                r = hg.evaluate(root, draft, diff=None)
+            self.assertFalse(r.ok)
+            self.assertTrue(any("repo_hygiene" in v for v in r.violations), r.violations)
+
+    def test_repo_hygiene_skips_for_prose(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = root / "PR_DRAFT.md"
+            _write(
+                draft,
+                "## What\n**Spec waiver:** docs-only\n"
+                "## Red-proof\nTDD N/A docs-only\n",
+            )
+            with (
+                mock.patch.object(hg, "_scope_flags", return_value=(True, False)),
+                mock.patch.object(crh, "check", return_value=(False, ["fail: x.bak-1"])),
+            ):
+                r = hg.evaluate(root, draft, diff=None)
+            self.assertTrue(r.ok, r.violations)
+            self.assertTrue(any("repo_hygiene" in s for s in r.skipped))
 
 
 if __name__ == "__main__":
