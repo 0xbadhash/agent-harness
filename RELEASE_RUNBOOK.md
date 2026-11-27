@@ -1,21 +1,21 @@
-# RELEASE_RUNBOOK — agent-harness v1.4.54
+# RELEASE_RUNBOOK — agent-harness v1.4.55
 
 **Score:** 100 · phase `approved` → `shipped` · 2026-11-27
 **Branch:** `main`
-**Tag:** `v1.4.54` (on the release merge commit)
-**Scheme:** `VERSION` file, patch bump `1.4.53` → `1.4.54`. Roadmap (`CHANGELOG.md`) lists the Markdown escape-hatch audit.
+**Tag:** `v1.4.55` (on the release merge commit)
+**Scheme:** `VERSION` file, patch bump `1.4.54` → `1.4.55`. Roadmap (`CHANGELOG.md`) lists the categorical lint bans.
 
 ## Scope
 
-Markdown escape hatch (T2087U item 3):
+Categorical lint bans and typed suppressions (T2087U item 4):
 
-- `check_comment_audit` flags justification prose (`escape_hatch`) unless the line
-  names a check; whole-tree runs ratchet against a per-`path::kind` baseline.
-- `check_markdown_audit` caps `AGENTS.md` at 250 lines and requires every
-  `## Do not` bullet to name an enforcing check.
-- `check_stale_agent_config` calls the cap; `validate.py full` runs both audits;
-  `hard_gates` reports `markdown_audit`.
-- `check_repo_hygiene` fails on `[DEBUG-…]` tags.
+- `ruff.toml` selects `B`, `BLE`, `S602`, and `C90` (mccabe 20) with the ratchet
+  as the pass/fail signal.
+- `compliance_engine.py` calls the ratchet when present.
+- `check_type_ignores.py` bans blanket suppressions; every one names `[code]`,
+  `owner=…`, and a future `expires=…`.
+- 87 unnecessary suppressions removed; eight mypy errors fixed with typed
+  annotations; `mypy scripts tests` clean.
 
 ## Smoke
 
@@ -24,8 +24,9 @@ Markdown escape hatch (T2087U item 3):
 | smoke:hardcodes | `python3 scripts/product_smoke.py --root .` → `scripts/check_hardcodes.py` | 0 |
 | smoke:unit | `python3 scripts/product_smoke.py --root .` → `bash scripts/smoke_unit.sh` | 0 |
 | web_e2e | `python3 scripts/check_web_e2e.py --root .` | 0 (skipped: no website/app UI) |
-| validate full | `python3 scripts/validate.py full` | 0 (8/8 gates) |
-| pytest | `python3 -m pytest -q` | 0 (497 passed, 2 skipped) |
+| validate full | `python3 scripts/validate.py full` | 0 (9/9 gates) |
+| pytest | `python3 -m pytest -q` | 0 (507 passed, 2 skipped) |
+| mypy | `python3 -m mypy scripts tests` | 0 (Success, 217 files) |
 
 `product_smoke` summary: `✅ 2 smoke step(s) passed`.
 
@@ -46,28 +47,30 @@ this ship does not modify their branches.
 | Item | Result |
 |------|--------|
 | hard_gates | pass (pr_validator score 100) |
-| pytest | 497 passed, 2 skipped |
+| pytest | 507 passed, 2 skipped |
+| mypy | Success: no issues in 217 files (zero suppressions) |
 | smoke | 2/2 steps, exit 0 |
-| validate full | 8/8 gates |
-| lint ratchet | E701 held below baseline |
+| validate full | 9/9 gates |
+| lint ratchet | B904=1, B905=2, BLE001=44, C901=14 held |
 | comment audit | 7 known findings, no increase |
 | correction checks | 6 findings mapped |
-| markdown audit | clean (no `AGENTS.md`; three `## Do not` sections edited) |
+| type ignores | none in the tree |
 | repo hygiene | clean (three pre-existing ticket-less TODO warnings) |
 
 ## Rollback
 
-Revert the release commit and the feature commit, then delete tag `v1.4.54`.
-Deleting the two `validate.py` gate calls and the `hard_gates` `markdown_audit`
-call restores the old behavior. No data or product state is involved.
+Revert the release commit and the feature commit, then delete tag `v1.4.55`.
+Restoring `E,F,W` in `ruff.toml` and deleting the `type_ignores` calls returns the
+old gate. The suppression removals are annotation-only; keeping them is harmless.
+No data or product state is involved.
 
 ## Things that look bad but are actually fine
 
-1. Seven legacy comment findings remain in the baseline; the ratchet blocks new
-   ones and rewards declines.
-2. `check_markdown_audit.py` prints `ok: no AGENTS.md` in this repo. The 250-line
-   cap is exercised by tests and applies to product trees.
-3. Installed `.agents/skills` copies lag `skills/`; the scanner reads the SoT tree
-   only and `install_into_product.sh` refreshes the copies.
+1. `BLE001=44` and `C901=14` stay in the baseline. The ratchet freezes them and
+   the spec names the burn-down follow-up.
+2. The diff touches 50 paths. 87 edits are one-line suppression removals; mypy and
+   the full suite are green.
+3. `compliance_engine` now runs the ratchet instead of raw ruff. Products without
+   the script keep the old path.
 4. `validate full` writes `agent-tasks/schema-lint-report.md` to the configured
    vault. This is existing tooling behavior, not a harness-tree edit.
