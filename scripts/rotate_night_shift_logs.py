@@ -40,7 +40,7 @@ DEFAULT_VAULT = Path(
 def _vw(path: Path, text: str) -> None:
     """Vault write via gateway when available."""
     try:
-        from vault_fs import write_text as _w  # type: ignore
+        from vault_fs import write_text as _w
     except ImportError:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")

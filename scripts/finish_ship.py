@@ -137,7 +137,7 @@ def evaluate(
     # Fail-closed origin gate: auto-push HEAD+tags then verify ls-remote
     if require_push and not dirty:
         try:
-            from release_origin_gate import ensure_release_on_origin  # type: ignore
+            from release_origin_gate import ensure_release_on_origin
 
             do_push = not skip_origin_push
             ok_gate, gate_msgs = ensure_release_on_origin(root, do_push=do_push)

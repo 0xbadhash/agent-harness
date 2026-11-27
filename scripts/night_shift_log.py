@@ -209,7 +209,7 @@ def write_night_shift_log(
     text = render_log_document(product_id, timeline, bodies)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        from vault_fs import write_text as _vault_write  # type: ignore
+        from vault_fs import write_text as _vault_write
     except ImportError:  # pragma: no cover
         log_path.write_text(text, encoding="utf-8")
     else:

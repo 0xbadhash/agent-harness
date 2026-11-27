@@ -127,7 +127,7 @@ def check(root: Path) -> tuple[bool, list[str]]:
 
     # AGENTS.md hard cap: prose cannot grow without a check
     try:
-        from check_markdown_audit import check_agents_bloat  # type: ignore
+        from check_markdown_audit import check_agents_bloat
 
         bloat_ok, bloat_msgs = check_agents_bloat(root)
         if not bloat_ok:

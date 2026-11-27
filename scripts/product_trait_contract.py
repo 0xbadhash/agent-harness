@@ -482,8 +482,8 @@ def evaluate_categories(root: Path) -> tuple[bool, list[str], dict[str, Any]]:
     # client_secrets — property_tests + secret-wall S-id
     if traits["client_secrets"]["active"]:
         try:
-            from check_property_tests import _load_modules  # type: ignore
-            from check_property_tests import check as _prop  # type: ignore
+            from check_property_tests import _load_modules
+            from check_property_tests import check as _prop
 
             enabled, modules = _load_modules(root)
         except Exception as e:  # noqa: BLE001

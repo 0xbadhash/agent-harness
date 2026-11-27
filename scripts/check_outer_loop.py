@@ -68,7 +68,7 @@ def _resolve(root: Path, rel: str) -> Path | None:
 
 def _is_large(root: Path, base: str, head: str) -> tuple[bool, str]:
     try:
-        from review_scope import build_baseline, is_large_baseline  # type: ignore
+        from review_scope import build_baseline, is_large_baseline
 
         b = build_baseline(root, base=base, head=head)
         large, detail = is_large_baseline(b, product_root=root)

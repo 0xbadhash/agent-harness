@@ -35,7 +35,7 @@ def _large(baseline, repo: Path | None = None) -> bool:
     prefixes_configured = False
     if repo is not None:
         try:
-            from product_plugin import (  # type: ignore
+            from product_plugin import (
                 load_product_path_prefixes,
                 path_matches_product_prefixes,
             )
@@ -135,7 +135,7 @@ def _infra_required(repo: Path) -> bool:
         return False
     # Prefer structured plugin keys when PyYAML (or minimal parse) is available
     try:
-        from product_plugin import load_plugin  # type: ignore
+        from product_plugin import load_plugin
 
         data = load_plugin(root)
         if data:
@@ -205,7 +205,7 @@ def decide(
 
     # Gap 3: if HEAD already passed smoke+hard_gates, do not extra-loop
     try:
-        from green_checkpoint import head_is_green  # type: ignore
+        from green_checkpoint import head_is_green
 
         _green, _gmsg = head_is_green(Path(repo).resolve())
     except Exception:  # noqa: BLE001

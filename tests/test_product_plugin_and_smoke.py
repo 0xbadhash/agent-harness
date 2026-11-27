@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 def test_load_product_path_prefixes_from_plugin(tmp_path: Path):
-    import product_plugin as pp  # type: ignore
+    import product_plugin as pp
 
     plugin = tmp_path / ".agents" / "product_plugin.yaml"
     plugin.parent.mkdir(parents=True)
@@ -22,20 +22,20 @@ def test_load_product_path_prefixes_from_plugin(tmp_path: Path):
 
 
 def test_load_product_path_prefixes_missing_plugin_returns_empty(tmp_path: Path):
-    import product_plugin as pp  # type: ignore
+    import product_plugin as pp
 
     assert pp.load_product_path_prefixes(tmp_path) == []
 
 
 def test_path_matches_prefix():
-    import product_plugin as pp  # type: ignore
+    import product_plugin as pp
 
     assert pp.path_matches_product_prefixes("src/foo.ts", ["src/"]) is True
     assert pp.path_matches_product_prefixes("docs/x.md", ["src/"]) is False
 
 
 def test_is_large_diff_uses_plugin_prefixes(monkeypatch, tmp_path: Path):
-    import cross_review_gate as gate  # type: ignore
+    import cross_review_gate as gate
 
     plugin = tmp_path / ".agents" / "product_plugin.yaml"
     plugin.parent.mkdir(parents=True)
@@ -54,7 +54,7 @@ def test_is_large_diff_uses_plugin_prefixes(monkeypatch, tmp_path: Path):
 
 
 def test_run_smoke_executes_cmds(tmp_path: Path):
-    import product_smoke as smoke  # type: ignore
+    import product_smoke as smoke
 
     agents = tmp_path / ".agents"
     agents.mkdir()
@@ -72,7 +72,7 @@ def test_run_smoke_executes_cmds(tmp_path: Path):
 
 
 def test_run_smoke_fails_on_nonzero(tmp_path: Path):
-    import product_smoke as smoke  # type: ignore
+    import product_smoke as smoke
 
     agents = tmp_path / ".agents"
     agents.mkdir()
@@ -87,13 +87,13 @@ def test_run_smoke_fails_on_nonzero(tmp_path: Path):
 
 
 def test_run_smoke_empty_plugin_returns_empty(tmp_path: Path):
-    import product_smoke as smoke  # type: ignore
+    import product_smoke as smoke
 
     assert smoke.run_smoke(tmp_path) == []
 
 
 def test_pr_validator_rubric_uses_suite_green_not_tdd_evidence():
-    import pr_validator as pv  # type: ignore
+    import pr_validator as pv
 
     assert "suite_green" in pv.RUBRIC
     assert "tdd_evidence" not in pv.RUBRIC
@@ -104,7 +104,7 @@ def test_pr_validator_rubric_uses_suite_green_not_tdd_evidence():
 
 
 def test_parse_minimal_plugin_multiple_smoke_entries():
-    import product_plugin as pp  # type: ignore
+    import product_plugin as pp
 
     text = """
 product_id: demo

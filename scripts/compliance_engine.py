@@ -89,9 +89,14 @@ def main() -> int:
     changed_py_files = [
         f for f in changed if f.endswith(".py") and (ROOT / f).is_file()
     ]
-    if args.diff and changed_py_files:
+    # The lint gate is the ratchet: rule families are on and legacy counts are
+    # frozen, so raw `ruff check` is not the pass/fail signal.
+    ratchet = ROOT / "scripts" / "check_lint_ratchet.py"
+    if ratchet.is_file():
+        linter_cmd = [py, str(ratchet), "--root", str(ROOT)]
+    elif args.diff and changed_py_files:
         linter_cmd = [py, "-m", "ruff", "check"] + changed_py_files
-    elif args.diff and not changed_py_files:
+    elif args.diff:
         linter_cmd = ["true"]  # No existing python files in diff
     else:
         # Only dirs that exist (many products have no bin/; ruff E902 on missing path)

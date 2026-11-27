@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 def test_product_venv_python_keeps_posix_symlink_under_venv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    import product_venv as pv  # type: ignore
+    import product_venv as pv
 
     monkeypatch.setattr(sys, "platform", "linux")
     vbin = tmp_path / ".venv" / "bin"
@@ -39,7 +39,7 @@ def test_product_venv_python_keeps_posix_symlink_under_venv(
 def test_product_venv_python_windows_scripts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    import product_venv as pv  # type: ignore
+    import product_venv as pv
 
     monkeypatch.setattr(sys, "platform", "win32")
     scripts = tmp_path / ".venv" / "Scripts"
@@ -55,7 +55,7 @@ def test_product_venv_python_windows_scripts(
 def test_rewrite_smoke_python_uses_venv(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
-    import product_venv as pv  # type: ignore
+    import product_venv as pv
 
     monkeypatch.setattr(sys, "platform", "linux")
     vbin = tmp_path / ".venv" / "bin"
@@ -72,14 +72,14 @@ def test_rewrite_smoke_python_uses_venv(
 
 
 def test_rewrite_leaves_absolute_alone(tmp_path: Path):
-    import product_venv as pv  # type: ignore
+    import product_venv as pv
 
     cmd = pv.rewrite_smoke_python(["/usr/bin/python3", "-c", "pass"], tmp_path)
     assert cmd[0] == "/usr/bin/python3"
 
 
 def test_product_venv_python_missing(tmp_path: Path):
-    import product_venv as pv  # type: ignore
+    import product_venv as pv
 
     assert pv.product_venv_python(tmp_path) is None
 
@@ -88,7 +88,7 @@ def test_night_shift_venv_python_keeps_symlink(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
     """night_shift_readiness._venv_python must not collapse to system path."""
-    import night_shift_readiness as nsr  # type: ignore
+    import night_shift_readiness as nsr
 
     monkeypatch.setattr(sys, "platform", "linux")
     # Night sets NIGHT_SHIFT_PRODUCT_PYTHON for the product under test; clear it

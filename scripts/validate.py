@@ -31,7 +31,7 @@ def _run(cmd: list[str], label: str) -> int:
 def _project_label() -> str | None:
     try:
         sys.path.insert(0, str(SCRIPTS))
-        from vault_resolve import load_vault_config  # type: ignore
+        from vault_resolve import load_vault_config
 
         cfg = load_vault_config(ROOT)
         label = (cfg.get("project_label") or cfg.get("product_id") or "").strip()
@@ -52,7 +52,7 @@ def _resolve_vault() -> Path | None:
     """Return vault root if present and enabled; else None (gate skipped)."""
     try:
         sys.path.insert(0, str(SCRIPTS))
-        from vault_resolve import resolve_vault_root  # type: ignore
+        from vault_resolve import resolve_vault_root
 
         v = resolve_vault_root(cli_vault=None, product_root=ROOT, require_enabled=False)
         if v is not None:
@@ -188,6 +188,12 @@ def main() -> int:
             _run(
                 [py, str(SCRIPTS / "check_markdown_audit.py"), "--root", str(ROOT)],
                 "check_markdown_audit",
+            )
+        )
+        exits.append(
+            _run(
+                [py, str(SCRIPTS / "check_type_ignores.py"), "--root", str(ROOT)],
+                "check_type_ignores",
             )
         )
         exits.append(_run([py, str(SCRIPTS / "check_module_coverage.py")], "check_module_coverage"))

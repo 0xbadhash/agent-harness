@@ -1,10 +1,12 @@
 # agent-harness SoT — compliance_engine runs `ruff check` without per-product config.
-# Keep rules to classic correctness (E/F/W); style churn is out of scope for ship gates.
+# Classic correctness plus the constructs agents misuse: blind except, mutable
+# defaults, shell=True, and runaway complexity. The ratchet freezes the legacy
+# counts; new occurrences fail.
 line-length = 100
 target-version = "py311"
 
 [lint]
-select = ["E", "F", "W"]
+select = ["E", "F", "W", "B", "BLE", "S602", "C90"]
 ignore = [
   "E501",  # long lines common in CLI/docs strings
   "E402",  # import after sys.path bootstrap (tests + scripts)
@@ -12,3 +14,6 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/*" = ["E402"]
+
+[lint.mccabe]
+max-complexity = 20

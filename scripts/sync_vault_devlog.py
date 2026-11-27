@@ -388,7 +388,7 @@ def split_header_and_rest(text: str) -> tuple[str, str]:
 def _write_full(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        from vault_fs import write_text as _vault_write  # type: ignore
+        from vault_fs import write_text as _vault_write
 
         _vault_write(path, content)
         return

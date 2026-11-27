@@ -954,7 +954,7 @@ def render(d: Dashboard, vault: Path | None) -> str:
     # When tests run — same map as night-shift-log (SoT test_trigger_schedule.py)
     try:
         sys.path.insert(0, str(HARNESS / "scripts"))
-        from test_trigger_schedule import schedule_markdown  # type: ignore
+        from test_trigger_schedule import schedule_markdown
 
         lines.append(schedule_markdown(compact=False).rstrip())
         lines.append("")
@@ -1006,7 +1006,7 @@ def render(d: Dashboard, vault: Path | None) -> str:
     # Tier B-5: embed GitHub daytime snapshot (best-effort; never blocks dashboard)
     try:
         sys.path.insert(0, str(HARNESS / "scripts"))
-        from github_daytime_status import collect, render_markdown  # type: ignore
+        from github_daytime_status import collect, render_markdown
 
         gh_rows = collect()
         gh_md = render_markdown(gh_rows)
