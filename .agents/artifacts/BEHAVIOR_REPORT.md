@@ -1,18 +1,30 @@
-# BEHAVIOR-REPORT
+# Behavior report — T2088U harness wiring
 
 **Marker:** BEHAVIOR-REPORT
-**Contract:** unset vault must refuse before a model call; night-shift smoke must stay green when `PRODUCT_VAULT_ROOT` is set
-**Surface:** `scripts/challenge.py` CLI and `scripts/product_smoke.py`
+**Contract:** `.agents/artifacts/BEHAVIOR_CONTRACT.md`
+**Date:** 2026-11-27
+**Method:** source-blind CLI runs; no implementation files were read to judge
+pass/fail.
 
-## Results
-
-| Clause | Status | Evidence |
+| Clause | Result | Evidence |
 |--------|--------|----------|
-| 1 Unset vault, no `--vault` | pass | `env -u PRODUCT_VAULT_ROOT .venv/bin/python scripts/challenge.py --proposal <tmp>/p.md --decision <tmp>/d.md --root <tmp>` exited 1. stderr: `pre-flight failed, no model was called: vault root is unset; pass --vault or set PRODUCT_VAULT_ROOT`. stdout empty. |
-| 2 Night-shift unit smoke with vault env set | pass | `PRODUCT_VAULT_ROOT` set to a temp dir. `scripts/product_smoke.py --root .` printed `smoke:hardcodes exit=0` and `smoke:unit exit=0`. `2 smoke step(s) passed`. |
-| 3 Live model call | out_of_scope | No API key used. The refusal path returns before a model call. |
+| B1 ticket DAG | pass | `check_ticket_dag.py` → `rc=0`, 5 tickets, frontier `01, 02`; workflow tickets → 2 tickets, frontier `02` |
+| B2 stack layers | pass | `stack_plan.py --json` → `layers=[['01','02'],['03','04','05']]`, chunks `[1, 2]` |
+| B3 stack write | pass | `--write` created `.agents/artifacts/STACK_PLAN.md` and `.json` |
+| B4 unknown dependency | pass | fixture with `**Blocked by:** 99` → `rc=1`, message names `99` |
+| B5 retro issue bodies | pass | `--file-issues` → retro + `2026-11-27-tests.md` + `2026-11-27-umbrella.md` |
+| B6 offline default | pass | `--gh` without `--file-issues` → `rc=2`; offline run made no subprocess call (test) |
+| B7 spec gate | pass | ship spec → `rc=0`; colliding `policy_id` / `Policy ID` → `False` with both line numbers |
+| B8 comment audit | pass | `check_comment_audit.py --diff 0336317...HEAD --strict` → clean |
+| B9 smoke | pass | `product_smoke.py` → 2/2 steps green |
 
-## Summary
+## Notes
 
-- pass: 2 · fail: 0 · blocked: 0 · out_of_scope: 1
-- NEXT_SKILL=/pr_review --validate
+- No UI or HTTP surface is involved; the contract covers CLIs and generated
+  artifacts.
+- B4 and B7 use throwaway directories under `/tmp`; the ship tree is unchanged.
+- The workflow-harness ticket DAG check ran against the companion tree.
+
+## Verdict
+
+All 9 clauses pass. No blocked or failing clause.

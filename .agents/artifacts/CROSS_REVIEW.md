@@ -1,44 +1,59 @@
-# CROSS-REVIEW
+# Cross-review — T2088U harness wiring and stacked ships
 
 **Marker:** CROSS-REVIEW
-**Range:** `a463eef..HEAD` (`fa8226b`)
-**Secrets:** `check_secrets_diff.py --base HEAD~1 --head HEAD` clean.
-**Blockers:** 0
-**Tier A obsolete:** 0
+**Base:** `0336317`
+**Head:** `HEAD`
+**Scope:** `scripts/{stack_plan,retro_job,spec_gate}.py`, five skill files,
+spec references, CI workflow, template, and tests.
 
 ## Security Guru
 
-None. The diff does not add a credential, a vault write, or a new network call. `test_unset_vault_calls_no_model` now drops `PRODUCT_VAULT_ROOT` before `challenge.main`, which is what stopped a night-shift process from treating the operator vault as the fixture vault. The CLI still refuses an unset vault before any model call (stderr: `pre-flight failed, no model was called`).
+Findings: none.
+
+- Ticket and glossary content is parsed with strict regexes; no `eval`, no shell
+  interpolation, and no execution of file contents.
+- `stack_plan` resolves the ticket directory through `load_tickets`, which reads
+  only `*.md` under the supplied directory.
+- `retro_job --gh` uses an argv list (`gh issue create --title … --body-file …`)
+  and requires `--file-issues`; the default path makes no network call.
+- No new secrets, credentials, or absolute host paths enter the tree.
 
 ## Maintainability Expert
 
-None. The env save/restore matches `test_unset_vault_refuses_instead_of_host_default` in the same file. The fixture splits keep the runtime strings the assertions already require. No production module moved.
+Findings: none blocking.
 
-### Obsolete / cleanup (scoped)
+Scoped obsolete/cleanup scan (touched paths + direct callers):
 
-Touched paths only: the four tests, `PR_DRAFT.md`, `CODE_REVIEW.md`, `BEHAVIOR_REPORT.md`.
+| Tier | Item | Evidence | Confidence |
+|------|------|----------|------------|
+| A | none | every new symbol is used by `main()` or a test | 0.9 |
+| B | none | existing `_glossary_terms` still serves `check_glossary` | 0.9 |
+| C | default LOC estimate 150 | `stack_plan.DEFAULT_ESTIMATE`; tickets can add `**Estimate:**` | 0.8 |
 
-| Item | Conf | Verdict | Evidence |
-|------|-----:|---------|----------|
-| `tests/test_challenge.py` preflight test | 0.1 | Tier C keep | Pytest collects `ChallengePreflightTests`. `scripts/challenge.py` `_rounds` is the callee the night-shift failure hit. |
-| Fixture `# TODO` splits in three tests | 0.1 | Tier C keep | `check_repo_hygiene.py` warns on the unsplit form. Comment-auditor test still expects one ownerless TODO. |
-| `scripts/challenge.py` | 0.0 | Tier C keep | Not in the diff. Still the CLI `product_smoke` does not call directly; unit smoke imports it via pytest. |
-
-No Tier A. No Tier B. Whole-repo cruft is out of scope — run `/sweep`.
+- Coupling stays one-way: `stack_plan` imports `check_ticket_dag`; the reverse
+  import does not exist.
+- The skill edits name exact commands, matching the scripts.
+- No dead branches; no duplicated DAG parser.
 
 ## Domain Specialist
 
-None. Plugin hints are a portable harness and no secret leakage. Smoke commands stayed `check_hardcodes.py` and `scripts/smoke_unit.sh`. The harness does not gain a host path or a new smoke step.
+Findings: none.
 
-## Severity
+- `/execute_dev` now owns ticket-DAG, stack-plan, smart-zone, and compact-safety
+  checks at the stages where they apply.
+- `/code_review` owns the comment audit and per-layer chunks.
+- `/retrospect` and `/qa_campaign` keep issue creation offline by default.
+- The spec rituals match the domain: why-first, pain ranking, `STOP`, and
+  candidate-name scenarios.
 
-- blocker: 0
-- major: 0
-- nit: 0
-- follow-up: hygiene could skip string literals so fixtures need not split `# TODO`. Not a ship blocker.
+## Intentional oddities
 
-## Things that look bad but are actually fine
+1. The CI ticket-DAG loop is a no-op in this repo because `.agents` is ignored
+   here; product installs carry the tickets.
+2. Issue bodies are written even when there are no clusters, so the umbrella is
+   always a stable artifact.
+3. `stack_plan` includes done tickets in layer 0 so the plan mirrors history.
 
-1. Popping `PRODUCT_VAULT_ROOT` is the unset-vault case, not a deleted assertion.
-2. Split `# TODO` literals still produce the same runtime headings.
-3. `challenge.py` stays as it is because a set vault is supposed to reach the models.
+## Verdict
+
+Blockers: 0. Tier A obsolete items: 0. Proceed to behavior validation.
