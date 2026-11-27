@@ -1,4 +1,4 @@
-# CODE-REVIEW — correction → check wiring
+# CODE-REVIEW — pristine garden hygiene
 
 **Marker:** CODE-REVIEW
 
@@ -8,32 +8,43 @@
 
 ## Standards
 
-- `scripts/check_correction_checks.py` follows the existing `(ok, messages)` checker contract and stays dependency-free.
-- `check_lint_ratchet.check` and `check_comment_audit.check` reuse existing helpers; no duplicated parsing logic beyond one shared `_findings_from_diff`.
-- `hard_gates` adds three calls in the same guarded style as the rest of the pack; prose-only ships skip them explicitly.
-- No P0 findings. One nit: the three new `try/except` blocks repeat the pack's established pattern; acceptable for consistency with 15 existing gates.
+- `check_repo_hygiene.check` follows the established `(ok, messages)` contract
+  used by the other gate checkers, with `fail:` and `warn:` prefixes.
+- `scan_scratch_artifacts` is a single `rglob` pass that reuses `SKIP_DIRS`;
+  `_magicmock_hits` and `_todo_hits` reuse `_iter_files` instead of duplicating
+  traversal logic.
+- `hard_gates` adds the call in the same guarded `try/except` style as the other
+  gates and lists `repo_hygiene (prose-only)` in the skip set.
+- The CLI keeps `--require-clean` opt-in, so manual hygiene runs stay usable on a
+  working tree while `/pr_review --validate` enforces the clean requirement.
+- No P0 findings.
 
 ## Spec
 
-- AC-1 through AC-4 are covered by `tests/test_lint_ratchet.py`, `tests/test_comment_audit.py`, `tests/test_correction_checks.py`, and `tests/test_hard_gates.py`.
-- AC-5 is documentation in `skills/code_review/SKILL.md`; verified by reading the file and `verify_skills.py`.
-- AC-6/AC-7 verified by the full suite (477 passed) and `smoke_unit.sh`.
-- AC-8 is a `hard_gates` secret scan on the diff.
-- Scope matches the spec. The prerequisite T2086U text commit is called out in the PR draft and adds no behavior.
+- AC-1 and AC-2 are covered by `tests/test_repo_hygiene.py`.
+- AC-3 is covered by `tests/test_hard_gates.py::test_repo_hygiene_blocks_code_ship`
+  and `::test_repo_hygiene_skips_for_prose`.
+- AC-4 is `.gitignore` plus the existing `night_shift_runtime.yaml.bak-t1659u`
+  removal; `check_repo_hygiene.py` on the repo reports no scratch hits.
+- AC-5 through AC-7 are the full suite, smoke, validate, and the diff secrets scan.
+- Scope matches the spec; no unrelated cleanup was folded in.
 
 ## Correction checks
 
-- Lint regression could bypass the local gate → tests/test_lint_ratchet.py
-- New history comment could pass review → tests/test_comment_audit.py
-- Review findings could stay prose-only → tests/test_correction_checks.py
-- Gate wiring could silently skip code ships → tests/test_hard_gates.py
+- Scratch suffixes could pass unnoticed → tests/test_repo_hygiene.py
+- A dirty tree could still validate → tests/test_repo_hygiene.py::TestDirtyTree
+- The gate could be wired but not reported → tests/test_hard_gates.py
+- Prose ships could be blocked by a code gate → tests/test_hard_gates.py
+- Non-repo fixtures could fail closed → tests/test_repo_hygiene.py::test_non_repo_is_a_warning
 
 ## Findings
 
 - P0: none.
-- Follow-ups: none required for this slice.
+- Follow-ups: none required for this slice. A future item could promote the
+  ticket-less TODO warning to a ratchet, which is out of scope here.
 
 ## Verdict
 
-Approve. The change is local to the harness gate pack, all targeted tests went
-red then green, and the full suite plus smoke are green.
+Approve. The change is local to the harness gate pack, the new tests went red
+before the implementation and green after, and the full suite, smoke, and
+validate are green.

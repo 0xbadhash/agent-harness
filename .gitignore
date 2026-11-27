@@ -7,3 +7,12 @@ __pycache__/
 
 # Local scorecard dumps (SoT is vault agent-tasks/evidence)
 evidence/
+
+# Scratch / backup state (must never be committed; gate fails on it)
+*.bak-*
+*.orig
+*.rej
+.coverage
+.coverage.*
+.venv-*bak*
+signal-cli-canary-*
