@@ -1,7 +1,9 @@
 # Auto-review relay — install and rollback
 
 Source of truth for the box copies. Install only under a CEO stamp; the
-default state is "built, not installed".
+default state is "built, not installed". Installed on this box 2026-11-27
+10:24 UTC — re-run the copy table after editing these sources, then
+`systemctl --user restart auto-review-relay-watch.service`.
 
 ## Files
 

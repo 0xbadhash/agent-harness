@@ -31,6 +31,9 @@ fallback_providers:
 `when:` is used instead of `on:` because PyYAML parses an unquoted `on` key as a
 boolean.
 
+`hermes fallback list` does not print `when` (its table predates the key), so read
+the profile config to confirm the gate.
+
 ## Reapply after `hermes update`
 
 The update autostashes local edits and restores them, but a conflict or a
