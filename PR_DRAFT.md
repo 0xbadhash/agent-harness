@@ -19,7 +19,7 @@
 - Added `scripts/stack_plan.py` for stack layers and per-layer review chunks
   (AC-5).
 
-Released as `v1.4.56`: main shipped `v1.4.52` through `v1.4.55` while this
+Released as `v1.4.57`: main shipped `v1.4.52` through `v1.4.56` while this
 branch was in review, and all of them are merged and re-verified here.
 
 ## What Problem This Solves
@@ -108,7 +108,7 @@ green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 | Item | Result |
 |------|--------|
-| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 520 passed, 1 skipped |
+| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 532 passed, 2 skipped |
 | smoke | `product_smoke.py` — 2/2 passed |
 | validate | `validate.py full` — 9/9 gates passed |
 | hard_gates | `hard_gates.py` — pass |
