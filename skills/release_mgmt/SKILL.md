@@ -15,7 +15,14 @@ When invoked with `/release_mgmt`:
 1. **Pre-condition:** `phase = approved` (score ≥95). Else `🛑 WRONG STATE` and halt.
 2. **GitHub PR gate (when `gh` is available):**
    - `gh pr list --state open` must be empty, or product policy allows tagging with open PRs documented.
-   - Prefer merging release PRs before tagging.
+   - Merge a stack in ticket order, stopping on the first red check:
+     ```bash
+     python3 scripts/merge_stack.py --tickets .agents/specs/<slug>/tickets \
+       --pr-map .agents/artifacts/PR_MAP.json --dry-run
+     python3 scripts/merge_stack.py --tickets ... --pr-map ... [--auto-merge]
+     ```
+     `--auto-merge` is opt-in; the default merges one PR and stops for the
+     operator. A non-open PR, a conflict, or a non-success check halts the run.
 3. **Infra gate (if the product has an infra skill or INFRA_RUNBOOK):**
    - Confirm latest verify PASS within 24h, or run the product's infra skill.
    - If product has no infra surface → skip with note in RELEASE_RUNBOOK.
