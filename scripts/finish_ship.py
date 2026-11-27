@@ -96,7 +96,14 @@ def evaluate(
     notes: list[str] = []
 
     rc, out = _run(["git", "status", "--porcelain"], root)
-    dirty = bool(out.strip()) if rc == 0 else True
+    # The proof file is this function's own output; it must not make the tree dirty.
+    proof_rel = ".agents/artifacts/PUSH_PROOF.md"
+    dirty_lines = [
+        line
+        for line in out.splitlines()
+        if line.strip() and not line.endswith(proof_rel)
+    ]
+    dirty = bool(dirty_lines) if rc == 0 else True
     if dirty:
         missing.append("working tree dirty (commit or stash before push proof)")
 
