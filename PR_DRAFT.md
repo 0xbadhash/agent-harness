@@ -47,6 +47,40 @@ Harness operators and agents get fail-closed checks where they already work:
 installs keep working because the helper CLIs are unchanged; only additive flags
 and new commands appear. No user-visible product change.
 
+## Smallest visual change
+
+The smallest slice is one command in this repo:
+
+```bash
+python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-wiring-stack-issues/tickets
+```
+
+It prints the dependency layers and review chunks for the five ship tickets.
+Every other item is the same pattern: one existing helper invoked from the skill
+or CI step that owns the risk.
+
+## Before/after
+
+**Before:** the helper scripts existed, but no skill or CI job named them, so a
+real ship never ran them. The base commit had no stack planner at all.
+
+```text
+$ git grep -l "check_ticket_dag" 0336317 -- skills .github || echo "no skill/CI caller"
+no skill/CI caller
+$ git cat-file -e 0336317:scripts/stack_plan.py; echo $?
+128
+```
+
+**After:** each helper has a named caller, and the planner runs offline:
+
+```text
+$ python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-wiring-stack-issues/tickets
+### CHUNK 1 — tickets 01, 02
+### CHUNK 2 — tickets 03, 04, 05
+$ .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
+5 passed in 0.07s
+```
+
 ## Merge Danger
 
 **Door:** two-way
