@@ -1,3 +1,14 @@
+## v1.4.52 — 2026-11-27
+
+### feat(gates): corrections become deterministic checks
+
+- `hard_gates` now runs the lint ratchet, a diff-scoped comment audit, and a
+  correction → check map for non-prose ships; prose-only ships record explicit skips.
+- `check_correction_checks.py` requires one line per accepted finding under
+  `## Correction checks`, mapping to a check or a signed `no-check` reason.
+- `/code_review` documents the rule; an older product artifact gets a named fix.
+- Routing tests isolate the local green checkpoint so release smoke is hermetic.
+
 ## v1.4.51 — 2026-11-09
 
 - **Vault completion writer (staging).** `hermes-done` records a run's verdict as one JSON event; `vault_writer.py`
