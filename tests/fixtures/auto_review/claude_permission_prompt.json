@@ -1,0 +1,10 @@
+{
+  "session_id": "51ab77de",
+  "transcript_path": "/home/debian/.claude/projects/x/51ab77de.jsonl",
+  "cwd": "/home/debian/email-detach",
+  "hook_event_name": "Notification",
+  "message": "Claude needs your permission to use Bash",
+  "title": "Bash command",
+  "tool_name": "Bash",
+  "tool_input": {"command": "git status --porcelain"}
+}

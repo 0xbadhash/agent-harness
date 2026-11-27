@@ -1,0 +1,6 @@
+  Confirm HEAD and dirty state of both harness trees
+
+  1 Yes, proceed
+  2 No, and tell Grok what to do differently
+
+  2/3:select

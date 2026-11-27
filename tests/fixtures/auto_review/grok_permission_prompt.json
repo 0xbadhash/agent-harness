@@ -1,0 +1,12 @@
+{
+  "session_id": "9f1c0b3e",
+  "transcript_path": "/home/debian/.grok/sessions/abc.jsonl",
+  "cwd": "/home/debian/agent-harness",
+  "permission_mode": "auto",
+  "hookEventName": "notification",
+  "hook_event_name": "Notification",
+  "notification_type": "permission_prompt",
+  "message": "Grok needs your permission to run Read",
+  "tool_name": "Read",
+  "tool_input": {"file_path": "/home/debian/agent-harness/README.md"}
+}
