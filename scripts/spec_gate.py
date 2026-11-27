@@ -65,6 +65,13 @@ REPRO_HEADER_RE = re.compile(
     r"^##+\s+(?:Repro(?:duction)?)\b", re.IGNORECASE | re.MULTILINE
 )
 
+# E23/E24: a spec names which decisions are the operator's and which are
+# delegated, and a user-visible ship names its feature flag.
+RESERVED_RE = re.compile(r"\*\*Reserved decisions:\*\*\s*(\S.+)", re.IGNORECASE)
+DELEGATED_RE = re.compile(r"\*\*Delegated decisions:\*\*\s*(\S.+)", re.IGNORECASE)
+FLAG_RE = re.compile(r"\*\*Feature flag:\*\*\s*(\S.+)", re.IGNORECASE)
+SURFACE_RE = re.compile(r"\*\*Surface:\*\*\s*user-visible", re.IGNORECASE)
+
 
 def _pipeline(root: Path) -> dict:
     p = root / ".agents" / "state" / "pipeline.json"
@@ -297,18 +304,22 @@ def check_ticket_blocking_edges(
                     deps.add(target)
         graph[ticket.stem] = deps
 
-    def _cycle(node: str, seen: set[str], stack: set[str]) -> bool:
-        if node in stack:
-            return True
-        if node in seen:
-            return False
-        seen.add(node)
-        stack.add(node)
-        return any(_cycle(dep, seen, stack) for dep in graph.get(node, set()))
+    state: dict[str, int] = {}
 
-    for ticket_id in graph:
-        if _cycle(ticket_id, set(), set()):
+    def _cycle(node: str) -> bool:
+        state[node] = 1
+        for dep in graph.get(node, set()):
+            if state.get(dep, 0) == 1:
+                return True
+            if state.get(dep, 0) == 0 and _cycle(dep):
+                return True
+        state[node] = 2
+        return False
+
+    for ticket_id in sorted(graph):
+        if state.get(ticket_id, 0) == 0 and _cycle(ticket_id):
             failures.append(f"{ticket_id}: blocking edges form a cycle")
+            break
     if failures:
         return False, failures
     return True, [f"ok: {len(tickets)} ticket(s) with blocking edges"]
@@ -332,6 +343,40 @@ def check_repro_requirement(text: str) -> tuple[bool, list[str]]:
             "(error, traceback, or non-zero exit) observed before the fix"
         ]
     return True, ["ok: bug-fix reproduction recorded (went red first)"]
+
+
+def check_decision_record(text: str) -> tuple[bool, list[str]]:
+    """E23 — write down which decisions are reserved and which are delegated."""
+    reserved = RESERVED_RE.search(text)
+    delegated = DELEGATED_RE.search(text)
+    msgs: list[str] = []
+    if reserved is None:
+        msgs.append(
+            "warn: missing **Reserved decisions:** — state the choices only the "
+            "operator may make"
+        )
+    if delegated is None:
+        msgs.append(
+            "warn: missing **Delegated decisions:** — state the choices the agent "
+            "may make without asking"
+        )
+    if reserved and delegated:
+        msgs.append("ok: reserved and delegated decisions recorded")
+    return True, msgs
+
+
+def check_feature_flag(text: str) -> tuple[bool, list[str]]:
+    """E24 — a user-visible ship names the flag that can turn it off."""
+    if SURFACE_RE.search(text) is None:
+        return True, ["ok: no user-visible surface declared — feature-flag check N/A"]
+    match = FLAG_RE.search(text)
+    value = match.group(1).strip().lower() if match else ""
+    if not value or value in {"none", "-", "n/a", "na"}:
+        return False, [
+            "user-visible ship needs **Feature flag:** <name> and an off-path, "
+            "or **Surface:** internal when there is no user-visible change"
+        ]
+    return True, [f"ok: feature flag named ({value[:60]})"]
 
 
 def check(
@@ -401,6 +446,8 @@ def check(
             (check_glossary, (root, spec_text)),
             (check_ticket_blocking_edges, (root, spec_path, spec_text)),
             (check_repro_requirement, (spec_text,)),
+            (check_decision_record, (spec_text,)),
+            (check_feature_flag, (spec_text,)),
         ):
             c_ok, c_msgs = checker(*args)
             msgs.extend(c_msgs)
@@ -411,6 +458,11 @@ def check(
         msgs.extend(c_msgs)
         if not c_ok:
             return False, msgs
+        if draft:
+            f_ok, f_msgs = check_feature_flag(draft)
+            msgs.extend(f_msgs)
+            if not f_ok:
+                return False, msgs
         return True, msgs
 
     msgs.append(
@@ -429,12 +481,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Allow pipeline-only spec_id/waiver without PR_DRAFT",
     )
+    ap.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warn: lines (reserved/delegated decisions) as failures",
+    )
     args = ap.parse_args(argv)
     ok, msgs = check(
         args.root,
         pr_draft=args.pr_draft,
         allow_missing_draft=args.allow_missing_draft,
     )
+    if ok and args.strict and any(m.startswith("warn:") for m in msgs):
+        ok = False
     for m in msgs:
         print(("✅ " if ok else "❌ ") + m if not m.startswith("ok:") and not m.startswith("fail:") else ("✅ " + m[4:] if m.startswith("ok:") else "❌ " + m[6:]))
     return 0 if ok else 1

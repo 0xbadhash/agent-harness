@@ -19,6 +19,11 @@ Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`.
 - **Tracker:** local | Linear <url> | GitHub <url>
 - **Constitution:** .agents/CONSTITUTION.md | AGENTS.md | policy defaults
 - **Grill-me:** complete | spike-skipped
+- **Door:** one-way | two-way
+- **Surface:** internal | user-visible
+- **Feature flag:** <name and off-path> | not-applicable (state why)
+- **Prototype:** `.agents/prototypes/<slug>` | none
+- **Prototype verdict:** <chosen variant and why> | not-applicable
 
 ## Problem Statement
 
@@ -38,6 +43,8 @@ Numbered, extensive enough for the slice:
 
 Light-touch only (surfaces, non-goals). Prefer `-plan.md` for stack/architecture when non-trivial.
 
+- **Reserved decisions:** choices only the operator may make
+- **Delegated decisions:** choices the agent may make without asking
 - Modules / surfaces — names and behavior
 - Explicit non-goals that affect the experience
 - Pointers to constitution constraints that apply
