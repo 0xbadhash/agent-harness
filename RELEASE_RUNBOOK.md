@@ -20,7 +20,7 @@ branch and re-verified here.
 | unit | `python3 scripts/product_smoke.py --root .` → `bash scripts/smoke_unit.sh` | 0 |
 | product smoke | `python3 scripts/product_smoke.py --root .` | 0 (2/2) |
 | web E2E | `python3 scripts/check_web_e2e.py --root .` | 0 (skipped: no website) |
-| validate full | `python3 scripts/validate.py full` | 0 (6/6 gates) |
+| validate full | `python3 scripts/validate.py full` | 0 (9/9 gates) |
 | pytest | `python3 -m pytest -q` | 0 (520 passed, 1 skipped) |
 
 ## Infra
@@ -35,7 +35,7 @@ false. Infra verify skipped.
 | hard_gates | `hard_gates.py --diff origin/main...HEAD` → pass |
 | smoke | 2/2 steps |
 | pytest | 520 passed, 1 skipped |
-| validate | `validate.py full` → 6/6 |
+| validate | `validate.py full` → 9/9 |
 | coverage | `check_module_coverage` passed |
 | secrets | clean on `origin/main...HEAD` |
 | lint ratchet | B904/B905/BLE001/C901 held at baseline |
