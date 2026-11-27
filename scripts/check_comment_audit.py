@@ -77,6 +77,19 @@ def audit_paths(paths: list[Path]) -> list[str]:
     return findings
 
 
+def _findings_from_diff(stdout: str) -> list[str]:
+    findings: list[str] = []
+    path = ""
+    for line in stdout.splitlines():
+        if line.startswith("+++ b/"):
+            path = line[6:]
+        elif line.startswith("+") and not line.startswith("+++"):
+            kind = classify_comment(line[1:])
+            if kind:
+                findings.append(f"{path}: {kind}: {line[1:].strip()[:160]}")
+    return findings
+
+
 def audit_diff(diff: str = "HEAD~1...HEAD", root: Path = ROOT) -> list[str]:
     run = subprocess.run(
         ["git", "diff", "-U0", diff],
@@ -87,16 +100,29 @@ def audit_diff(diff: str = "HEAD~1...HEAD", root: Path = ROOT) -> list[str]:
     )
     if run.returncode != 0:
         return []
-    findings: list[str] = []
-    path = ""
-    for line in run.stdout.splitlines():
-        if line.startswith("+++ b/"):
-            path = line[6:]
-        elif line.startswith("+") and not line.startswith("+++"):
-            kind = classify_comment(line[1:])
-            if kind:
-                findings.append(f"{path}: {kind}: {line[1:].strip()[:160]}")
-    return findings
+    return _findings_from_diff(run.stdout)
+
+
+def check(root: Path, base: str = "HEAD~1", head: str = "HEAD") -> tuple[bool, list[str]]:
+    """Return (ok, messages) for hard_gates: audit only the added diff lines."""
+    root = Path(root)
+    if not (root / ".git").exists() and not (root / ".git").is_file():
+        return True, ["comment_audit: no git checkout (not a ship diff)"]
+    diff = f"{base}...{head}"
+    run = subprocess.run(
+        ["git", "diff", "-U0", diff],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if run.returncode != 0:
+        detail = (run.stderr or "").strip()[:200]
+        return False, [f"comment_audit: git diff {diff} failed: {detail}"]
+    findings = _findings_from_diff(run.stdout)
+    if findings:
+        return False, ["comment_audit: " + finding for finding in findings]
+    return True, ["comment_audit: no new history/dead-code/TODO comments"]
 
 
 def main(argv: list[str] | None = None) -> int:
