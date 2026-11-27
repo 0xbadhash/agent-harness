@@ -1,92 +1,91 @@
-# PR Draft: Categorical lint bans and typed suppressions
+# PR Draft: Automation readiness gate before the outer loop
 
 **Range:** `origin/main..HEAD`
+**Owner:** 0xbadhash
 
 ## What Problem This Solves
 
-`ruff.toml` selected only `E`, `F`, and `W`, so blind exceptions, mutable
-defaults, `shell=True`, and runaway complexity passed the local gate. The tree
-carried 95 type suppressions with no owner or expiry, and raw `ruff check` in
-`compliance_engine.py` would fail as soon as new families were enabled.
+The bounded outer loop runs mechanical fixers after a gate failure. It had no
+proof that the inner loop itself was sound, so an expired suppression, an
+unmapped correction, a stale behavior report, or an old coverage artifact could
+start a repair run on a broken base. The fixers then added noise and masked the
+real failure.
 
 ## Why This Change Was Made
 
-The gate should eliminate a construct category in configuration instead of asking
-reviewers to catch it. The ratchet freezes the legacy counts, the suppression ban
-is absolute, and the eight real mypy errors are fixed with typed annotations.
+Automation may only touch the tree when the inner loop is proven. The proof is a
+timestamped artifact computed from the same checkers the PR gate uses, and the
+outer loop reads that artifact before it changes anything.
 
 ## User Impact
 
-- A new blind except, over-complex function, mutable default, or `shell=True` call
-  fails `check_lint_ratchet.py` and `validate.py full`.
-- A new type suppression must name `[code]`, `owner=…`, and a future
-  `expires=…`; expired suppressions fail.
-- `compliance_engine.py` uses the ratchet as the lint gate, so local and CI signals
-  agree.
-- 87 unnecessary suppressions are gone; no runtime behavior changes.
+- `check_automation_ready.py` fails closed on any of: lint ratchet, suppression
+  ban, correction map, behavior report, fresh coverage, named owner.
+- `--write` records `.agents/artifacts/AUTOMATION_READINESS.md`.
+- `attempt_autofix(require_readiness=True)` returns one `autofix_blocked` record
+  and runs no fixer without a current artifact.
+- `night_shift_readiness.py` sets the flag from
+  `night_shift.require_automation_ready` or `AUTOFIX_REQUIRE_READY=1`.
+- Default is off for products; the harness opts in through its plugin.
 
 ## Evidence pack
 
 | Gate | Command | Result |
 |------|---------|--------|
-| Red proof | `python3 -m pytest tests/test_type_ignores.py tests/test_lint_config.py -q` | `ModuleNotFoundError: check_type_ignores` before implementation |
-| Targeted tests | same command after implementation | 24 passed |
-| Mypy | `python3 -m mypy scripts tests` | Success: no issues in 217 files |
+| Red proof | `python3 -m pytest tests/test_automation_ready.py -q` | collection failed before `check_automation_ready.py` existed |
+| Targeted tests | `python3 -m pytest tests/test_automation_ready.py -q` | 13 passed |
+| Night-shift tests | `python3 -m pytest tests/test_night_refresh_from_orchestrator.py tests/test_night_shift_runtime_ops430.py tests/test_night_shift_todo_and_hardcodes.py -q` | 35 passed including the new file |
+| Mypy | `python3 -m mypy scripts tests` | success, 222 files |
 | Lint ratchet | `python3 scripts/check_lint_ratchet.py` | four rules held at baseline |
-| Full suite | `python3 -m pytest -q` | 507 passed, 2 skipped |
+| Full suite | `python3 -m pytest -q` | 520 passed, 2 skipped |
 | Smoke | `python3 scripts/product_smoke.py --root .` | 2/2 steps passed |
 | Validate | `python3 scripts/validate.py full` | 9/9 gates passed |
-| Hard gates | `python3 scripts/pr_validator.py --diff origin/main...HEAD` | pr_validator score 100 |
+| Readiness live run | `check_automation_ready.py --owner 0xbadhash --write` | all rows ok, artifact written |
+| Hard gates | `python3 scripts/pr_validator.py --diff origin/main...HEAD` | score gate |
 
-**Spec:** `.agents/specs/2026-11-27-categorical-lint-bans.md`
-**Plan:** `.agents/specs/2026-11-27-categorical-lint-bans-plan.md`
+**Spec:** `.agents/specs/2026-11-27-automation-readiness-gate.md`
+**Plan:** `.agents/specs/2026-11-27-automation-readiness-gate-plan.md`
 
 ## Traceability
 
 | AC | Test / smoke |
 |----|----------------|
-| AC-1 families and threshold | `tests/test_lint_config.py` |
-| AC-2 ratchet floor | `tests/test_lint_ratchet.py`, `check_lint_ratchet.py` |
-| AC-3 suppression ban | `tests/test_type_ignores.py` |
-| AC-4 tree has no suppressions | `mypy scripts tests` success; grep finds none |
-| AC-5 gate wiring | `tests/test_hard_gates.py::test_type_ignores_blocks_code_ship` |
-| AC-6 compliance/validate | `validate.py full` 9/9 |
-| AC-7 suite/smoke/secrets | full pytest 507 passed; smoke 2/2; `check_secrets_diff.py` |
+| AC-1 precondition failure is named | `tests/test_automation_ready.py::TestAutomationReadyCheck` |
+| AC-2 artifact write/validate | `tests/test_automation_ready.py::TestReadinessArtifact` |
+| AC-3 autofix refusal | `tests/test_automation_ready.py::TestAutofixReadinessGate::test_outer_loop_blocked_without_artifact` |
+| AC-4 flag wiring | `tests/test_automation_ready.py::TestAutofixReadinessGate` plus `night_shift_readiness.py` |
+| AC-5 plugin + docs | `.agents/product_plugin.yaml`, `.agents/docs/night-shift.md` |
+| AC-6 suite/smoke/validate | full pytest 520 passed; smoke 2/2; validate 9/9 |
 
 ## Threat notes
 
-Security tags: `supply-chain`, `secrets`, `injection`.
+Security tags: `supply-chain`, `secrets`.
 
-- Asset / trust boundary: lint and mypy run locally on repository text; no network
-  or credential access.
-- Abuse case: a blanket suppression could hide a future injection defect; the ban
-  forces a code, owner, and expiry so the suppression is reviewable
-  (`supply-chain` integrity).
-- Abuse case: `shell=True` was the named danger; `S602` is selected, and the tree
-  has zero occurrences.
-- Abuse case: a ratchet could hide new findings in an already-counted rule; the
-  count is per rule and any increase fails.
-- Abuse case: an expired suppression could mask a real type error; the checker
-  compares `expires=` with today (`secrets`-adjacent reviewability).
+- Asset / trust boundary: the gate reads repository artifacts and runs local
+  checkers; it makes no network calls and reads no credentials.
+- Abuse case: automation could reformat over a real gate failure — the readiness
+  artifact forces the inner loop green first (`supply-chain` integrity).
+- Abuse case: a stale artifact could authorize work on an old commit — the 24h
+  cap and the failed-check scan reject it.
+- Abuse case: an ownerless automation run has no accountability — the gate
+  requires a named owner from `--owner`, `AUTOMATION_OWNER`, or `PR_DRAFT.md`.
 
 ## Red-proof (process honesty)
 
 Red was observed before implementation: the targeted run failed collection with
-`ModuleNotFoundError: No module named 'check_type_ignores'`, and `ruff check
---select B,BLE,S602,C90` reported 60 findings before the baseline was recorded.
-The retained green command is executable:
+`ModuleNotFoundError: No module named 'check_automation_ready'`, and
+`attempt_autofix(require_readiness=True)` had no refusal path. The retained green
+command is executable:
 
 ```text
-green_cmd: python3 -m pytest tests/test_type_ignores.py tests/test_lint_config.py tests/test_hard_gates.py -q
+green_cmd: python3 -m pytest tests/test_automation_ready.py tests/test_night_refresh_from_orchestrator.py -q
 ```
 
 ## Things that look bad but are actually fine
 
-1. `BLE001=44` and `C901=14` remain in the baseline. The ratchet freezes them; the
-   spec names the follow-up.
-2. Removing 87 suppressions looks large; `mypy` is clean and the full suite is
-   green, so the annotations were already unnecessary.
-3. `compliance_engine` no longer calls raw `ruff check` when the ratchet exists;
-   products without the script keep the old path.
-4. `check_type_ignores.py` skips `.agents`, `.venv`, and cache directories, so
-   generated trees do not fail.
+1. The harness opts in while products default off. Opt-in proves the gate on the
+   reference repo; a product without coverage must not be blocked by default.
+2. Coverage reads 47.8%. The gate checks freshness and presence, while
+   `check_module_coverage.py` owns the threshold.
+3. `AUTOMATION_READINESS.md` is an artifact, not source. It is force-added so the
+   check ships with its evidence and stays out of the default ignore paths.

@@ -1,19 +1,19 @@
 # BEHAVIOR-REPORT
 
 **Marker:** BEHAVIOR-REPORT
-**Contract:** categorical lint families are on and ratcheted; every type suppression is coded, owned, and current
-**Surface:** `ruff.toml`, `config/lint_ratchet_baseline.json`, `scripts/check_type_ignores.py`, `scripts/compliance_engine.py`, `scripts/hard_gates.py`, `scripts/validate.py`
+**Contract:** the outer loop refuses to act unless a current readiness artifact proves the inner loop
+**Surface:** `scripts/check_automation_ready.py`, `scripts/night_shift_autofix.py`, `scripts/night_shift_readiness.py`, `.agents/product_plugin.yaml`
 
 ## Results
 
 | Clause | Status | Evidence |
 |--------|--------|----------|
-| 1 Families selected | pass | `tests/test_lint_config.py` asserts `B`, `BLE`, `S602`, `C90`, and `max-complexity = 20`. |
-| 2 Ratchet floor | pass | `check_lint_ratchet.py --update` wrote `B904=1, B905=2, BLE001=44, C901=14`; the check prints four held lines and exits 0. |
-| 3 Suppression ban | pass | `tests/test_type_ignores.py` covers blanket, missing owner, expired, annotated, and skip dirs. |
-| 4 Tree has no suppressions | pass | `grep '# type:'` finds none in `scripts/` or `tests/`; `mypy scripts tests` reports success in 217 files. |
-| 5 Gate wiring | pass | `tests/test_hard_gates.py::test_type_ignores_blocks_code_ship`; `validate.py full` prints `check_type_ignores`. |
-| 6 Compliance agrees | pass | `compliance_engine.py` prints type_checker/linter/test_runner all exit 0; `validate.py full` is 9/9. |
+| 1 Preconditions named | pass | `check` returns one row per precondition; a failure names the remedy. |
+| 2 Artifact recorded | pass | `--owner 0xbadhash --write` wrote `.agents/artifacts/AUTOMATION_READINESS.md` with the marker and seven ok rows. |
+| 3 Artifact validated | pass | `--require-artifact` rejects missing, stale, and failed artifacts in `TestReadinessArtifact`. |
+| 4 Outer loop refuses | pass | `TestAutofixReadinessGate::test_outer_loop_blocked_without_artifact` asserts one `autofix_blocked` record and no fixer call. |
+| 5 Opt-in wiring | pass | Harness plugin sets `require_automation_ready: "1"`; `night_shift_readiness.py` passes the flag. |
+| 6 Verification set | pass | full pytest 520 passed; smoke 2/2; validate 9/9; mypy clean in 222 files. |
 
 ## Summary
 

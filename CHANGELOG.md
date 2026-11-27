@@ -1,3 +1,18 @@
+## v1.4.56 — 2026-11-27
+
+### feat(gates): automation readiness before the outer loop
+
+- New `check_automation_ready.py` proves the inner loop before automation acts:
+  lint ratchet, suppression ban, correction map, behavior report marker, fresh
+  `coverage.json`, and a named owner.
+- `--write` records `.agents/artifacts/AUTOMATION_READINESS.md`; `--require-artifact`
+  rejects a missing, stale, or failed artifact.
+- `attempt_autofix` gains `require_readiness` and returns one `autofix_blocked`
+  record, running no fixer, when the artifact is not current.
+- `night_shift_readiness.py` sets the flag from
+  `night_shift.require_automation_ready` or `AUTOFIX_REQUIRE_READY=1`; products
+  default off, the harness opts in.
+
 ## v1.4.55 — 2026-11-27
 
 ### feat(lint): categorical bans and typed suppressions
