@@ -385,7 +385,7 @@ def check(
         msgs.append(f"ok: Spec file {spec_id}")
         # Grill-me evidence (mandatory for feature Specs; skip only on Spec waiver above)
         try:
-            from check_spec_grill import check_path as _grill_check  # type: ignore
+            from check_spec_grill import check_path as _grill_check
 
             g_ok, g_msgs = _grill_check(spec_path)
             msgs.extend(g_msgs)

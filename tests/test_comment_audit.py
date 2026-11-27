@@ -78,6 +78,42 @@ class TestCommentAuditCheck(unittest.TestCase):
             ok, msgs = cca.check(root, "HEAD~1", "HEAD")
             self.assertTrue(ok, msgs)
 
+
+class TestJustificationAudit(unittest.TestCase):
+    def test_escape_hatch_comment_fails(self):
+        for phrase in (
+            "# for now, this is fine",
+            "# temporary until the API lands",
+            "# works around the flaky client",
+            "# safe to ignore",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertEqual(cca.classify_comment(phrase), "escape_hatch")
+
+    def test_escape_hatch_naming_a_check_passes(self):
+        line = "# temporary shim, see scripts/check_repo_hygiene.py"
+        self.assertIsNone(cca.classify_comment(line))
+
+    def test_escape_hatch_in_added_diff_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = _repo(td)
+            (root / "a.py").write_text("# for now\nx = 2\n", encoding="utf-8")
+            _git(root, "add", "-A")
+            _git(root, "commit", "-q", "-m", "change")
+            ok, msgs = cca.check(root, "HEAD~1", "HEAD")
+            self.assertFalse(ok, msgs)
+            self.assertTrue(any("escape_hatch" in m for m in msgs), msgs)
+
+    def test_baseline_ratchet(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.py").write_text("# for now\nx = 1\n", encoding="utf-8")
+            baseline = root / "baseline.json"
+            self.assertEqual(cca.main(["--root", str(root), "--baseline", str(baseline), "--update-baseline"]), 0)
+            self.assertEqual(cca.main(["--root", str(root), "--baseline", str(baseline), "--strict"]), 0)
+            (root / "b.py").write_text("# safe to ignore\nx = 2\n", encoding="utf-8")
+            self.assertEqual(cca.main(["--root", str(root), "--baseline", str(baseline), "--strict"]), 1)
+
     def test_non_repo_is_not_a_ship(self):
         with tempfile.TemporaryDirectory() as td:
             ok, msgs = cca.check(Path(td), "HEAD~1", "HEAD")

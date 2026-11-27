@@ -1,4 +1,4 @@
-## v1.4.54 — 2026-11-27
+## v1.4.56 — 2026-11-27
 
 ### feat(harness): wire orphaned helpers and plan stacked ships
 
@@ -7,6 +7,35 @@
 - `retro_job.py --file-issues` writes per-cluster and umbrella issue bodies offline; `--gh` is opt-in.
 - `scripts/stack_plan.py` emits dependency layers and review chunks; unknown dependencies exit non-zero.
 - Restores four pieces the base commit tested but left uncommitted: the diagnosing-bugs skill, review axes, the Merge Danger template block, and `GLOSSARY.md` references.
+
+## v1.4.55 — 2026-11-27
+
+### feat(lint): categorical bans and typed suppressions
+
+- `ruff.toml` selects `B`, `BLE`, `S602`, and `C90` (mccabe 20) alongside `E`,
+  `F`, `W`; the ratchet records `B904=1, B905=2, BLE001=44, C901=14`.
+- `compliance_engine.py` uses the ratchet as the lint gate, so local and CI agree.
+- New `check_type_ignores` bans blanket suppressions: every one names `[code]`,
+  `owner=…`, and a future `expires=…`.
+- 87 unnecessary suppressions are removed and the eight real mypy errors get typed
+  fixes; `mypy scripts tests` is clean with no suppressions.
+- `hard_gates` and `validate.py full` run the suppression check.
+
+## v1.4.54 — 2026-11-27
+
+### feat(gates): Markdown escape hatch — prose must name a check
+
+- `check_comment_audit` gains an `escape_hatch` class for justification prose
+  unless the line names the check that bounds it, plus a per-`path::kind`
+  baseline ratchet (`config/comment_audit_baseline.json`).
+- New `check_markdown_audit` caps `AGENTS.md` at 250 lines and requires every
+  `## Do not` bullet in a skill to name an enforcing check; the harness tree is
+  clean.
+- `check_stale_agent_config` calls the cap; `validate.py full` runs the comment
+  audit (baseline) and the Markdown audit; `hard_gates` reports
+  `markdown_audit` for non-prose ships.
+- `check_repo_hygiene` fails on `[DEBUG-…]` tags, matching the diagnosing-bugs
+  skill.
 
 ## v1.4.53 — 2026-11-27
 

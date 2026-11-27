@@ -13,7 +13,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import check_comment_audit as cca
 import check_correction_checks as ccc
 import check_lint_ratchet as clr
+import check_markdown_audit as cma
 import check_repo_hygiene as crh
+import check_type_ignores as cti
 import hard_gates as hg
 
 
@@ -276,6 +278,45 @@ class TestHardGates(unittest.TestCase):
                 r = hg.evaluate(root, draft, diff=None)
             self.assertTrue(r.ok, r.violations)
             self.assertTrue(any("repo_hygiene" in s for s in r.skipped))
+
+    def test_markdown_audit_blocks_code_ship(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = self._valid_code_draft(root)
+            with (
+                mock.patch.object(hg, "_scope_flags", return_value=(False, False)),
+                mock.patch.object(hg, "_secrets_ok", return_value=True),
+                mock.patch.object(clr, "check", return_value=(True, ["ok"])),
+                mock.patch.object(cca, "check", return_value=(True, ["ok"])),
+                mock.patch.object(ccc, "check", return_value=(True, ["ok"])),
+                mock.patch.object(crh, "check", return_value=(True, ["ok"])),
+                mock.patch.object(
+                    cma, "check", return_value=(False, ["fail: unenforced Do not bullet"])
+                ),
+            ):
+                r = hg.evaluate(root, draft, diff=None)
+            self.assertFalse(r.ok)
+            self.assertTrue(any("markdown_audit" in v for v in r.violations), r.violations)
+
+    def test_type_ignores_blocks_code_ship(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = self._valid_code_draft(root)
+            with (
+                mock.patch.object(hg, "_scope_flags", return_value=(False, False)),
+                mock.patch.object(hg, "_secrets_ok", return_value=True),
+                mock.patch.object(clr, "check", return_value=(True, ["ok"])),
+                mock.patch.object(cca, "check", return_value=(True, ["ok"])),
+                mock.patch.object(ccc, "check", return_value=(True, ["ok"])),
+                mock.patch.object(crh, "check", return_value=(True, ["ok"])),
+                mock.patch.object(cma, "check", return_value=(True, ["ok"])),
+                mock.patch.object(
+                    cti, "check", return_value=(False, ["fail: blanket type-ignore"])
+                ),
+            ):
+                r = hg.evaluate(root, draft, diff=None)
+            self.assertFalse(r.ok)
+            self.assertTrue(any("type_ignores" in v for v in r.violations), r.violations)
 
 
 if __name__ == "__main__":

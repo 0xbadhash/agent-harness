@@ -6,6 +6,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from typing import cast
 
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
@@ -41,8 +42,8 @@ def find_cycle(tickets: dict[str, dict[str, object]]) -> list[str] | None:
 
     def dfs(node: str, trail: list[str]) -> list[str] | None:
         state[node] = 1
-        deps = tickets.get(node, {}).get("deps", [])
-        for dep in deps:  # type: ignore[attr-defined]
+        deps = cast(list[str], tickets.get(node, {}).get("deps", []))
+        for dep in deps:
             if dep not in tickets:
                 continue
             if state.get(dep, 0) == 1:
@@ -70,7 +71,7 @@ def ready_frontier(tickets: dict[str, dict[str, object]]) -> list[str]:
     for tid, info in sorted(tickets.items()):
         if tid in done:
             continue
-        deps: list[str] = info["deps"]  # type: ignore[assignment]
+        deps = cast(list[str], info["deps"])
         if all(d in done for d in deps):
             ready.append(tid)
     return ready

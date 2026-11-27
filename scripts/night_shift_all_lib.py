@@ -26,17 +26,18 @@ from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
+fcntl: Any
 try:  # POSIX cross-process port locks; Windows falls back to in-process locks
     import fcntl
 except ImportError:  # pragma: no cover
-    fcntl = None  # type: ignore[assignment]
+    fcntl = None
 
 
 def _vw(path: Path, text: str) -> None:
     try:
         scripts = Path(__file__).resolve().parent.parent / "scripts"
         sys.path.insert(0, str(scripts))
-        from vault_fs import write_text as _w  # type: ignore
+        from vault_fs import write_text as _w
         _w(path, text)
     except Exception:
         path.parent.mkdir(parents=True, exist_ok=True)

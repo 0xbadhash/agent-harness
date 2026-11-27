@@ -22,7 +22,7 @@ from pathlib import Path
 def _load_modules(root: Path) -> tuple[bool, list[str]]:
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
-        from product_plugin import load_plugin  # type: ignore
+        from product_plugin import load_plugin
 
         data = load_plugin(root)
     except Exception:

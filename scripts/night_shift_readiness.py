@@ -332,7 +332,7 @@ def _vault_root(plugin: dict[str, Any], cli_vault: Path | None) -> Path:
     if cli_vault is not None:
         return cli_vault
     try:
-        from vault_resolve import resolve_vault_root  # type: ignore
+        from vault_resolve import resolve_vault_root
 
         r = resolve_vault_root(cli_vault=None, product_root=ROOT, require_enabled=False)
         if r is not None:
@@ -436,7 +436,7 @@ def run_gates(
         if use_sot_lint:
             vault = None
             try:
-                from vault_resolve import resolve_vault_root  # type: ignore
+                from vault_resolve import resolve_vault_root
 
                 vault = resolve_vault_root(
                     cli_vault=None, product_root=ROOT, require_enabled=False
@@ -712,7 +712,7 @@ def recommendations_from(
 
     # Evidence-based roadmap proposals (never invent greenfield features)
     try:
-        from night_shift_autofix import propose_roadmap_items  # type: ignore
+        from night_shift_autofix import propose_roadmap_items
 
         proposals = propose_roadmap_items(
             root or ROOT, results, matrix_missing, product_id
@@ -961,7 +961,7 @@ def write_vault(
         todo_path = proj / "TODO.md"
         merged_todo = merge_human_backlog(todo_path, todo_md)
         try:
-            from vault_fs import write_text as _vw  # type: ignore
+            from vault_fs import write_text as _vw
             _vw(todo_path, merged_todo)
         except ImportError:
             todo_path.write_text(merged_todo, encoding="utf-8")
@@ -1038,7 +1038,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     if autofix_enabled and any(not r.get("ok") for r in results):
         try:
-            from night_shift_autofix import attempt_autofix  # type: ignore
+            from night_shift_autofix import attempt_autofix
 
             autofix_attempts = attempt_autofix(
                 ROOT,
@@ -1068,7 +1068,7 @@ def main(argv: list[str] | None = None) -> int:
     if matrix_path.is_file() and checker.is_file():
         sys.path.insert(0, str(SCRIPTS))
         try:
-            from check_test_matrix import check_matrix  # type: ignore
+            from check_test_matrix import check_matrix
 
             _, matrix_rows = check_matrix(ROOT, matrix_path)
             for row in matrix_rows:

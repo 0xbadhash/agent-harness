@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 
 try:
-    import yaml  # type: ignore
+    import yaml
 except ImportError:  # pragma: no cover
-    yaml = None  # type: ignore
+    yaml = None
 
 
 def plugin_path(product_root: Path) -> Path:

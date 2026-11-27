@@ -7,8 +7,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from product_plugin import load_plugin  # type: ignore
-from product_venv import (  # type: ignore
+from product_plugin import load_plugin
+from product_venv import (
     product_venv_python,
     rewrite_smoke_python,
 )

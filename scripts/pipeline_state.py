@@ -17,10 +17,11 @@ from pathlib import Path
 
 from typing import Any
 
+fcntl: Any
 try:
     import fcntl
 except ImportError:  # pragma: no cover — non-POSIX
-    fcntl = None  # type: ignore
+    fcntl = None
 
 # Five ship phases only (see docs/ship-flow.md). Do not invent others.
 VALID_PHASES = {"init", "ready_for_review", "approved", "blocked", "shipped"}

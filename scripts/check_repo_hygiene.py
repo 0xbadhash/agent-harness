@@ -30,8 +30,7 @@ SCRATCH_PATTERNS = (
     ".venv-*bak*",
     "signal-cli-canary-*",
 )
-
-DEBUG_TAG_RE = re.compile(r"\[DEBUG-[A-Za-z0-9_-]+\]")
+DEBUG_TAG_RE = re.compile(r"\[DEBUG-[A-Za-z0-9_.-]+\]")
 
 
 def scan_debug_tags(root: Path) -> int:
@@ -99,6 +98,18 @@ def _todo_hits(root: Path) -> list[tuple[str, int]]:
     return hits
 
 
+def _debug_tag_hits(root: Path) -> list[tuple[str, int, str]]:
+    """Debug tags must not survive into a commit (see skills/diagnosing-bugs)."""
+    hits: list[tuple[str, int, str]] = []
+    for p, rel in _iter_files(root, "*.py"):
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        for m in DEBUG_TAG_RE.finditer(text):
+            hits.append(
+                (rel.as_posix(), text[: m.start()].count("\n") + 1, m.group(0))
+            )
+    return hits
+
+
 def _git_dirty(root: Path) -> tuple[list[str], str]:
     """Return (dirty entries, warning). A non-repo root warns instead of failing."""
     try:
@@ -130,12 +141,9 @@ def check(root: Path, *, require_clean: bool = False) -> tuple[bool, list[str]]:
         messages.append(f"fail: {rel}:{line} MagicMock import in non-test code")
         fails += 1
 
-    debug_fails = scan_debug_tags(root)
-    if debug_fails:
-        messages.append(
-            f"fail: {debug_fails} leftover [DEBUG-*] instrumentation site(s)"
-        )
-        fails += debug_fails
+    for rel, line, tag in _debug_tag_hits(root):
+        messages.append(f"fail: {rel}:{line} debug tag survives into commit: {tag}")
+        fails += 1
 
     if require_clean:
         dirty, warning = _git_dirty(root)

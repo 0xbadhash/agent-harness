@@ -1,15 +1,16 @@
-# Release runbook — v1.4.54 (T2088U)
+# Release runbook — v1.4.56 (T2088U)
 
-**Version:** 1.4.54
+**Version:** 1.4.56
 **Date:** 2026-11-27
 **Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
-**Base:** `origin/main` at `9d1c540` (v1.4.53)
+**Base:** `origin/main` at `1e3718d` (v1.4.55)
 **Head:** the merge of `origin/main` into `ship/t2088u-fsm-1-5`
 **Ship PR:** https://github.com/0xbadhash/agent-harness/pull/56
 
-The version moved to 1.4.54 because main shipped `v1.4.52` (correction →
-check) and `v1.4.53` (pristine garden) while this branch was in review. Both
-of those releases are merged into this branch and re-verified here.
+The version moved to 1.4.56 because main shipped `v1.4.52` through `v1.4.55`
+(correction → check, pristine garden, Markdown escape hatch, categorical lint)
+while this branch was in review. Every one of those releases is merged into this
+branch and re-verified here.
 
 ## Smoke
 
@@ -20,7 +21,7 @@ of those releases are merged into this branch and re-verified here.
 | product smoke | `python3 scripts/product_smoke.py --root .` | 0 (2/2) |
 | web E2E | `python3 scripts/check_web_e2e.py --root .` | 0 (skipped: no website) |
 | validate full | `python3 scripts/validate.py full` | 0 (6/6 gates) |
-| pytest | `python3 -m pytest -q` | 0 (492 passed, 1 skipped) |
+| pytest | `python3 -m pytest -q` | 0 (520 passed, 1 skipped) |
 
 ## Infra
 
@@ -33,12 +34,15 @@ false. Infra verify skipped.
 |------|--------|
 | hard_gates | `hard_gates.py --diff origin/main...HEAD` → pass |
 | smoke | 2/2 steps |
-| pytest | 492 passed, 1 skipped |
+| pytest | 520 passed, 1 skipped |
 | validate | `validate.py full` → 6/6 |
 | coverage | `check_module_coverage` passed |
 | secrets | clean on `origin/main...HEAD` |
+| lint ratchet | B904/B905/BLE001/C901 held at baseline |
+| type ignores | `check_type_ignores.py` clean |
 | correction checks | 4 findings mapped in `CODE_REVIEW.md` |
 | repo hygiene | clean tree, no scratch artifacts |
+| comment audit | clean on `origin/main...HEAD` |
 
 ## GitHub PR gate
 
@@ -53,9 +57,16 @@ plus this ship's PR:
 None of #40, #21, #19 touch the harness scripts in this ship. They are recorded
 because the release policy expects open PRs to be documented.
 
+## CI fix carried by this ship
+
+The new pristine-garden gate failed `harness-daytime` because the J1 coverage
+step wrote `.coverage` into the repo root, which `check_repo_hygiene` treats as a
+scratch artifact. The workflow now sets `COVERAGE_FILE=.agents/artifacts/.coverage`
+and creates that gitignored directory first. Both checks pass on the PR.
+
 ## Tag
 
-`v1.4.54` lands on the squash-merge commit on `main`, not on this branch. Main is
+`v1.4.56` lands on the squash-merge commit on `main`, not on this branch. Main is
 protected, so the tag cannot be created from here before the merge.
 
 ## Merge danger
@@ -66,7 +77,7 @@ protected, so the tag cannot be created from here before the merge.
 ## Rollback
 
 1. `git revert <squash-merge-sha>` on `main` and open a revert PR.
-2. Delete tag `v1.4.54` if it already points at the bad commit.
+2. Delete tag `v1.4.56` if it already points at the bad commit.
 3. No data migration or persistent state is involved; product installs keep the
    previous skill text until the next reinstall.
 
@@ -81,5 +92,8 @@ protected, so the tag cannot be created from here before the merge.
 4. **The branch carries commit `0336317`, which is not on main.** It is the base
    repair that main's committed tests already expected (diagnosing-bugs skill,
    review axes, Merge Danger template block, `GLOSSARY.md` references).
-5. **`STACK_PLAN.md` is generated.** It is evidence, not source; rerun
+5. **Two `type: ignore` comments became casts.** Main's new suppression gate
+   requires an owner and expiry on every ignore; the ticket DAG parser did not
+   need the ignores once `cast(list[str], …)` made the types explicit.
+6. **`STACK_PLAN.md` is generated.** It is evidence, not source; rerun
    `scripts/stack_plan.py --write` when tickets change.

@@ -12,6 +12,7 @@ Does not invent history. Unparseable blocks keep relative order at the bottom
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 import re
 import sys
 from datetime import UTC, datetime
@@ -20,16 +21,19 @@ from pathlib import Path
 # Import dual-zone helper from sibling module
 SCRIPTS = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPTS))
+format_when_line: Callable[[datetime | None], str] | None
+split_header_and_rest: Callable[[str], tuple[str, str]] | None
+_write_full: Callable[[Path, str], None] | None
 try:
-    from sync_vault_devlog import (  # type: ignore
+    from sync_vault_devlog import (
         _write_full,
         format_when_line,
         split_header_and_rest,
     )
 except Exception:  # pragma: no cover
-    format_when_line = None  # type: ignore
-    split_header_and_rest = None  # type: ignore
-    _write_full = None  # type: ignore
+    format_when_line = None
+    split_header_and_rest = None
+    _write_full = None
 
 # Em dash / en dash / hyphen / common mojibake of em dash (Ã¢â‚¬â€ / â€")
 _SEP = r"(?:[—–\-]|Ã¢â‚¬â€|â€\"|â€”)"
