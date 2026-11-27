@@ -68,6 +68,17 @@ def compare(
     return True, messages or ["ok: no lint violations recorded"]
 
 
+def check(root: Path) -> tuple[bool, list[str]]:
+    """Return (ok, messages) for hard_gates; fails closed when ruff is unavailable."""
+    root = Path(root)
+    try:
+        baseline = load_baseline(root / "config" / BASELINE_NAME)
+        report = run_ruff(root)
+    except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+        return False, [f"lint ratchet unavailable: {exc}"]
+    return compare(count_by_rule(report), baseline)
+
+
 def _ruff_command(root: Path) -> list[str] | None:
     found = shutil.which("ruff")
     if found:

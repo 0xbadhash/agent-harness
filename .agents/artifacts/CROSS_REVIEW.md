@@ -1,42 +1,41 @@
-# CROSS-REVIEW
+# CROSS-REVIEW — correction → check wiring
 
 **Marker:** CROSS-REVIEW
-**Base:** HEAD~1 (`5b848df^`)
-**Head:** `5b848df`
-**Secrets:** `check_secrets_diff.py --base HEAD~1 --head HEAD` clean
 
-## Verdict
-
-Blockers: 0. Majors: 0. Obsolete Tier A: 0.
+- Base: `origin/main` · Head: `HEAD`
+- Scope: `scripts/check_correction_checks.py`, `scripts/check_lint_ratchet.py`, `scripts/check_comment_audit.py`, `scripts/hard_gates.py`, `skills/code_review/SKILL.md`, tests, plus the prerequisite T2086U skill-text commit.
+- Blocker count: **0**
 
 ## Security Guru
 
-None. The diff adds comments and a test. `ExecStart`, `SuccessExitStatus=0 2`, and the two base `OnCalendar=` lines are unchanged. No new path is executed. No secret is added. `path-traversal` and `secrets` are called out in the threat notes because the unit already names a vault path; this slice does not widen that path.
+- No auth, network, subprocess-with-input, or secret handling added. `git diff` and `ruff` run with fixed arguments; `base`/`head` come from the operator's diff range.
+- Finding: none (blocker/major). Nit: the diff range is interpolated into a `git diff` argument list, not a shell string, so option injection is bounded by `git` parsing. Accepted as-is.
 
 ## Maintainability Expert
 
-None in the unit text. The contract test locks the directive lines, so a later comment edit that drops `SuccessExitStatus` or adds a base calendar fails the suite.
+- New checker follows the established `(ok, messages)` contract and is independently importable.
+- `check_comment_audit.check` shares `_findings_from_diff` with the CLI path; no duplicated parsing.
+- Finding: none (blocker). Nit: the three `try/except` blocks in `hard_gates` repeat the pack's existing pattern; consistency wins over extraction at this size.
 
 ### Obsolete / cleanup (scoped)
 
-Touched paths: `deploy/ops-dashboard.service`, `deploy/ops-dashboard.timer`, `tests/test_ops_dashboard_contract.py`, the spec, and the review drafts.
+Touched paths plus direct callers/callees only.
 
-| Path | Tier | Confidence | Evidence | Action |
-|------|------|------------|----------|--------|
-| `deploy/ops-dashboard.service` | keep | 0.05 delete | Installed unit and the test both require `SuccessExitStatus=0 2` | keep |
-| `deploy/ops-dashboard.timer` | keep | 0.05 delete | Live timer is enabled; base file still has the 01:00 and 12:00 directives | keep |
-| `tests/test_ops_dashboard_contract.py` | keep | 0.0 delete | Named by PR_DRAFT traceability for AC-1..AC-4 | keep |
-
-No stub or "TODO remove" comments were added. Whole-repo cruft was not scanned.
+| Tier | Item | Confidence | Evidence |
+|------|------|-----------|----------|
+| A | none | — | `grep -rn "check_comment_audit\|check_lint_ratchet\|check_correction_checks"` shows only CLI, tests, and the new `hard_gates` calls |
+| B | none | — | no superseded helper or duplicate gate remains |
+| C | none | — | no dead branch in the new checker; all three findings classes are reachable from tests |
 
 ## Domain Specialist
 
-None. Exit 2 matches the writer (`return 0 if overall != RED else 2`). The four calendars match `systemctl show` after daemon-reload: 01:00, 12:00, 19:45, and 23:45 UTC. The timer stayed enabled.
+- Harness domain: a fail-closed gate must name the fix and must not block prose-only ships. Both hold: messages include the heading or command, and the prose branch appends explicit skips.
+- Finding: none (blocker). Note: products with an older `CODE_REVIEW.md` will fail once; the message states the required heading.
 
-Follow-up, not a blocker: repo `Group=debian` still differs from the installed `Group=secondbrain`. Changing it is a behaviour change and was left out.
+## Follow-ups (not ship-blockers)
 
-## §9
+- Consider folding the three new gate calls into a helper once a fourth whole-tree check appears.
 
-1. Overwriting `PR_DRAFT.md` drops the previous IoC narrative from the working file. That narrative remains in git history on the parent commit.
-2. File count is 8 because review artifacts were replaced, not because the unit grew a new schedule.
-3. systemd prints `Sun,Mon,Tue,Wed,Thu` as `Mon..Thu,Sun`. Same weekday set.
+## Verdict
+
+No blockers. Proceed to behavior validation and `/pr_review --validate`.

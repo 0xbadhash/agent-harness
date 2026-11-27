@@ -10,6 +10,9 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import check_comment_audit as cca
+import check_correction_checks as ccc
+import check_lint_ratchet as clr
 import hard_gates as hg
 
 
@@ -66,6 +69,8 @@ class TestHardGates(unittest.TestCase):
                 "# CODE-REVIEW\n**Marker:** CODE-REVIEW\n\n"
                 "## Findings\n- No P0 issues in test fixture scope.\n"
                 "- Gate checks exercised via unit tests.\n\n"
+                "## Correction checks\n"
+                "- fixture finding → tests/test_hard_gates.py\n\n"
                 "## Verdict\nApprove fixture pass for hard_gates unit test.\n"
                 + ("x" * 80),
             )
@@ -178,6 +183,63 @@ class TestHardGates(unittest.TestCase):
                     r = hg.evaluate(root, draft, diff=None)
             self.assertFalse(r.ok)
             self.assertTrue(any("Red-proof" in v or "red" in v.lower() for v in r.violations))
+
+    def _valid_code_draft(self, root: Path) -> Path:
+        draft = root / "PR_DRAFT.md"
+        _write(
+            draft,
+            "**Spec waiver:** chore\n"
+            "## Red-proof\n- red_cmd: false\n- green_cmd: true\nTDD done\n"
+            "## Traceability\n| AC-1 | tests/test_x.py |\n| smoke | product_smoke |\n"
+            "## Evidence pack\n| hard_gates | ok |\n| smoke | product_smoke |\n",
+        )
+        _write(
+            root / ".agents" / "artifacts" / "CODE_REVIEW.md",
+            "# CODE-REVIEW\n**Marker:** CODE-REVIEW\n\n"
+            "## Findings\n- No P0 issues in fixture scope.\n\n"
+            "## Correction checks\n- fixture finding → tests/test_hard_gates.py\n\n"
+            "## Verdict\nApprove fixture pass.\n" + ("x" * 80),
+        )
+        return draft
+
+    def test_new_checks_block_code_ship(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = self._valid_code_draft(root)
+            with (
+                mock.patch.object(hg, "_scope_flags", return_value=(False, False)),
+                mock.patch.object(hg, "_secrets_ok", return_value=True),
+                mock.patch.object(clr, "check", return_value=(False, ["E501 2 > 1"])),
+                mock.patch.object(cca, "check", return_value=(False, ["history"])),
+                mock.patch.object(ccc, "check", return_value=(False, ["missing section"])),
+            ):
+                r = hg.evaluate(root, draft, diff=None)
+            self.assertFalse(r.ok)
+            for name in ("lint_ratchet", "comment_audit", "correction_checks"):
+                self.assertTrue(
+                    any(name in v for v in r.violations), (name, r.violations)
+                )
+
+    def test_new_checks_skip_for_prose(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            draft = root / "PR_DRAFT.md"
+            _write(
+                draft,
+                "## What\n**Spec waiver:** docs-only\n"
+                "## Red-proof\nTDD N/A docs-only\n",
+            )
+            with (
+                mock.patch.object(hg, "_scope_flags", return_value=(True, False)),
+                mock.patch.object(clr, "check", return_value=(False, ["x"])),
+                mock.patch.object(cca, "check", return_value=(False, ["x"])),
+                mock.patch.object(ccc, "check", return_value=(False, ["x"])),
+            ):
+                r = hg.evaluate(root, draft, diff=None)
+            self.assertTrue(r.ok, r.violations)
+            self.assertTrue(any("lint_ratchet" in s for s in r.skipped))
+            self.assertTrue(any("comment_audit" in s for s in r.skipped))
+            self.assertTrue(any("correction_checks" in s for s in r.skipped))
 
 
 if __name__ == "__main__":

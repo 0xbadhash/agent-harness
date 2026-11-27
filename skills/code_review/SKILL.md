@@ -77,13 +77,30 @@ lightweight read of the diff only and record skip in handoff.
 
 8. **Do not** advance `pipeline.json`. That is `/pr_review --validate` only.
 
+## Correction → check (required)
+
+For every accepted finding, add one line under `## Correction checks` naming the
+deterministic check that prevents recurrence:
+
+- `- <finding> → tests/test_foo.py`
+- `- <finding> → ruff rule <code> / gate <name>`
+- `- <finding> → no-check: <reason ≥10 chars>` (signed exception)
+
+A finding with no check and no signed reason is not closed. Write
+`- none (no accepted findings)` when the review accepted nothing.
+`scripts/check_correction_checks.py` fails `hard_gates` when the section is
+missing or a bullet is unmapped.
+
 ## Report artifact
 
-Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with:
+Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with two separated axes (do not merge or rerank across axes):
 
+- `## Standards` — repo coding standards + Fowler smell baseline (`Mysterious Name`, `Duplicated Code`, `Feature Envy`, `Data Clumps`, `Primitive Obsession`, `Repeated Switches`, `Shotgun Surgery`, `Divergent Change`, `Speculative Generality`, `Message Chains`, `Middle Man`, `Refused Bequest`)
+- `## Spec` — AC-by-AC fidelity against the spec/PR_DRAFT (missing requirements, scope creep, wrong behavior)
 - command / base / head
 - secrets scan result
 - findings accepted / rejected (brief why)
+- `## Correction checks` — one line per accepted finding: the check that prevents recurrence, or a signed `no-check` reason
 - P0 count; follow-ups listed separately
 - smoke/tests run
 

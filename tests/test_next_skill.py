@@ -9,6 +9,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import green_checkpoint as gc  # noqa: E402
 import next_skill as ns  # noqa: E402
 from review_scope import ScopeBaseline  # noqa: E402
 
@@ -29,6 +30,12 @@ def _b(**kwargs):
 
 
 class TestNextSkill(unittest.TestCase):
+    def setUp(self):
+        # Routing unit tests must not read the operator's local checkpoint.
+        patcher = mock.patch.object(gc, "head_is_green", return_value=(False, ""))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_execute_dev_code_requires_code_review(self):
         with mock.patch.object(ns, "build_baseline", return_value=_b()):
             nxt, meta = ns.decide("execute_dev", base="a", head="b", repo=Path("."))

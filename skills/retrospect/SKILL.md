@@ -22,7 +22,7 @@ timeout-seconds: 600
    - optional: `python3 scripts/night_shift_taxonomy.py`
 2. Write `.agents/artifacts/RETRO.md` (marker `RETRO`) with:
    - What went well
-   - Failures / near-misses (with gate names)
+   - Failures / near-misses (with gate names); classify each first: **mechanical** violations (banned API, import shape, file-location, syntax) MUST become an automated linter/gate check, never prose in `AGENTS.md`; reserve prose only for genuine **judgement calls**.
    - **Harness improvements** (skills/scripts/docs)
    - **Product improvements** (tests/smoke/plugin)
    - Explicit non-actions
