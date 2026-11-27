@@ -1,91 +1,168 @@
-# PR Draft: Automation readiness gate before the outer loop
+# PR Draft: Wire orphaned harness helpers, tighten spec rituals, plan stacked ships
 
 **Range:** `origin/main..HEAD`
-**Owner:** 0xbadhash
+**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
+**Plan:** `.agents/specs/2026-11-27-harness-wiring-stack-issues-plan.md`
+**Tickets:** `.agents/specs/2026-11-27-harness-wiring-stack-issues/tickets`
+
+## Summary
+
+- Wired `retro_job.py`, `smart_zone_guard.py`, `check_compact_safety.py`,
+  `check_comment_audit.py`, and `check_ticket_dag.py` into their owning skills
+  and CI jobs (AC-1).
+- Added the candidate-name scenario table, operator `STOP` token, why-first
+  question order, pain ranking, and a glossary collision gate (AC-2).
+- Added `workflow-harness/glossary.json` and real ticket fields for the ingest
+  fan-out (AC-3).
+- Added offline issue-body generation to the retro job and documented the QA
+  flow (AC-4).
+- Added `scripts/stack_plan.py` for stack layers and per-layer review chunks
+  (AC-5).
+
+Released as `v1.4.57`: main shipped `v1.4.52` through `v1.4.56` while this
+branch was in review, and all of them are merged and re-verified here.
 
 ## What Problem This Solves
 
-The bounded outer loop runs mechanical fixers after a gate failure. It had no
-proof that the inner loop itself was sound, so an expired suppression, an
-unmapped correction, a stale behavior report, or an old coverage artifact could
-start a repair run on a broken base. The fixers then added noise and masked the
-real failure.
+The harness had five deterministic helpers that no stage called. The ticket DAG
+validator, smart-zone guard, compact-safety gate, comment audit, and retro job
+therefore had no effect on a real ship. Spec interviews also missed the decisions
+that prevent rework: why the work matters, which pain ranks first, whether a
+candidate name survives real scenarios, and whether two glossary rows define the
+same term. `workflow-harness` pointed at a `glossary.json` that did not exist,
+and its ingest ticket had no acceptance criteria or blocking edge. Retro and QA
+findings stayed in session artifacts. Large diffs had no layer plan or review
+chunks.
 
 ## Why This Change Was Made
 
-Automation may only touch the tree when the inner loop is proven. The proof is a
-timestamped artifact computed from the same checkers the PR gate uses, and the
-outer loop reads that artifact before it changes anything.
+The helpers already encode the intended behavior, so the smallest useful change
+is to invoke them at the stage that owns the risk. The planner reuses the ticket
+DAG parser to avoid a second dependency model. Issue bodies are files first so
+the default path stays offline and deterministic; `gh` is a thin, explicit
+adapter. The spec edits are prose contracts with exact commands, which tests can
+assert without adding a runtime.
 
 ## User Impact
 
-- `check_automation_ready.py` fails closed on any of: lint ratchet, suppression
-  ban, correction map, behavior report, fresh coverage, named owner.
-- `--write` records `.agents/artifacts/AUTOMATION_READINESS.md`.
-- `attempt_autofix(require_readiness=True)` returns one `autofix_blocked` record
-  and runs no fixer without a current artifact.
-- `night_shift_readiness.py` sets the flag from
-  `night_shift.require_automation_ready` or `AUTOFIX_REQUIRE_READY=1`.
-- Default is off for products; the harness opts in through its plugin.
+Harness operators and agents get fail-closed checks where they already work:
+`/execute_dev`, `/code_review`, `/retrospect`, `/qa_campaign`, and CI. Product
+installs keep working because the helper CLIs are unchanged; only additive flags
+and new commands appear. No user-visible product change.
+
+## Smallest visual change
+
+The smallest slice is one command in this repo:
+
+```bash
+python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-wiring-stack-issues/tickets
+```
+
+It prints the dependency layers and review chunks for the five ship tickets.
+Every other item is the same pattern: one existing helper invoked from the skill
+or CI step that owns the risk.
+
+## Before/after
+
+**Before:** the helper scripts existed, but no skill or CI job named them, so a
+real ship never ran them. The base commit had no stack planner at all.
+
+```text
+$ git grep -l "check_ticket_dag" 0336317 -- skills .github || echo "no skill/CI caller"
+no skill/CI caller
+$ git cat-file -e 0336317:scripts/stack_plan.py; echo $?
+128
+```
+
+**After:** each helper has a named caller, and the planner runs offline:
+
+```text
+$ python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-wiring-stack-issues/tickets
+### CHUNK 1 — tickets 01, 02
+### CHUNK 2 — tickets 03, 04, 05
+$ .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
+5 passed in 0.07s
+```
+
+## Merge Danger
+
+**Door:** two-way
+**Blast Radius:** harness
+
+## Evidence
+
+New tests in `tests/test_harness_wiring_stack.py` failed before the
+implementation and pass after it. The workflow-harness test file covers the
+glossary and ticket fields in its own tree. The full harness suite (492 passed,
+1 skipped), `validate.py full` (9/9), and product smoke (2/2) are green. This
+ship also restores four pieces that the base commit tested but left
+uncommitted: the diagnosing-bugs skill, the two review axes, the Merge Danger
+template block, and the `GLOSSARY.md` references.
+
+```text
+red_cmd: git cat-file -e origin/main:tests/test_harness_wiring_stack.py
+green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
+```
 
 ## Evidence pack
 
-| Gate | Command | Result |
-|------|---------|--------|
-| Red proof | `python3 -m pytest tests/test_automation_ready.py -q` | collection failed before `check_automation_ready.py` existed |
-| Targeted tests | `python3 -m pytest tests/test_automation_ready.py -q` | 13 passed |
-| Night-shift tests | `python3 -m pytest tests/test_night_refresh_from_orchestrator.py tests/test_night_shift_runtime_ops430.py tests/test_night_shift_todo_and_hardcodes.py -q` | 35 passed including the new file |
-| Mypy | `python3 -m mypy scripts tests` | success, 222 files |
-| Lint ratchet | `python3 scripts/check_lint_ratchet.py` | four rules held at baseline |
-| Full suite | `python3 -m pytest -q` | 520 passed, 2 skipped |
-| Smoke | `python3 scripts/product_smoke.py --root .` | 2/2 steps passed |
-| Validate | `python3 scripts/validate.py full` | 9/9 gates passed |
-| Readiness live run | `check_automation_ready.py --owner 0xbadhash --write` | all rows ok, artifact written |
-| Hard gates | `python3 scripts/pr_validator.py --diff origin/main...HEAD` | score gate |
+| Item | Result |
+|------|--------|
+| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 532 passed, 2 skipped |
+| smoke | `product_smoke.py` — 2/2 passed |
+| validate | `validate.py full` — 9/9 gates passed |
+| hard_gates | `hard_gates.py` — pass |
+| lint ratchet | `check_lint_ratchet.py` — B904/B905/BLE001/C901 held |
+| type ignores | `check_type_ignores.py` — every suppression owned |
 
-**Spec:** `.agents/specs/2026-11-27-automation-readiness-gate.md`
-**Plan:** `.agents/specs/2026-11-27-automation-readiness-gate-plan.md`
+## Spec
+
+**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
 
 ## Traceability
 
 | AC | Test / smoke |
 |----|----------------|
-| AC-1 precondition failure is named | `tests/test_automation_ready.py::TestAutomationReadyCheck` |
-| AC-2 artifact write/validate | `tests/test_automation_ready.py::TestReadinessArtifact` |
-| AC-3 autofix refusal | `tests/test_automation_ready.py::TestAutofixReadinessGate::test_outer_loop_blocked_without_artifact` |
-| AC-4 flag wiring | `tests/test_automation_ready.py::TestAutofixReadinessGate` plus `night_shift_readiness.py` |
-| AC-5 plugin + docs | `.agents/product_plugin.yaml`, `.agents/docs/night-shift.md` |
-| AC-6 suite/smoke/validate | full pytest 520 passed; smoke 2/2; validate 9/9 |
+| AC-1 | `tests/test_harness_wiring_stack.py::test_ac_1_helpers_wired` |
+| AC-2 | `tests/test_harness_wiring_stack.py::test_ac_2_spec_rituals_and_glossary_collision` |
+| AC-3 | `workflow-harness/tests/test_glossary_and_tickets.py` (companion tree) |
+| AC-4 | `tests/test_harness_wiring_stack.py::test_ac_4_issue_bodies_offline` |
+| AC-5 | `tests/test_harness_wiring_stack.py::test_ac_5_stack_plan_layers_and_chunks` |
+| smoke | `product_smoke.py` (`hardcodes`, `unit`) |
 
 ## Threat notes
 
-Security tags: `supply-chain`, `secrets`.
-
-- Asset / trust boundary: the gate reads repository artifacts and runs local
-  checkers; it makes no network calls and reads no credentials.
-- Abuse case: automation could reformat over a real gate failure — the readiness
-  artifact forces the inner loop green first (`supply-chain` integrity).
-- Abuse case: a stale artifact could authorize work on an old commit — the 24h
-  cap and the failed-check scan reject it.
-- Abuse case: an ownerless automation run has no accountability — the gate
-  requires a named owner from `--owner`, `AUTOMATION_OWNER`, or `PR_DRAFT.md`.
+- **Path traversal:** ticket and glossary inputs are untrusted Markdown/JSON.
+  Parsers keep strict token regexes and resolve paths under the repo root.
+- **Injection:** issue bodies are written as files; `--gh` uses an argv list and
+  never a shell string. Default execution makes no network call.
+- **Secrets:** `check_secrets_diff.py` runs on the ship range before issue
+  bodies are eligible for posting.
 
 ## Red-proof (process honesty)
 
-Red was observed before implementation: the targeted run failed collection with
-`ModuleNotFoundError: No module named 'check_automation_ready'`, and
-`attempt_autofix(require_readiness=True)` had no refusal path. The retained green
-command is executable:
+The wiring tests do not exist on `origin/main` and failed on import/collection.
+After implementation the same tests pass.
 
 ```text
-green_cmd: python3 -m pytest tests/test_automation_ready.py tests/test_night_refresh_from_orchestrator.py -q
+red_cmd: git cat-file -e origin/main:tests/test_harness_wiring_stack.py
+green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 ```
+
+## Cross-review
+
+See `.agents/artifacts/CROSS_REVIEW.md` (marker `CROSS-REVIEW`).
 
 ## Things that look bad but are actually fine
 
-1. The harness opts in while products default off. Opt-in proves the gate on the
-   reference repo; a product without coverage must not be blocked by default.
-2. Coverage reads 47.8%. The gate checks freshness and presence, while
-   `check_module_coverage.py` owns the threshold.
-3. `AUTOMATION_READINESS.md` is an artifact, not source. It is force-added so the
-   check ships with its evidence and stays out of the default ignore paths.
+1. **Issue bodies are local files, not GitHub issues.** The ship is deterministic
+   and offline; `--gh` remains an explicit operator action with its own approval.
+2. **The stack planner reads ticket Markdown instead of a new manifest format.**
+   Tickets already carry `Blocked by:` edges, so one parser keeps the DAG and the
+   layers consistent.
+3. **Skill edits are prose rather than Python gates.** The scripts stay the
+   enforcement point; the skill text tells the agent which command to run, and
+   tests assert the command appears.
+4. **`workflow-harness` data ships in a companion repo.** Its glossary and ticket
+   schema belong to that product's tests, so the harness ship references them
+   without editing product code.

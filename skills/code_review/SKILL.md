@@ -64,6 +64,15 @@ lightweight read of the diff only and record skip in handoff.
 
    Fail closed on findings. Prefer gitleaks/trufflehog when installed.
 
+4b. **Comment audit on added lines:**
+
+   ```bash
+   python3 scripts/check_comment_audit.py --diff <base>...HEAD --strict
+   ```
+
+   Fail closed on history comments, commented-out code, and ownerless TODOs.
+   Comments explain constraints (why), not the change history.
+
 5. **Engine.** Prefer a **different model** than the implementer when available:
 
    - Env: `CODE_REVIEW_MODEL` or `GROK_MODEL_CROSS_REVIEW` / product equivalent
@@ -103,6 +112,16 @@ Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with two separat
 - `## Correction checks` — one line per accepted finding: the check that prevents recurrence, or a signed `no-check` reason
 - P0 count; follow-ups listed separately
 - smoke/tests run
+
+## Review chunks (stacked or large diffs)
+
+```bash
+python3 scripts/stack_plan.py --tickets .agents/specs/<slug>/tickets
+```
+
+Review one `### CHUNK n` per stack layer and record a verdict for each chunk in
+`CODE_REVIEW.md`. Keep findings attached to the chunk that introduced them; do
+not rerank across chunks.
 
 ## Handoff
 

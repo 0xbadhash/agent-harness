@@ -171,6 +171,16 @@ CODE_REVIEW_MIN_CHARS = 180
 CODE_REVIEW_AUTO_MARKER = "Auto-written by run_ship_chain"
 
 
+def check_code_review_axes(text: str) -> tuple[bool, str]:
+    """Return (ok, detail) verifying separated ## Standards and ## Spec sections."""
+    has_std = bool(re.search(r"^##\s+Standards\b", text, re.IGNORECASE | re.MULTILINE))
+    has_spec = bool(re.search(r"^##\s+Spec\b", text, re.IGNORECASE | re.MULTILINE))
+    if has_std and has_spec:
+        return True, "ok"
+    missing = [name for name, ok in (("## Standards", has_std), ("## Spec", has_spec)) if not ok]
+    return False, f"missing {', '.join(missing)}"
+
+
 def _code_review_quality(path: Path) -> tuple[bool, str]:
     """Return (ok, detail). Marker required; thin/auto stubs fail quality floor."""
     if not path.is_file():

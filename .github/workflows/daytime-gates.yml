@@ -20,7 +20,12 @@ jobs:
           if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           pip install pytest pytest-cov ruff mypy hypothesis pyyaml || true
       - name: J1 unit (coverage)
+        env:
+          # Keep coverage scratch out of the repo root: check_repo_hygiene
+          # fails the pack on .coverage, and .agents/ is skipped.
+          COVERAGE_FILE: .agents/artifacts/.coverage
         run: |
+          mkdir -p .agents/artifacts
           python -m pytest tests/ -q \
             --ignore=tests/enhancement_specs \
             --cov=scripts \
@@ -42,6 +47,16 @@ jobs:
           semgrep --config .semgrep.yml --error . 2>&1 | tail -60
       - name: Import boundary
         run: python scripts/check_import_boundaries.py
+      - name: Comment audit (diff)
+        run: |
+          BASE=origin/main
+          git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE=HEAD~1
+          python scripts/check_comment_audit.py --diff "$BASE...HEAD" --strict
+      - name: Ticket DAG
+        run: |
+          for d in .agents/specs/*/tickets; do
+            if [ -d "$d" ]; then python scripts/check_ticket_dag.py "$d"; fi
+          done
   skill-conformance:
     runs-on: ubuntu-latest
     steps:

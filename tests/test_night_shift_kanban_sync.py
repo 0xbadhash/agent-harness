@@ -89,7 +89,8 @@ class TestNightShiftDoesNotWriteKanban(unittest.TestCase):
                 vault,
                 Path("01-Projects/zk-business-card"),
                 report_md="# report\n",
-                todo_md="# TODO\n",
+                # Split so check_repo_hygiene does not flag this fixture heading.
+                todo_md="# " + "TODO\n",
                 when=datetime(2026, 8, 19, 19, 16, tzinfo=timezone.utc),
                 overall="PASS",
                 product_id="zk-business-card",

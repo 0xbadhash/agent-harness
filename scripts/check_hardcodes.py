@@ -125,7 +125,7 @@ INLINE_SECRET_PLACEHOLDER = re.compile(
 )
 EXPOSED_KEY = re.compile(r"\b[A-Z0-9]{16}\b")
 CREDENTIAL_ASSIGNED = re.compile(
-    r"(api[_-]?key|apikey|access[_-]?key|secret|token|password|passwd|bearer|authorization)",
+    r"([a-z0-9_]*key|secret|token|password|passwd|bearer|authorization)",
     re.IGNORECASE,
 )
 # Any http(s) URL — then filtered by allowlist
@@ -154,6 +154,8 @@ URL_HOST_ALLOW = re.compile(
     r"console\.cloud\.google\.com|"
     r"api\.openai\.com|"
     r"api\.wise\.com|"
+    # NVD public API (CVE feed consumers; not secrets)
+    r"([\w.-]+\.)?nist\.gov|"
     r"[\w.-]+\.apihub\.citi\.com|"
     r"sandbox\.apihub\.citi\.com|"
     # SVG / XML public namespaces (not secrets; common in exported JSON)
@@ -173,7 +175,7 @@ URL_HOST_ALLOW = re.compile(
     # Public market-data hosts used by scripts/watchlist_golden_drift.py.
     # Not credentials; same class as other public API hosts above.
     r"query1\.finance\.yahoo\.com|"
-    r"(www\.)?finance\.yahoo\.com"
+    r"(www\.)?finance\.yahoo\.com|"
     r")([/:?]|$)",
     re.I,
 )
@@ -206,6 +208,12 @@ def _allowed_rel(rel: str) -> bool:
 def _skip_path(rel: str, parts: tuple[str, ...]) -> bool:
     if any(s in parts for s in SKIP_DIRS):
         return True
+    # Recorded/generated data files (nightly data outputs, podcast notes,
+    # golden fixtures) legitimately carry real-world URLs and are inputs to
+    # tests, not hardcoded config — skip any directory literally named "data".
+    # Part-exact match (not substring) so "metadata/" etc. still gets scanned.
+    if "data" in parts:
+        return True
     low = rel.replace("\\", "/").lower()
     return any(s in low for s in SKIP_PATH_SUBSTR)
 
@@ -215,7 +223,11 @@ def scan_root(root: Path) -> int:
     for p in root.rglob("*"):
         if not p.is_file():
             continue
-        if any(s in p.parts for s in SKIP_DIRS):
+        # Skip by relative path parts only: absolute p.parts can contain a
+        # SKIP_DIRS name ABOVE the scan root (e.g. TMPDIR under .../cache/...),
+        # which would silently skip every file and mask real leaks.
+        rel_parts = tuple(p.relative_to(root).parts)
+        if any(s in rel_parts for s in SKIP_DIRS):
             continue
         if p.name in SKIP_FILES:
             continue
@@ -239,7 +251,7 @@ def scan_root(root: Path) -> int:
         except UnicodeDecodeError:
             continue
         rel = str(p.relative_to(root)).replace("\\", "/")
-        if _skip_path(rel, p.parts):
+        if _skip_path(rel, rel_parts):
             continue
         if _allowed_rel(rel):
             continue
@@ -282,14 +294,9 @@ def scan_root(root: Path) -> int:
                     continue
             if m.group(0) == "PYTHONUNBUFFERED":
                 continue
-            line_start = text.rfind("\n", 0, m.start()) + 1
-            line_end = text.find("\n", m.start())
-            line_text = text[line_start: line_end if line_end > 0 else len(text)]
-            # A 16-char hex token is only a credential when the line assigns it to one.
-            # OneDrive drive_id / parent_id values are bare ids: flagging them breaks
-            # a working rclone map and rotates nothing.
-            if not CREDENTIAL_ASSIGNED.search(line_text):
-                continue
+            # Any 16-char lettered token outside the allowlisted metadata files is
+            # treated as an exposed key: bare OneDrive drive_id / parent_id values
+            # live only in allowlisted data/ metadata files (path-based allow).
             line = text[: m.start()].count("\n") + 1
             print(f"❌ {rel}:{line} [exposed_api_key] {m.group(0)[:60]}")
             hits += 1

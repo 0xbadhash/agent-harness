@@ -8,6 +8,11 @@ __pycache__/
 # Local scorecard dumps (SoT is vault agent-tasks/evidence)
 evidence/
 
+# untracked operational scratch (cleanup 2026-11-24, decision L5)
+/bin/restore_product_venvs.sh
+/config/night_shift_runtime.yaml.bak-t1659u
+/signal-cli-canary-*/
+
 # Scratch / backup state (must never be committed; gate fails on it)
 *.bak-*
 *.orig

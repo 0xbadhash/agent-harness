@@ -44,6 +44,19 @@ RUBRIC = {
 }
 
 
+def validate_merge_danger(text: str) -> tuple[bool, str]:
+    """Validate ## Merge Danger contains Door (one-way|two-way) and Blast Radius."""
+    if "## Merge Danger" not in text:
+        return False, "missing ## Merge Danger"
+    m = re.search(r"##\s+Merge Danger\b(.*?)(?=\n## |\Z)", text, re.IGNORECASE | re.DOTALL)
+    body = m.group(1) if m else ""
+    has_door = bool(re.search(r"\*\*Door:\*\*\s*(one-way|two-way)", body, re.IGNORECASE))
+    has_radius = bool(re.search(r"\*\*Blast Radius:\*\*\s*\S+", body, re.IGNORECASE))
+    if has_door and has_radius:
+        return True, "ok"
+    return False, "Merge Danger requires **Door:** (one-way|two-way) and **Blast Radius:**"
+
+
 def _validate_section_9(pr_draft: Path) -> tuple[bool, str, int]:
     if not pr_draft.exists():
         return False, "PR_DRAFT.md not found", 0

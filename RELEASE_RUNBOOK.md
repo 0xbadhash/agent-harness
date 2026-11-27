@@ -1,71 +1,101 @@
-# RELEASE_RUNBOOK — agent-harness v1.4.56
+# Release runbook — v1.4.57 (T2088U)
 
-**Score:** 100 · phase `approved` → `shipped` · 2026-11-27
-**Branch:** `main`
-**Tag:** `v1.4.56` (on the release merge commit)
-**Scheme:** `VERSION` file, patch bump `1.4.55` → `1.4.56`. Roadmap (`CHANGELOG.md`) lists the automation readiness gate.
+**Version:** 1.4.57
+**Date:** 2026-11-27
+**Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
+**Base:** `origin/main` at `e983281` (v1.4.56)
+**Head:** the merge of `origin/main` into `ship/t2088u-fsm-1-5`
+**Ship PR:** https://github.com/0xbadhash/agent-harness/pull/56
 
-## Scope
-
-Automation readiness gate before the outer loop (T2087U item 5):
-
-- `check_automation_ready.py` proves the inner loop from the lint ratchet,
-  suppression ban, correction map, behavior report, fresh coverage, and owner.
-- `--write` records `AUTOMATION_READINESS.md`; `--require-artifact` validates it.
-- `attempt_autofix(require_readiness=True)` refuses with `autofix_blocked` and
-  runs no fixer without a current artifact.
-- `night_shift_readiness.py` wires the flag from the plugin or
-  `AUTOFIX_REQUIRE_READY=1`; the harness plugin opts in.
+The version moved to 1.4.57 because main shipped `v1.4.52` through `v1.4.56`
+(correction → check, pristine garden, Markdown escape hatch, categorical lint,
+automation readiness) while this branch was in review. Every one of those
+releases is merged into this branch and re-verified here.
 
 ## Smoke
 
 | Step | Command | Exit |
 |------|---------|------|
-| smoke:hardcodes | `python3 scripts/product_smoke.py --root .` → `scripts/check_hardcodes.py` | 0 |
-| smoke:unit | `python3 scripts/product_smoke.py --root .` → `bash scripts/smoke_unit.sh` | 0 |
-| web_e2e | `python3 scripts/check_web_e2e.py --root .` | skipped (no website/app UI) |
-| validate full | `python3 scripts/validate.py full` | 0 (9/9 gates) |
-| pytest | `python3 -m pytest -q` | 0 (520 passed, 2 skipped) |
-| mypy | `python3 -m mypy scripts tests` | 0 (Success, 222 files) |
-| readiness | `python3 scripts/check_automation_ready.py --owner 0xbadhash --write` | 0 (all rows ok) |
-
-`product_smoke` summary: `✅ 2 smoke step(s) passed`.
+| hardcodes | `python3 scripts/product_smoke.py --root .` → `scripts/check_hardcodes.py` | 0 |
+| unit | `python3 scripts/product_smoke.py --root .` → `bash scripts/smoke_unit.sh` | 0 |
+| product smoke | `python3 scripts/product_smoke.py --root .` | 0 (2/2) |
+| web E2E | `python3 scripts/check_web_e2e.py --root .` | 0 (skipped: no website) |
+| validate full | `python3 scripts/validate.py full` | 0 (all gates) |
+| pytest | `python3 -m pytest -q` | 0 (532 passed, 2 skipped) |
 
 ## Infra
 
-No infra surface. `product_plugin.yaml` has no infra skill and `traits.web` is false. Infra verify skipped.
-
-## GitHub PR gate
-
-`gh pr list --state open` is checked before tagging; unrelated open PRs are
-documented and left untouched.
+No infra surface. `product_plugin.yaml` has no infra skill and `traits.web` is
+false. Infra verify skipped.
 
 ## Evidence pack
 
 | Item | Result |
 |------|--------|
-| hard_gates | pass (pr_validator score gate) |
-| pytest | 520 passed, 2 skipped |
-| mypy | Success: no issues in 222 files |
-| smoke | 2/2 steps, exit 0 |
-| validate full | 9/9 gates |
-| lint ratchet | B904=1, B905=2, BLE001=44, C901=14 held |
-| correction checks | 7 findings mapped |
-| type ignores | none in the tree |
-| readiness artifact | recorded, marker present, all rows ok |
+| hard_gates | `hard_gates.py --diff origin/main...HEAD` → pass |
+| smoke | 2/2 steps |
+| pytest | 532 passed, 2 skipped |
+| validate | `validate.py full` → all gates |
+| coverage | `check_module_coverage` passed |
+| secrets | clean on `origin/main...HEAD` |
+| lint ratchet | B904/B905/BLE001/C901 held at baseline |
+| type ignores | `check_type_ignores.py` clean |
+| correction checks | 4 findings mapped in `CODE_REVIEW.md` |
+| repo hygiene | clean tree, no scratch artifacts |
+| comment audit | clean on `origin/main...HEAD` |
+
+## GitHub PR gate
+
+`gh pr list --state open` returns three pre-existing PRs unrelated to this ship,
+plus this ship's PR:
+
+- #56 `ship/t2088u-fsm-1-5` — this ship (open until squash merge)
+- #40 `chore/ops-ceo-waits-buzz-leftovers`
+- #21 `fix/figure-it-out-night-product-id`
+- #19 `feat/night-shift-atom-learning-family`
+
+None of #40, #21, #19 touch the harness scripts in this ship. They are recorded
+because the release policy expects open PRs to be documented.
+
+## CI and companion notes
+
+- The pristine-garden gate failed `harness-daytime` because the J1 coverage step
+  wrote `.coverage` into the repo root. The workflow now sets
+  `COVERAGE_FILE=.agents/artifacts/.coverage`; both checks pass on the PR.
+- The AC-3 companion assertion skips when `~/workflow-harness` is on a branch
+  without `glossary.json`. The workflow-harness side merged as
+  https://github.com/0xbadhash/workflow-harness/pull/5 and its own test proves
+  the glossary schema.
+
+## Tag
+
+`v1.4.57` lands on the squash-merge commit on `main`, not on this branch. Main is
+protected, so the tag cannot be created from here before the merge.
+
+## Merge danger
+
+- **Door:** two-way
+- **Blast Radius:** harness
 
 ## Rollback
 
-Revert the release commit and the feature commit, then delete tag `v1.4.56`.
-Unset `night_shift.require_automation_ready` (or `AUTOFIX_REQUIRE_READY`) to
-restore unconditional autofix; the script and artifact are inert otherwise. No
-data or product state is involved.
+1. `git revert <squash-merge-sha>` on `main` and open a revert PR.
+2. Delete tag `v1.4.57` if it already points at the bad commit.
+3. No data migration or persistent state is involved; product installs keep the
+   previous skill text until the next reinstall.
 
 ## Things that look bad but are actually fine
 
-1. The harness opts in while installed products default off. Opt-in proves the
-   gate on the reference repo without blocking products that lack coverage.
-2. Coverage reads 47.8%. The gate checks freshness and presence;
-   `check_module_coverage.py` owns the threshold.
-3. `AUTOMATION_READINESS.md` is force-added. It is evidence the nightly job reads,
-   not a source file, and it stays out of the default ignore paths.
+1. **The release tag is not local yet.** Main is protected, so the tag must land
+   on the squash-merge commit rather than the feature-branch commit.
+2. **Three older PRs are open.** They predate this ship and touch other areas.
+3. **`workflow-harness` ships separately.** Its glossary and ticket fields merged
+   in its own repo with a 128-test suite.
+4. **The branch carries commit `0336317`, which is not on main.** It is the base
+   repair that main's committed tests already expected (diagnosing-bugs skill,
+   review axes, Merge Danger template block, `GLOSSARY.md` references).
+5. **Two `type: ignore` comments became casts.** Main's suppression gate requires
+   an owner and expiry on every ignore; the ticket DAG parser did not need the
+   ignores once `cast(list[str], …)` made the types explicit.
+6. **`STACK_PLAN.md` is generated.** It is evidence, not source; rerun
+   `scripts/stack_plan.py --write` when tickets change.

@@ -80,11 +80,17 @@ Goals: enough adversarial clarity that we do **not** ship the wrong product/feat
 Rules:
 
 1. **One question at a time**; always offer a **recommended default**.
-2. Cover required themes G1–G7 (or mark N/A with reason when truly inapplicable).
-3. Prefer short decision tree; do not stop early because the agent “knows.”
-4. **Do not** lock tech stack here unless the user forces it (stack → `--plan`).
-5. Record **every** Q/A under `## Grill-me` in the spec file (create draft file early if needed).
-6. If grill **rejects** the idea → status `rejected`; halt `🛑 GRILL REJECTED`; no plan/tickets.
+2. **Why first.** Establish why the pain matters (G1/G7) before what to build,
+   and defer how to `--plan`.
+3. Cover required themes G1–G7 (or mark N/A with reason when truly inapplicable).
+4. Prefer short decision tree; do not stop early because the agent “knows.”
+5. **Pain ranking.** Ask the operator to rank the pains this feature removes
+   (1 = worst); record it under `### Pain ranking`.
+6. **Do not** lock tech stack here unless the user forces it (stack → `--plan`).
+7. Record **every** Q/A under `## Grill-me` in the spec file (create draft file early if needed).
+8. **Operator stop token:** reply `STOP` → status `rejected`; halt
+   `🛑 GRILL REJECTED`; no plan/tickets.
+9. If grill **rejects** the idea → status `rejected`; halt `🛑 GRILL REJECTED`; no plan/tickets.
 
 Minimum coverage still includes outcome, scope, surfaces, constraints, risks, verify, priority — fold into G1–G7 rather than a separate optional interview.
 
@@ -126,9 +132,11 @@ Structured gap-closing **after** draft, **before** ready-for-agent / plan / tick
 1. Read `references/clarify-checklist.md`.
 2. Scan draft for remaining underspecification (not already answered in Grill-me).
 3. Ask **one** clarifying question at a time (max ~8 unless user invites more).
-4. Append under `## Clarifications` (separate from Grill-me).
-5. Update Problem / Solution / Acceptance / Out of Scope to match.
-6. Set status to `ready-for-agent` only when:
+4. For each new domain name, fill the **candidate-name scenario table** from
+   `references/clarify-checklist.md` before locking the term.
+5. Append under `## Clarifications` (separate from Grill-me).
+6. Update Problem / Solution / Acceptance / Out of Scope to match.
+7. Set status to `ready-for-agent` only when:
    - acceptance is checkable, **and**
    - grill evidence is complete (or spike-skipped with reason).
 

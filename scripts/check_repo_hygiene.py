@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Repo hygiene: scratch artifacts, dirty tree, MagicMock, orphan TODOs."""
+"""Repo hygiene: scratch artifacts, dirty tree, MagicMock, orphan TODOs, debug tags."""
 from __future__ import annotations
 
 import argparse
@@ -31,6 +31,23 @@ SCRATCH_PATTERNS = (
     "signal-cli-canary-*",
 )
 DEBUG_TAG_RE = re.compile(r"\[DEBUG-[A-Za-z0-9_.-]+\]")
+
+
+def scan_debug_tags(root: Path) -> int:
+    """Fail closed when temporary [DEBUG-*] instrumentation survives in non-test source."""
+    fails = 0
+    prod_skip = SKIP_DIRS | {"tests", "test", "testing", "docs", "skills"}
+    for ext in ("*.py", "*.ts", "*.tsx", "*.js", "*.jsx"):
+        for p in Path(root).rglob(ext):
+            if any(s in p.parts for s in prod_skip):
+                continue
+            if p.name == "check_repo_hygiene.py":
+                continue
+            text = p.read_text(encoding="utf-8", errors="ignore")
+            if DEBUG_TAG_RE.search(text):
+                print(f"❌ {p.relative_to(root)}: leftover [DEBUG-*] instrumentation")
+                fails += 1
+    return fails
 
 
 def scan_scratch_artifacts(root: Path) -> list[str]:
