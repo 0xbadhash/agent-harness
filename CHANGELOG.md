@@ -1,3 +1,15 @@
+## v1.5.0 — 2026-11-27
+
+### feat(harness): finish the top-50 scorecard — decisions, prototype, review, retro, stacks
+
+- **Decisions.** `.agents/decisions/` gains an index, a template, and an ADR for review tiers. `check_adr.py` validates headings, status, dates, supersession, and workflow links; `/spec` reads the index and states reserved versus delegated decisions. Review depth keys off `**Door:**`, and a shared-component ticket without a `Prefactor:` entry fails `check_ticket_dag.py`.
+- **Prototype and handoff.** `/prototype` answers shape questions with throwaway variants; `check_prototype_fidelity.py` fails review when the shipped shape drifted. `context_pack.py --compact --spec` writes a grill handoff with decisions, ownership, glossary, and ADR links.
+- **Review rigor.** `.agents/policy/comment-policy.md` plus `check_comment_audit.py --diff --strict` cap new history, dead-code, and TODO comments. `/code_review` reports a comment ratio and adds a Process lens. `check_docs_patterns.py` enforces doc shape, and `templates/eslint-ratchet/` extends the lint ratchet to JavaScript.
+- **Session cost.** `session_context.py` records token and context cost per ship in `SESSION_COST.md`; `check_docs_patterns.py` and the comment audit run in the daytime gate.
+- **Retro.** `retro_job.py --transcripts --pr-comments` scans local sessions and PR comments, redacts secret-shaped tokens, and classifies findings into action classes (`add-gate`, `non-action`, …) before writing `RETRO.md`.
+- **Stacks.** `merge_stack.py` merges tickets in layer order with an optional PR map and opt-in `--auto-merge`; `run_tickets.py` runs the unblocked frontier in parallel and records `TICKET_RUNS.jsonl`.
+- **Companion.** The same mechanisms, plus a canary gate and registry-last rule, ship in workflow-harness v0.3.0.
+
 ## v1.4.57 — 2026-11-27
 
 ### feat(harness): wire orphaned helpers and plan stacked ships

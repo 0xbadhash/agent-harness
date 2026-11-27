@@ -1,8 +1,8 @@
 {
   "card_id": null,
-  "phase": "init",
+  "phase": "approved",
   "remediation": [],
-  "score": 100.0,
+  "score": 100,
   "spec_id": ".agents/specs/2026-11-27-harness-top50-completion.md",
   "task": "T2088U harness top-50 completion (v1.5.0)",
   "updated_at": "2026-08-19T01:08Z",
