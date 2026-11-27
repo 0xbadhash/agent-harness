@@ -12,3 +12,12 @@ evidence/
 /bin/restore_product_venvs.sh
 /config/night_shift_runtime.yaml.bak-t1659u
 /signal-cli-canary-*/
+
+# Scratch / backup state (must never be committed; gate fails on it)
+*.bak-*
+*.orig
+*.rej
+.coverage
+.coverage.*
+.venv-*bak*
+signal-cli-canary-*

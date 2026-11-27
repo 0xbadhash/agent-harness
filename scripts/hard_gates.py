@@ -639,10 +639,26 @@ def evaluate(
                 )
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: correction_checks error: {e}")
+
+        try:
+            from check_repo_hygiene import check as _hygiene_check  # type: ignore
+
+            hy_ok, hy_msgs = _hygiene_check(root, require_clean=True)
+            if not hy_ok:
+                for msg in hy_msgs:
+                    if msg.startswith("fail:"):
+                        violations.append(f"hard_gates: repo_hygiene — {msg}")
+            else:
+                skipped.append(
+                    "repo_hygiene (" + (hy_msgs[0] if hy_msgs else "ok") + ")"
+                )
+        except Exception as e:  # pragma: no cover
+            violations.append(f"hard_gates: repo_hygiene error: {e}")
     else:
         skipped.append("lint_ratchet (prose-only)")
         skipped.append("comment_audit (prose-only)")
         skipped.append("correction_checks (prose-only)")
+        skipped.append("repo_hygiene (prose-only)")
 
     return HardGatesResult(
         ok=len(violations) == 0,

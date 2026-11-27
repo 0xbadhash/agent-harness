@@ -19,6 +19,9 @@
 - Added `scripts/stack_plan.py` for stack layers and per-layer review chunks
   (AC-5).
 
+Released as `v1.4.54`: main shipped `v1.4.52` and `v1.4.53` while this
+branch was in review, and both are merged and re-verified here.
+
 ## What Problem This Solves
 
 The harness had five deterministic helpers that no stage called. The ticket DAG
@@ -90,7 +93,7 @@ $ .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 New tests in `tests/test_harness_wiring_stack.py` failed before the
 implementation and pass after it. The workflow-harness test file covers the
-glossary and ticket fields in its own tree. The full harness suite (483 passed,
+glossary and ticket fields in its own tree. The full harness suite (492 passed,
 1 skipped), `validate.py full` (6/6), and product smoke (2/2) are green. This
 ship also restores four pieces that the base commit tested but left
 uncommitted: the diagnosing-bugs skill, the two review axes, the Merge Danger
@@ -105,7 +108,7 @@ green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 | Item | Result |
 |------|--------|
-| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 483 passed, 1 skipped |
+| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 492 passed, 1 skipped |
 | smoke | `product_smoke.py` — 2/2 passed |
 | validate | `validate.py full` — 6/6 gates passed |
 | hard_gates | `hard_gates.py` — pass |

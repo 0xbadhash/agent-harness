@@ -1,14 +1,15 @@
-# Release runbook — v1.4.53 (T2088U)
+# Release runbook — v1.4.54 (T2088U)
 
-**Version:** 1.4.53
+**Version:** 1.4.54
 **Date:** 2026-11-27
 **Spec:** `.agents/specs/2026-11-27-harness-wiring-stack-issues.md`
-**Base:** `origin/main` at `158ca1e` (v1.4.52 already shipped as T2087U)
+**Base:** `origin/main` at `9d1c540` (v1.4.53)
 **Head:** the merge of `origin/main` into `ship/t2088u-fsm-1-5`
 **Ship PR:** https://github.com/0xbadhash/agent-harness/pull/56
 
-The version moved from 1.4.52 to 1.4.53 because main shipped its own
-`v1.4.52` (correction → check wiring) while this branch was in review.
+The version moved to 1.4.54 because main shipped `v1.4.52` (correction →
+check) and `v1.4.53` (pristine garden) while this branch was in review. Both
+of those releases are merged into this branch and re-verified here.
 
 ## Smoke
 
@@ -19,7 +20,7 @@ The version moved from 1.4.52 to 1.4.53 because main shipped its own
 | product smoke | `python3 scripts/product_smoke.py --root .` | 0 (2/2) |
 | web E2E | `python3 scripts/check_web_e2e.py --root .` | 0 (skipped: no website) |
 | validate full | `python3 scripts/validate.py full` | 0 (6/6 gates) |
-| pytest | `python3 -m pytest -q` | 0 (483 passed, 1 skipped) |
+| pytest | `python3 -m pytest -q` | 0 (492 passed, 1 skipped) |
 
 ## Infra
 
@@ -32,11 +33,12 @@ false. Infra verify skipped.
 |------|--------|
 | hard_gates | `hard_gates.py --diff origin/main...HEAD` → pass |
 | smoke | 2/2 steps |
-| pytest | 483 passed, 1 skipped |
+| pytest | 492 passed, 1 skipped |
 | validate | `validate.py full` → 6/6 |
 | coverage | `check_module_coverage` passed |
 | secrets | clean on `origin/main...HEAD` |
 | correction checks | 4 findings mapped in `CODE_REVIEW.md` |
+| repo hygiene | clean tree, no scratch artifacts |
 
 ## GitHub PR gate
 
@@ -49,12 +51,11 @@ plus this ship's PR:
 - #19 `feat/night-shift-atom-learning-family`
 
 None of #40, #21, #19 touch the harness scripts in this ship. They are recorded
-because the release policy expects open PRs to be documented. Merging #56 first
-is the intended order.
+because the release policy expects open PRs to be documented.
 
 ## Tag
 
-`v1.4.53` lands on the squash-merge commit on `main`, not on this branch. Main is
+`v1.4.54` lands on the squash-merge commit on `main`, not on this branch. Main is
 protected, so the tag cannot be created from here before the merge.
 
 ## Merge danger
@@ -65,7 +66,7 @@ protected, so the tag cannot be created from here before the merge.
 ## Rollback
 
 1. `git revert <squash-merge-sha>` on `main` and open a revert PR.
-2. Delete tag `v1.4.53` if it already points at the bad commit.
+2. Delete tag `v1.4.54` if it already points at the bad commit.
 3. No data migration or persistent state is involved; product installs keep the
    previous skill text until the next reinstall.
 

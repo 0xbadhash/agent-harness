@@ -1,4 +1,4 @@
-## v1.4.53 — 2026-11-27
+## v1.4.54 — 2026-11-27
 
 ### feat(harness): wire orphaned helpers and plan stacked ships
 
@@ -7,6 +7,19 @@
 - `retro_job.py --file-issues` writes per-cluster and umbrella issue bodies offline; `--gh` is opt-in.
 - `scripts/stack_plan.py` emits dependency layers and review chunks; unknown dependencies exit non-zero.
 - Restores four pieces the base commit tested but left uncommitted: the diagnosing-bugs skill, review axes, the Merge Danger template block, and `GLOSSARY.md` references.
+
+## v1.4.53 — 2026-11-27
+
+### feat(gates): pristine garden — scratch state fails the pack
+
+- `check_repo_hygiene` gains `check(root, require_clean=False)`: backup/scratch
+  artifacts (`*.bak-*`, `*.orig`, `*.rej`, `.coverage*`, `.venv-*bak*`,
+  `signal-cli-canary-*`) fail, and a dirty git tree fails when the clean
+  requirement is on.
+- `hard_gates` runs the hygiene gate for non-prose ships and reports
+  `hard_gates: repo_hygiene`; prose-only ships record an explicit skip.
+- `.gitignore` lists the scratch patterns; the live
+  `config/night_shift_runtime.yaml.bak-t1659u` is removed.
 
 ## v1.4.52 — 2026-11-27
 
