@@ -23,6 +23,19 @@ Mark each as OK or needs Q:
 | Dependencies | Blocked on credentials, third parties, other tickets? |
 | Constitution | Conflicts with project principles? |
 
+## Candidate-name scenario table
+
+Before locking a domain term, prove the candidate name against real scenarios:
+
+| Candidate | Empty state | Error state | Happy path | Verdict |
+|-----------|-------------|-------------|------------|---------|
+| `<name A>` | `<reads as …>` | `<reads as …>` | `<reads as …>` | keep / reject |
+| `<name B>` | … | … | … | … |
+
+Pick the candidate that reads correctly in every scenario. Record the winner and
+the rejected candidates under `## Clarifications` so the name does not churn in
+code or tests.
+
 ## Rules
 
 1. Ask **one** question at a time.  

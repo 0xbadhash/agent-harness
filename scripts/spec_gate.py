@@ -167,24 +167,36 @@ def check_adr_three_part(text: str) -> tuple[bool, list[str]]:
     return True, ["ok: ADR three-part test (reversibility / surprise / tradeoff)"]
 
 
-def _glossary_terms(root: Path) -> tuple[set[str], Path | None]:
+def _glossary_entries(root: Path) -> tuple[list[tuple[str, int]], Path | None]:
+    """Return (term, line_number) pairs from the first glossary file found."""
     for rel in GLOSSARY_PATHS:
         path = root / rel
         if not path.is_file():
             continue
-        terms: set[str] = set()
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        entries: list[tuple[str, int]] = []
+        for number, line in enumerate(
+            path.read_text(encoding="utf-8", errors="replace").splitlines(), 1
+        ):
             row = line.strip()
             if row.startswith("|") and not row.startswith("|---"):
                 cells = [c.strip() for c in row.strip("|").split("|")]
                 if cells and cells[0] and cells[0].lower() != "term":
-                    terms.add(re.sub(r"[`*]", "", cells[0]).strip())
+                    entries.append((re.sub(r"[`*]", "", cells[0]).strip(), number))
             elif row.startswith(("-", "*")):
                 match = re.match(r"^[-*]\s+\*\*([^*]+)\*\*", row)
                 if match:
-                    terms.add(match.group(1).strip())
-        return terms, path
-    return set(), None
+                    entries.append((match.group(1).strip(), number))
+        return entries, path
+    return [], None
+
+
+def _glossary_terms(root: Path) -> tuple[set[str], Path | None]:
+    entries, path = _glossary_entries(root)
+    return {term for term, _ in entries}, path
+
+
+def _collision_key(term: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", term.lower())
 
 
 def check_glossary(root: Path, text: str) -> tuple[bool, list[str]]:
@@ -206,6 +218,30 @@ def check_glossary(root: Path, text: str) -> tuple[bool, list[str]]:
             f"{path.relative_to(root)} with a one-line definition"
         ]
     return True, [f"ok: domain terms resolved in {path.relative_to(root)}"]
+
+
+def check_glossary_collisions(root: Path) -> tuple[bool, list[str]]:
+    """E14b — two rows must not define the same normalized term."""
+    entries, path = _glossary_entries(Path(root))
+    if path is None:
+        return True, ["ok: no GLOSSARY.md — collision check N/A"]
+    seen: dict[str, tuple[str, int]] = {}
+    collisions: list[str] = []
+    for term, number in entries:
+        key = _collision_key(term)
+        if not key:
+            continue
+        if key in seen and seen[key][0] != term:
+            first, first_line = seen[key]
+            collisions.append(
+                f"{path.name}:{first_line} {first!r} collides with "
+                f"{path.name}:{number} {term!r} (normalized {key!r})"
+            )
+        else:
+            seen.setdefault(key, (term, number))
+    if collisions:
+        return False, ["glossary collision(s): " + "; ".join(collisions)]
+    return True, [f"ok: {len(entries)} glossary term(s), no normalized collisions"]
 
 
 def _ticket_dir(root: Path, spec_path: Path, text: str) -> Path | None:
@@ -370,6 +406,11 @@ def check(
             msgs.extend(c_msgs)
             if not c_ok:
                 return False, msgs
+
+        c_ok, c_msgs = check_glossary_collisions(root)
+        msgs.extend(c_msgs)
+        if not c_ok:
+            return False, msgs
         return True, msgs
 
     msgs.append(

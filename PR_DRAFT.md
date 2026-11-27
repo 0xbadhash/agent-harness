@@ -56,8 +56,11 @@ and new commands appear. No user-visible product change.
 
 New tests in `tests/test_harness_wiring_stack.py` failed before the
 implementation and pass after it. The workflow-harness test file covers the
-glossary and ticket fields in its own tree. Harness smoke and `validate.py full`
-are run before release.
+glossary and ticket fields in its own tree. The full harness suite (436 passed,
+1 skipped), `validate.py full` (6/6), and product smoke (2/2) are green. This
+ship also restores four pieces that the base commit tested but left
+uncommitted: the diagnosing-bugs skill, the two review axes, the Merge Danger
+template block, and the `GLOSSARY.md` references.
 
 ```text
 red_cmd: git cat-file -e HEAD~1:tests/test_harness_wiring_stack.py
@@ -68,7 +71,7 @@ green_cmd: .venv/bin/python -m pytest tests/test_harness_wiring_stack.py -q
 
 | Item | Result |
 |------|--------|
-| pytest | `tests/test_harness_wiring_stack.py` — 5 passed |
+| pytest | `tests/test_harness_wiring_stack.py` — 5 passed; full suite 436 passed, 1 skipped |
 | smoke | `product_smoke.py` — 2/2 passed |
 | validate | `validate.py full` — 6/6 gates passed |
 | hard_gates | `hard_gates.py` — pass |

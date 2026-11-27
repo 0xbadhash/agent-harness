@@ -20,6 +20,14 @@ timeout-seconds: 600
    - `.agents/artifacts/NIGHT_SHIFT_REPORT.md` / `NIGHT_SHIFT_TODO.md`
    - `PR_DRAFT.md`, `RELEASE_RUNBOOK.md`
    - optional: `python3 scripts/night_shift_taxonomy.py`
+1b. **Mechanical retro (deterministic, offline):**
+   ```bash
+   python3 scripts/retro_job.py --root .
+   python3 scripts/retro_job.py --root . --file-issues
+   ```
+   - `--file-issues` writes one issue body per cluster plus an umbrella body under
+     `.agents/artifacts/issues/`.
+   - `--gh` posts those bodies; run it only with the operator's explicit approval.
 2. Write `.agents/artifacts/RETRO.md` (marker `RETRO`) with:
    - What went well
    - Failures / near-misses (with gate names)

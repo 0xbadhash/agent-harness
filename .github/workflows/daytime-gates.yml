@@ -42,6 +42,16 @@ jobs:
           semgrep --config .semgrep.yml --error . 2>&1 | tail -60
       - name: Import boundary
         run: python scripts/check_import_boundaries.py
+      - name: Comment audit (diff)
+        run: |
+          BASE=origin/main
+          git rev-parse --verify "$BASE" >/dev/null 2>&1 || BASE=HEAD~1
+          python scripts/check_comment_audit.py --diff "$BASE...HEAD" --strict
+      - name: Ticket DAG
+        run: |
+          for d in .agents/specs/*/tickets; do
+            if [ -d "$d" ]; then python scripts/check_ticket_dag.py "$d"; fi
+          done
   skill-conformance:
     runs-on: ubuntu-latest
     steps:

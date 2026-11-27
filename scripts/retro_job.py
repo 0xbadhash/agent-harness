@@ -22,6 +22,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
+import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -176,12 +178,106 @@ def write_retro(root: Path, text: str, out: Path | None = None) -> Path:
     return target
 
 
+def _slug(label: str) -> str:
+    return re.sub(r"[^a-z0-9_-]+", "-", label.lower()).strip("-") or "other"
+
+
+def _cluster_body(label: str, examples: list[str], when: datetime) -> str:
+    lines = [
+        f"# [retro] {label}: {len(examples)} finding(s)",
+        "",
+        f"**Source:** retro {when:%Y-%m-%d}",
+        f"**Proposal:** {_proposal(label, examples)}",
+        "",
+        "## Examples",
+        "",
+        *[f"- {item}" for item in examples[:20]],
+        "",
+        "## Promotion checklist",
+        "",
+        "- [ ] Add one automated gate or ratchet-baseline change for this cluster",
+        "- [ ] Reference the change from the next PR body",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _umbrella_body(clusters: dict[str, list[str]], when: datetime) -> str:
+    lines = [
+        f"# [retro] Umbrella — {when:%Y-%m-%d}",
+        "",
+        "Umbrella for the retro clusters below. Each cluster has its own issue body.",
+        "",
+        "| Cluster | Findings |",
+        "|---------|----------|",
+        *[f"| {label} | {len(items)} |" for label, items in sorted(clusters.items())],
+        "",
+        "- [ ] Each cluster is promoted to one gate or ratchet change",
+        "- [ ] No cluster is closed by prose alone",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def write_issue_bodies(
+    root: Path,
+    clusters: dict[str, list[str]],
+    when: datetime | None = None,
+    out_dir: Path | None = None,
+) -> list[Path]:
+    """Write one issue body per cluster plus an umbrella body."""
+    when = when or datetime.now(UTC)
+    target = out_dir or (root / ".agents" / "artifacts" / "issues")
+    target.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    for label, examples in sorted(clusters.items()):
+        path = target / f"{when:%Y-%m-%d}-{_slug(label)}.md"
+        path.write_text(_cluster_body(label, examples, when), encoding="utf-8")
+        written.append(path)
+    umbrella = target / f"{when:%Y-%m-%d}-umbrella.md"
+    umbrella.write_text(_umbrella_body(clusters, when), encoding="utf-8")
+    written.append(umbrella)
+    return written
+
+
+def _title_from_body(path: Path) -> str:
+    first = path.read_text(encoding="utf-8", errors="replace").splitlines()[0]
+    return first.lstrip("# ").strip()
+
+
+def _gh_create(body: Path, repo: str | None) -> int:
+    argv = ["gh", "issue", "create", "--title", _title_from_body(body), "--body-file", str(body)]
+    if repo:
+        argv.extend(["--repo", repo])
+    run = subprocess.run(argv, capture_output=True, text=True, check=False)
+    if run.returncode != 0:
+        print(run.stderr.strip() or "gh issue create failed", file=sys.stderr)
+        return run.returncode
+    print(run.stdout.strip())
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=ROOT)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--file-issues",
+        action="store_true",
+        help="Write one Markdown issue body per cluster plus an umbrella body",
+    )
+    ap.add_argument(
+        "--gh",
+        action="store_true",
+        help="Create the written issue bodies with gh (requires --file-issues)",
+    )
+    ap.add_argument("--repo", default=None, help="owner/name passed to gh issue create")
+    ap.add_argument("--issues-dir", type=Path, default=None)
     args = ap.parse_args(argv)
+    if args.gh and not args.file_issues:
+        print("❌ --gh requires --file-issues", file=sys.stderr)
+        return 2
     root = args.root.resolve()
     text = build_retro(root)
     if args.dry_run:
@@ -189,6 +285,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     path = write_retro(root, text, args.out)
     print(f"✅ retro written: {path}")
+    if not args.file_issues:
+        return 0
+    clusters = cluster_lessons(collect_findings(root))
+    bodies = write_issue_bodies(root, clusters, out_dir=args.issues_dir)
+    for body in bodies:
+        print(f"✅ issue body: {body}")
+    if args.gh:
+        for body in bodies:
+            rc = _gh_create(body, args.repo)
+            if rc != 0:
+                return rc
     return 0
 
 

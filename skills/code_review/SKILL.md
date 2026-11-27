@@ -64,6 +64,15 @@ lightweight read of the diff only and record skip in handoff.
 
    Fail closed on findings. Prefer gitleaks/trufflehog when installed.
 
+4b. **Comment audit on added lines:**
+
+   ```bash
+   python3 scripts/check_comment_audit.py --diff <base>...HEAD --strict
+   ```
+
+   Fail closed on history comments, commented-out code, and ownerless TODOs.
+   Comments explain constraints (why), not the change history.
+
 5. **Engine.** Prefer a **different model** than the implementer when available:
 
    - Env: `CODE_REVIEW_MODEL` or `GROK_MODEL_CROSS_REVIEW` / product equivalent
@@ -79,13 +88,25 @@ lightweight read of the diff only and record skip in handoff.
 
 ## Report artifact
 
-Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with:
+Write `.agents/artifacts/CODE_REVIEW.md` (marker `CODE-REVIEW`) with two separated axes (do not merge or rerank across axes):
 
+- `## Standards` — repo coding standards + Fowler smell baseline (`Mysterious Name`, `Duplicated Code`, `Feature Envy`, `Data Clumps`, `Primitive Obsession`, `Repeated Switches`, `Shotgun Surgery`, `Divergent Change`, `Speculative Generality`, `Message Chains`, `Middle Man`, `Refused Bequest`)
+- `## Spec` — AC-by-AC fidelity against the spec/PR_DRAFT (missing requirements, scope creep, wrong behavior)
 - command / base / head
 - secrets scan result
 - findings accepted / rejected (brief why)
 - P0 count; follow-ups listed separately
 - smoke/tests run
+
+## Review chunks (stacked or large diffs)
+
+```bash
+python3 scripts/stack_plan.py --tickets .agents/specs/<slug>/tickets
+```
+
+Review one `### CHUNK n` per stack layer and record a verdict for each chunk in
+`CODE_REVIEW.md`. Keep findings attached to the chunk that introduced them; do
+not rerank across chunks.
 
 ## Handoff
 

@@ -30,10 +30,17 @@ When invoked with `/execute_dev`:
    ```bash
    python3 scripts/context_pack.py --root .
    ```
+0d. **Ticket DAG (when the task has tickets):**
+   ```bash
+   python3 scripts/check_ticket_dag.py .agents/specs/<slug>/tickets
+   ```
+   - Cycle → `🛑 TICKET CYCLE` and halt.
+   - Otherwise implement one ticket from the printed ready frontier at a time.
 1. **Load task:**
    - If user args specify a task → use that (acceptance must be clear).
    - Else product: first open priority item in the product roadmap file (see `product_plugin.yaml` → `product_roadmap`).
    - Else harness: first open row in `.agents/BACKLOG.md`.
+   - Consult `GLOSSARY.md` (when present) so symbol and test names match project domain vocabulary.
    - CHANGELOG Open work is the fallback when that backlog row is empty.
    - If none → `✅ ROADMAP EMPTY.`
 2. **Spec check:** Missing acceptance criteria → `🛑 SPEC MISSING.` and halt.
@@ -61,6 +68,12 @@ When invoked with `/execute_dev`:
            `python3 scripts/scaffold_web_e2e.py --root . --write`
       - Traceability must map UI ACs → Playwright S-id **and** Comet scenario.
       - Docs: `docs/web-e2e-comet.md`
+3b. **Stack plan (multi-ticket or large diff):**
+   ```bash
+   python3 scripts/stack_plan.py --tickets .agents/specs/<slug>/tickets --write
+   ```
+   - Implement layers in order; keep each layer green before starting the next.
+   - `.agents/artifacts/STACK_PLAN.md` also supplies the review chunks for `/code_review`.
 4. **Implement constraints + scope governor:**
    - **UI is allowed** when the product task is user-facing UI (use the product's own stack from `product_plugin.yaml`). Prefer progressive enhancement over unnecessary SPA rewrites unless the product already is an SPA.
    - Non-UI product work: APIs, services, CLIs, data paths as the product defines.
@@ -91,6 +104,13 @@ When invoked with `/execute_dev`:
    4. Do **not** set pipeline phase here — still `/pr_review` later.
    5. Then continue with `/cross_review` when the diff is large or non-trivial (personas +
       obsolete scan). Small code ships: `/code_review` alone is the minimum; large diffs need both.
+7b. **Context hygiene before handoff:**
+   ```bash
+   python3 scripts/smart_zone_guard.py --file PR_DRAFT.md --file .agents/artifacts/CODE_REVIEW.md
+   python3 scripts/check_compact_safety.py --root .
+   ```
+   - `externalize` → write `DECISIONS.md` / `OPEN_QUESTIONS.md`, then continue from a fresh context.
+   - Compact blocked → put the spec, at least one ticket, and the glossary on disk first.
 8. **Handoff:**
    - Mark product task ✅ in the product roadmap or harness item in `.agents/BACKLOG.md`
    - Update product workflow/drift docs if the product uses them

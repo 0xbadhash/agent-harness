@@ -116,6 +116,19 @@ Use harness vault writers when available:
 python3 scripts/sync_vault_devlog.py --note "QA campaign <date>" --bullet "…"
 ```
 
+## Issue filing (after the inventory)
+
+Turn clusters into durable follow-ups without a session transcript:
+
+```bash
+python3 scripts/retro_job.py --root . --file-issues
+# Review .agents/artifacts/issues/*.md, then post only with operator approval:
+# python3 scripts/retro_job.py --root . --file-issues --gh --repo <owner/name>
+```
+
+The default path writes files and makes no network call. `--gh` requires an
+explicit approval because it creates shared issues.
+
 ## Hard constraints
 
 - Never change external behaviour for previously working scenarios.

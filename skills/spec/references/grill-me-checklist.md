@@ -14,6 +14,12 @@ Inspired by adversarial “grill the idea” practice (see `provenance.md`). Thi
 5. If the operator says “you decide” → apply the **recommended** default and still **log** it under Grill-me (so the decision is auditably theirs via silence).
 6. Cap: cover **all required themes** below (at least one Q per theme that is still open). Soft max ~12 questions total unless the operator invites more.
 7. **Never skip grill-me** for feature ships. Only `--spike` (or Spec waiver path outside this skill) may omit — and must say so in the spec.
+8. **Why first.** Ask why the pain matters (G1/G7) before what to build or how.
+   Defer stack and architecture to `--plan`.
+9. **Pain ranking.** Ask the operator to rank the pains this work removes
+   (1 = worst). Record the order under `### Pain ranking`; it sets the build order.
+10. **Operator stop token.** If the operator replies `STOP`, set the spec status
+    to `rejected`, halt `🛑 GRILL REJECTED`, and write no plan or tickets.
 
 ## Required themes (must address or mark N/A with reason)
 
@@ -55,7 +61,13 @@ Inspired by adversarial “grill the idea” practice (see `provenance.md`). Thi
   - A: …
 
 … (G3–G7 as needed; mark N/A only with reason)
+
+### Pain ranking
+1. …
+2. …
 ```
+
+`STOP` is the operator kill token: it ends the interview with status `rejected`.
 
 ## Halt
 
