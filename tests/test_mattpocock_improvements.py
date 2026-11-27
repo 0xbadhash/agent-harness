@@ -18,7 +18,8 @@ def test_ac1_diagnosing_bugs_skill_and_debug_tag_gate(tmp_path: Path) -> None:
     import check_repo_hygiene
 
     bad = tmp_path / "app.py"
-    bad.write_text('print("[DEBUG-a4f2] leak")\n', encoding="utf-8")
+    tag = "DEBUG-a4f2"
+    bad.write_text(f'print("[{tag}] leak")\n', encoding="utf-8")
     fails = check_repo_hygiene.scan_debug_tags(tmp_path)
     assert fails == 1
 
