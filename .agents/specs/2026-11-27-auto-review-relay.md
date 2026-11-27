@@ -31,7 +31,7 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 3. As the CEO, I want the card title and the command being asked about, so that I can judge without opening the pane.
 4. As the CEO, I want one reminder if the card is still up after ten minutes, so that a forgotten card does not disappear into scrollback.
 5. As the CEO, I want no message when the card is answered, so that the channel stays quiet.
-6. As the CEO, I want cards from every harness (grok-build, Claude Code, Hermes, antigravity, others) to reach me, so that coverage does not depend on which tool a job used.
+6. As the CEO, I want cards from every harness (grok-build, Hermes, antigravity, others) to reach me, so that coverage does not depend on which tool a job used.
 7. As the operator, I want a kill switch and an hourly cap, so that a noisy pattern cannot flood the channel.
 8. As the operator, I want a daily count line, so that a dead watcher shows up as zero rather than as silence.
 
@@ -39,8 +39,8 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 
 **Detection.** Hybrid, per grill G1/A.
 
-- Native attention hooks push the event: Grok `Notification` (`notification_type: permission_prompt`, plus tool name and input), Claude Code `Notification`. Each hook runs a one-line shell wrapper that pipes stdin to `auto-review-relay.py --hook --harness <name>`.
-- A tmux watcher covers harnesses with no hook. It polls every 20 s, lists panes with `pane_current_command`, and skips the viewer pane and every harness already covered by a hook (`grok`, `claude`). Card match requires an option line (`2 Yes, proceed` / `1. Yes` / `y/n`) inside the last 30 captured lines, so prose never matches.
+- Native attention hooks push the event: Grok `Notification` (`notification_type: permission_prompt`, plus tool name and input). The hook runs a one-line shell wrapper that pipes stdin to `auto-review-relay.py --hook --harness <name>`.
+- A tmux watcher covers harnesses with no hook. It polls every 20 s, lists panes with `pane_current_command`, and skips the viewer pane and every harness already covered by a hook (`grok`). Card match requires an option line (`2 Yes, proceed` / `1. Yes` / `y/n`) inside the last 30 captured lines, so prose never matches.
 
 **Delivery.**
 
@@ -56,14 +56,14 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 - Script: `/opt/catalyxt/ops/auto-review-relay.py`; SoT copy in `agent-harness/deploy/auto-review-relay.py` plus the two unit files.
 - State: `/var/lib/pilot/auto-review-relay/` (`state.json`, `relay.log`, `posted/`, `DISABLED`).
 - Units (user): `auto-review-relay-watch.service` (long-running watcher) and `auto-review-relay-digest.timer` (08:00 HKT, one Signal line).
-- Hook wrappers under `~/.grok/hooks/` and `~/.claude/settings.json`. Codex is deferred (see Out of Scope).
+- Hook wrapper under `~/.grok/hooks/`. Codex and Claude are deferred (see Out of Scope).
 
 **Non-goals that affect the experience.** No approval from Signal, no keystroke ever, no OpenBot transport (no sender exists), no replacement of the end-of-job scorecard hook, no transcript or file contents in the message.
 
 ## Testing Decisions
 
 - Behaviour at the message boundary, not internals: given a hook payload or a captured pane, exactly one message with the expected fields.
-- Fixtures: real hook JSON for Grok `permission_prompt`, a Claude `Notification`, and two pane captures (Grok card, Claude card) under `tests/fixtures/auto_review/`.
+- Fixtures: real hook JSON for a Grok `permission_prompt` and a Grok pane capture under `tests/fixtures/auto_review/`.
 - `--dry` prints the Signal line and webhook body and sends neither, so the suite never touches Signal or the webhook.
 - Seam: `auto-review-relay.py` is a CLI; tests call it as a subprocess with `AUTO_REVIEW_STATE` pointed at a temp dir.
 - Manual live check: POST one synthetic hook payload with `--dry` first, then once for real with a CEO stamp.
@@ -89,8 +89,9 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 - Approving or declining from Signal, Boss, or any remote surface.
 - Replacing or re-enabling `pilot-pane-poll.timer` job-done detection.
 - OpenBot relay.
-- Harness-internal changes (Grok, Claude source or config beyond the hook entry).
+- Harness-internal changes (Grok source or config beyond the hook entry).
 - The Codex lane: no hook entry and no watcher coverage until its `notify` argv shape is confirmed.
+- The Claude lane: deferred with Codex; no hook entry and no watcher coverage in this build.
 - Multi-host rollout; this is pilot-vps first.
 
 ## Grill-me
@@ -130,9 +131,9 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 
 ### 2026-11-27
 - Q: Any harness dropped for the first build?
-  - A: Codex. It has neither a confirmed `notify` shape nor watcher coverage in slice 1–4; it comes back as a follow-up.
+  - A: Codex and Claude Code. Codex has no confirmed `notify` shape; Claude Code is out at the CEO's request on 2026-11-27. Both come back as follow-ups.
 - Q: Which panes may raise a card message?
-  - A: Every harness across sessions (grok-build, antigravity, Hermes, Claude Code, others; Codex deferred), classified by the hook or the pane foreground process. Viewer panes and plain shells are excluded.
+  - A: Every harness across sessions (grok-build, antigravity, Hermes, others; Codex and Claude deferred), classified by the hook or the pane foreground process. Viewer panes and plain shells are excluded.
 - Q: What goes into the message?
   - A: session:window, harness, card title, and the command being asked about, each clipped to ~200 chars, token-shaped strings and absolute paths redacted.
 
@@ -146,5 +147,6 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 ## Handoff
 
 - **Slice 1 done (2026-11-27):** `deploy/auto-review-relay.py` (hook ingest, normalisation, redaction, dedupe, hourly cap, rendering, dry/real delivery, reminder sweep) with `tests/test_auto_review_relay.py` (13 passed) and `tests/fixtures/auto_review/`. Nothing installed on the box; no live send.
-- Next: slice 2 hook wrappers (`~/.grok/hooks/`, Claude `Notification`), slice 3 tmux watcher, slice 4 units + digest, slice 5 dry run on the box.
+- **Slice 2 done (2026-11-27):** `deploy/hooks/grok-auto-review-relay.sh` (stdin passthrough, 8 s timeout, silent, always exit 0) and `deploy/hooks/grok-notification.json` (Notification registration, no matcher so the relay does the filtering). `tests/test_auto_review_hook_wrapper.py` covers passthrough, argv, dry flag, missing relay, a hung relay, and both end-to-end paths.
+- Next: slice 3 tmux watcher, slice 4 units + digest, slice 5 dry run on the box.
 - Then: `/cross_review` (if large) → `/pr_review` → `/release_mgmt` → `/sync_docs`

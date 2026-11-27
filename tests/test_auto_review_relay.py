@@ -92,22 +92,28 @@ def test_non_permission_notification_is_ignored(tmp_path: Path) -> None:
 
 
 def test_message_without_type_needs_permission_wording(tmp_path: Path) -> None:
-    idle = {"message": "Claude is waiting for your input", "tool_name": ""}
-    quiet = run(tmp_path, ["--hook", "--harness", "claude", "--dry", "--now", T0], idle)
+    idle = {"message": "Waiting for your input", "tool_name": ""}
+    quiet = run(tmp_path, ["--hook", "--harness", "grok", "--dry", "--now", T0], idle)
     assert quiet.stdout == ""
-    payload = load_payload("claude_permission_prompt.json")
-    loud = run(tmp_path, ["--hook", "--harness", "claude", "--dry", "--now", T0], payload)
+    loud_payload = {
+        "cwd": "/home/debian/agent-harness",
+        "message": "Needs your permission to use Bash",
+        "tool_name": "Bash",
+        "tool_input": {"command": "git status --porcelain"},
+    }
+    loud = run(tmp_path, ["--hook", "--harness", "grok", "--dry", "--now", T0], loud_payload)
     assert len(signal_lines(loud.stdout)) == 1
     assert "git status --porcelain" in loud.stdout
 
 
 def test_redacts_tokens_and_absolute_paths(tmp_path: Path) -> None:
-    payload = load_payload("claude_permission_prompt.json")
+    payload = load_payload("grok_permission_prompt.json")
+    payload["notification_type"] = "permission_prompt"
     payload["tool_input"] = {
         "command": 'curl -H "Authorization: sk-abcdefghijklmnopqrstuv" '
                    "https://example.test/x --out /home/debian/secret/statement.pdf"
     }
-    proc = run(tmp_path, ["--hook", "--harness", "claude", "--dry", "--now", T0], payload)
+    proc = run(tmp_path, ["--hook", "--harness", "grok", "--dry", "--now", T0], payload)
     out = proc.stdout
     assert "sk-abcdefghijklmnop" not in out
     assert "/home/debian" not in out
