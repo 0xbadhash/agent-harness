@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -155,8 +156,13 @@ def run_pytest_coverage(
             "--cov-fail-under=0",  # we enforce thresholds ourselves
         ]
     )
-    env = {**os.environ, "PYTHONPATH": str(ROOT)}
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=env, check=False)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        env = {
+            **os.environ,
+            "PYTHONPATH": str(ROOT),
+            "COVERAGE_FILE": str(Path(tmp_dir) / ".coverage"),
+        }
+        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, env=env, check=False)
     tail = ((r.stdout or "") + (r.stderr or ""))[-2000:]
     return r.returncode, tail
 
