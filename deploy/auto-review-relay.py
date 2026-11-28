@@ -35,7 +35,7 @@ from typing import TextIO
 
 HERMES_BIN = os.environ.get("AUTO_REVIEW_HERMES_BIN", "/home/debian/.local/bin/hermes")
 HERMES_HOME = os.environ.get(
-    "AUTO_REVIEW_HERMES_HOME", "/home/debian/hermes/profiles/chief-of-staff"
+    "AUTO_REVIEW_HERMES_HOME", os.path.expanduser("~/hermes/profiles/chief-of-staff")
 )
 SIGNAL_TARGET = os.environ.get("AUTO_REVIEW_SIGNAL_TARGET", "signal")
 BOSS_POSTER = os.environ.get(
