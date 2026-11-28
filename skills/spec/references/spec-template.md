@@ -24,6 +24,7 @@ Write to `.agents/specs/<YYYY-MM-DD>-<slug>.md`.
 - **Feature flag:** <name and off-path> | not-applicable (state why)
 - **Prototype:** `.agents/prototypes/<slug>` | none
 - **Prototype verdict:** <chosen variant and why> | not-applicable
+- **Prototype use:** reference | not-applicable — shipped code reimplements the shape
 
 ## Problem Statement
 
@@ -131,9 +132,12 @@ Risks, constitution tensions, links.
 
 **What to build:** end-to-end behaviour from the user’s perspective.
 
+**Kind:** feature | shared-component | prefactor | chore
+**Prefactor:** none | 00-<prefactor-ticket>
+**Touches:** `path/one`, `path/two`
 **Blocked by:** None — can start immediately | 02 — …
-
 **Status:** ready-for-agent
+**Session:** none
 
 - [ ] Acceptance criterion 1
 - [ ] Acceptance criterion 2

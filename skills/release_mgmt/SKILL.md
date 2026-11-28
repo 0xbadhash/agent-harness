@@ -20,9 +20,12 @@ When invoked with `/release_mgmt`:
      python3 scripts/merge_stack.py --tickets .agents/specs/<slug>/tickets \
        --pr-map .agents/artifacts/PR_MAP.json --dry-run
      python3 scripts/merge_stack.py --tickets ... --pr-map ... [--auto-merge]
+     python3 scripts/merge_stack.py --tickets ... --pr-map ... --background
      ```
      `--auto-merge` is opt-in; the default merges one PR and stops for the
      operator. A non-open PR, a conflict, or a non-success check halts the run.
+     `--background` re-execs detached, writes `merge_stack.log`, prints the pid
+     and log path, and returns; check the log for the final status.
 3. **Infra gate (if the product has an infra skill or INFRA_RUNBOOK):**
    - Confirm latest verify PASS within 24h, or run the product's infra skill.
    - If product has no infra surface → skip with note in RELEASE_RUNBOOK.

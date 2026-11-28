@@ -31,6 +31,12 @@ python3 scripts/check_comment_audit.py --root . \
 
 # Comment-to-code ratio (evidence, not a target)
 python3 scripts/check_comment_audit.py --ratio
+
+# Route every finding to one of four dispositions
+python3 scripts/check_comment_audit.py --diff origin/main...HEAD --classify
+
+# Fail a constraint comment with no test name, check reference, or waiver
+python3 scripts/check_comment_audit.py --path scripts/<file>.py --constraints
 ```
 
 ## Reading a finding
@@ -42,9 +48,32 @@ python3 scripts/check_comment_audit.py --ratio
 | `todo` | add an owner or issue (`TODO(name)`, `TODO: #123`) |
 | `escape_hatch` | name the check or condition that bounds it, or fix the check |
 
+## Routes
+
+`--classify` prints one route per finding:
+
+| Route | When | Action |
+|-------|------|--------|
+| `delete` | history or commented-out code | remove the comment |
+| `move-to-ADR` | decision language: *chose*, *trade-off*, *rationale*, *alternative* | record the decision in `.agents/decisions/`, leave a pointer |
+| `move-to-test-name` | constraint language: *must*, *never*, *before*, *order*, *invariant* | rename the test to state the constraint and assert it |
+| `rewrite` | ownerless TODO or an unbounded escape hatch | state the owner, check, or condition |
+
+A constraint comment keeps its place only when it names a test (`test_*`), a
+check (`scripts/…`, `check:_`), or a waiver (`waive: <reason>`). `--constraints`
+enforces that rule and exits 1 on an unbounded constraint.
+
+## Approval
+
+Routes change shipped code. Apply deletes, ADR moves, and test renames only
+after the operator approves the plan in `/code_review`; put the approval line in
+the handoff. A `rewrite` that only tightens wording needs no separate approval.
+
 ## Handoff
 
 ```text
 ✅ COMMENT AUDIT: <n> finding(s), ratio <x.xx>
+routes: <delete n> / <move-to-ADR n> / <move-to-test-name n> / <rewrite n>
+approval: operator-approved | pending
 NEXT_SKILL=/code_review
 ```

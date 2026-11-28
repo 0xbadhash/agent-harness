@@ -7,12 +7,15 @@ from a JSON map (``{"01": 56, "02": 62}``) or the same file under
 
 Default: merge one PR at a time and stop for the operator.
 ``--auto-merge``: ask GitHub to squash-merge once checks pass (opt-in).
+``--background``: re-exec detached, write ``.agents/artifacts/merge_stack.log``,
+print the pid, and return immediately.
 
 Usage::
 
   python3 scripts/merge_stack.py --tickets .agents/specs/<slug>/tickets \
       --pr-map .agents/artifacts/PR_MAP.json --dry-run
   python3 scripts/merge_stack.py --tickets ... --pr-map ... --auto-merge
+  python3 scripts/merge_stack.py --tickets ... --pr-map ... --background
 """
 from __future__ import annotations
 
@@ -118,6 +121,32 @@ def _gh(argv: list[str]) -> dict[str, Any]:
         return {}
 
 
+def background_argv(argv: list[str]) -> list[str]:
+    """Return the child argv: the same command without ``--background``."""
+    return [arg for arg in argv if arg != "--background"]
+
+
+def _spawn_background(argv: list[str], root: Path) -> int:
+    """Re-exec detached, redirect output to a log, and print pid and log path."""
+    log = root / ".agents" / "artifacts" / "merge_stack.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    handle = log.open("a", encoding="utf-8")
+    try:
+        proc = subprocess.Popen(  # noqa: S603 — argv is this script's own CLI
+            [sys.executable, str(Path(__file__).resolve()), *background_argv(argv)],
+            cwd=str(root),
+            stdout=handle,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
+        )
+    finally:
+        handle.close()
+    print(f"merge stack started in background: pid={proc.pid} log={log}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--tickets", type=Path, required=True)
@@ -125,8 +154,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pr-map", type=Path, default=None)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--auto-merge", action="store_true")
+    ap.add_argument("--background", action="store_true")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
+
+    if args.background:
+        raw = argv if argv is not None else sys.argv[1:]
+        return _spawn_background(raw, args.root.resolve())
 
     try:
         plan = build_plan(args.tickets)

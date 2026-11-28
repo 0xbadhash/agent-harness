@@ -78,3 +78,19 @@ If the constraint cannot be tested (an external service limit, for example),
 name the check that owns it beside the comment (`check:_`, `scripts/…`). During
 `/code_review`, an untested constraint stated only in a comment is a finding:
 move it to a test name or bound it to a check.
+
+## Comment migration rule
+
+`/comment_audit --classify` routes each finding:
+
+| Route | Signal | Migration |
+|-------|--------|-----------|
+| `delete` | history, commented-out code | remove the comment |
+| `move-to-ADR` | *chose*, *trade-off*, *rationale*, *alternative* | record in `.agents/decisions/` and leave a pointer |
+| `move-to-test-name` | *must*, *never*, *before*, *order*, *invariant* | rename the test to the constraint and assert it |
+| `rewrite` | ownerless TODO, unbounded escape hatch | name the owner, check, or condition |
+
+A migration changes shipped source, so it needs the operator's approval in
+`/code_review`. `check_comment_audit.py --constraints` enforces the bound at
+gate time: a constraint comment must name a test (`test_*`), a check
+(`scripts/…`, `check:_`), or a waiver (`waive: <reason>`).

@@ -11,16 +11,25 @@ from typing import Any, cast
 BLOCKED_RE = re.compile(r"^\*\*Blocked by:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 KIND_RE = re.compile(r"^\*\*Kind:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
-PREFACTOR_RE = re.compile(r"^\*\*Prefactor:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+PREFACTOR_RE = re.compile(
+    r"^\*\*Prefactor:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE
+)
+TOUCHES_RE = re.compile(r"^\*\*Touches:\*\*\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+DASH_NOTE_RE = re.compile(r"\s+(?:—|–|-{1,2})\s+.*$")
 NONE_VALUES = {"none", "n/a", "na", "-", "none."}
 
 
 def _ids(raw: str) -> list[str]:
-    """Split a dependency field into ticket-id tokens."""
-    if raw.strip().lower() in NONE_VALUES:
+    """Split a dependency field into ticket-id tokens.
+
+    The template's ``None — can start immediately`` means no dependency; strip
+    the trailing note before checking for the none value.
+    """
+    text = DASH_NOTE_RE.sub("", raw.strip())
+    if text.strip().lower() in NONE_VALUES:
         return []
     out: list[str] = []
-    for token in re.split(r"[,\s]+", raw.strip()):
+    for token in re.split(r"[,\s]+", text.strip()):
         token = token.strip().strip("#`[]().")
         if token and re.match(r"^[A-Za-z0-9_-]+$", token):
             out.append(token)
@@ -37,6 +46,18 @@ def _ticket_id(path: Path) -> str:
     return m.group(1) if m else path.stem
 
 
+def _touches(raw: str) -> list[str]:
+    """Split a Touches field into repo-relative path tokens."""
+    text = DASH_NOTE_RE.sub("", raw.strip())
+    if text.strip().lower() in NONE_VALUES:
+        return []
+    return [
+        token.strip("`[]().")
+        for token in re.split(r"[,\s]+", text)
+        if token.strip("`[]().")
+    ]
+
+
 def load_tickets(directory: Path) -> dict[str, dict[str, Any]]:
     tickets: dict[str, dict[str, Any]] = {}
     for p in sorted(directory.glob("*.md")):
@@ -50,6 +71,8 @@ def load_tickets(directory: Path) -> dict[str, dict[str, Any]]:
         deps.extend(p for p in prefactor if p not in deps)
         km = KIND_RE.search(text)
         kind = km.group(1).strip().lower() if km else ""
+        tm = TOUCHES_RE.search(text)
+        touches = _touches(tm.group(1)) if tm else []
         sm = STATUS_RE.search(text)
         status = sm.group(1).strip().lower() if sm else "ready-for-agent"
         tickets[tid] = {
@@ -58,6 +81,7 @@ def load_tickets(directory: Path) -> dict[str, dict[str, Any]]:
             "path": p,
             "kind": kind,
             "prefactor": prefactor,
+            "touches": touches,
         }
     return tickets
 

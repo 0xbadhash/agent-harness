@@ -31,6 +31,8 @@ Short prose: how we implement the acceptance criteria.
 - Modules / packages / routes
 - Data flow (if any)
 - Integration points (EmailJS, APIs, …)
+- **Prototype:** a prototype is a reference only. The plan reimplements the
+  chosen variant in product source and never imports `.agents/prototypes/`.
 - Explicit non-decisions (deferred)
 
 ## Data model

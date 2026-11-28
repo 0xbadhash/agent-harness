@@ -1,60 +1,37 @@
-# CROSS-REVIEW — runner-label gate
+# CROSS-REVIEW — top-50 gap closure
 
 **Marker:** CROSS-REVIEW
-**Scope:** `origin/main...HEAD` (13 files, 729 non-test LOC)
+**Scope:** `origin/main...HEAD` (33 files, 1168 insertions, 139 deletions)
 **Secrets scan:** `python3 scripts/check_secrets_diff.py --base origin/main --head HEAD`
 → clean
 **Blocker count:** 0
 
 ## Personas
 
-1. **Security Guru.** The checker reads repository files and never executes
-   them. It makes no network call, imports only `yaml`, and writes nothing. A
-   `runs-on` expression is reported as unresolved instead of being expanded, so
-   a crafted matrix value cannot hide an undeclared label. The workflow change
-   keeps `permissions:` and `secrets.GITHUB_TOKEN`; it adds no secret.
-2. **Maintainability Expert.** The parser lives in one module with a single
-   entry point (`check`) and a thin CLI (`main`). Skip conditions are explicit
-   and tested: no workflows, no allowlist, and empty allowlist. The
-   workflow-harness side enforces the same contract from its own data instead of
-   importing across repos.
-3. **Operator / Release.** A failure names workflow, job, and label, which is
-   the whole fix path. The gate is opt-in by adding the allowlist, so installing
-   the new harness does not fail products that never adopted it. The reports are
-   outside the repo and state their pinned commits.
-4. **Test Quality.** Nine agent-harness tests cover pass, fail, both skips,
-   empty allowlist, list-valued `runs-on`, expression, unparsable YAML, and
-   `.yaml`. Three workflow-harness tests cover allowlist presence, declaration,
-   and the exact label on both jobs.
+1. **Security Guru.** The new checks read repository files and never execute
+   them. `check_glossary` parses markdown tables; `weekly_retro` reads
+   `var/state/*/run.jsonl` as JSON and writes only under `docs/retros/`. The
+   retro workflow runs a first-party script on a hosted runner with
+   `contents: write`; it installs only PyYAML and commits only when a report
+   exists. No new secret or network call.
+2. **Maintainability Expert.** Each gap has one deterministic command and one
+   test file. The glossary is the single term source for `spec_gate`,
+   `check_compact_safety`, and `check_glossary`. The ticket fields match the
+   template the skill writes. The old comment-audit API is unchanged, so the
+   existing tests and `hard_gates` keep working.
+3. **Operator.** `--background` prints the pid and log path and leaves the
+   foreground default untouched. `--constraints` is opt-in, so the 110 existing
+   constraint comments do not block unrelated work. The retro schedule is
+   additive and manual dispatch stays available.
 
-## Obsolete / cleanup (scoped)
+## Obsolete scan
 
-- No dead code, commented-out block, or ownerless TODO in the added lines
-  (`check_comment_audit.py --diff origin/main...HEAD --strict` → clean).
-- No duplicated parser: workflow-harness asserts its own data and does not copy
-  the implementation.
-- `docs/ci-matrix.md` gains a J17 row and a runner-label section; the row points
-  at the script that exists.
+- No superseded path remains: `check_comment_audit.py` keeps its old flags and
+  adds new ones; `check_ticket_dag.py` keeps `Kind`/`Prefactor` and adds
+  `Touches`.
+- `docs/tdd.md` already had a constraint-to-test section; it now names the route
+  table and the approval step instead of duplicating them.
 
-## Findings
+## Verdict
 
-- **None.** No P0 or security-major finding survived verification.
-- **Follow-up, out of scope:** the missing `GLOSSARY.md` (re-score item 1) makes
-  two existing checks inert. Recorded in the re-score; not changed here.
-
-## Evidence pack
-
-- hard_gates: `python3 scripts/hard_gates.py --diff origin/main...HEAD` → pass
-- pytest: `python3 -m pytest -q` → 636 passed, 2 skipped, 11 subtests
-- validate: `python3 scripts/validate.py full` → 9/9 gates
-- smoke: `python3 scripts/product_smoke.py --root .` → 2/2 steps
-- workflow-harness: `python3 -m pytest tests -q --ignore=tests/enhancement_specs`
-  → 226 passed
-
-## Traceability
-
-- AC-1/AC-2 → `tests/test_workflow_runners.py` (agent-harness)
-- AC-3 → `scripts/hard_gates.py` registration; diff run output
-- AC-4 → workflow-harness `tests/test_workflow_runners.py`
-- AC-5 → `/srv/boxdrop/out/SCORECARD-GROKBUILD-HARNESS-TOP50-RESCORE-2026-11-28.md`
-- AC-6 → `/srv/boxdrop/out/TRIAGE-PRS-2026-11-28.md`
+No blockers.

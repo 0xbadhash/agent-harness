@@ -229,14 +229,16 @@ Do **not** invent gap findings — only structure what the analysis already stat
 
 After grill + clarify (and plan if any):
 
-1. Vertical tracer bullets + blockers. Each ticket carries `**Kind:**` and
-   `**Prefactor:**` (`none` when it stands alone).
+1. Vertical tracer bullets + blockers. Each ticket carries `**Kind:**`,
+   `**Prefactor:**` (`none` when it stands alone), `**Touches:**` (the paths it
+   may edit), and `**Session:**` (`none` until a real run records it).
 2. A `shared-component` ticket must name a prefactor ticket; it becomes a
    blocking edge, so `python3 scripts/check_ticket_dag.py <dir>` fails without it.
 3. User approves granularity when ambiguous.  
 4. `.agents/specs/<slug>/tickets/01-….md`  
 5. Roadmap lists ticket dir; `/execute_dev` one unblocked ticket at a time
    (`python3 scripts/run_tickets.py --tickets <dir> --workers 2 --dry-run`).
+   A real run writes the executor's `SESSION=<id>` back into `**Session:**`.
 
 ## 10. Optional tracker publish
 
