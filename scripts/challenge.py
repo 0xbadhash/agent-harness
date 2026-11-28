@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -22,6 +24,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
+
+AGY_ROUND1_MODEL = os.environ.get("CHALLENGE_AGY_ROUND1_MODEL", "gemini-4-carbon-high")
+AGY_ROUND2_MODEL = os.environ.get("CHALLENGE_AGY_ROUND2_MODEL", "gemini-4-hydrogen-high")
+AGY_ACCOUNT = "jeanclaude.mansart@gmail.com"
 
 INSTRUCTION = (
     "Attack the proposal. Do not agree by default. Name what is wrong, "
@@ -51,6 +57,34 @@ def _env_key(name: str) -> str:
         except OSError:
             continue
     raise ModelError(f"{name} not found")
+
+
+def call_agy(prompt: str, model: str = AGY_ROUND1_MODEL) -> str:
+    """Call local Antigravity CLI (agy) in print mode."""
+    agy_bin = os.environ.get("CHALLENGE_AGY_BIN") or shutil.which("agy") or str(
+        Path.home() / ".local" / "bin" / "agy"
+    )
+    if not agy_bin or not Path(agy_bin).is_file():
+        raise ModelError("agy CLI missing")
+    proc = subprocess.run(
+        [
+            agy_bin,
+            "-p",
+            prompt,
+            "--model",
+            model,
+            "--output-format",
+            "text",
+            "--disable-slash-commands",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise ModelError(f"agy failed ({model})")
+    return proc.stdout.strip()
 
 
 def call_glm(prompt: str) -> str:
@@ -115,6 +149,33 @@ def _slug(proposal_path: Path | None) -> str:
         return "stdin"
     stem = proposal_path.stem.lower().replace(" ", "-")
     return "".join(ch if ch.isalnum() or ch == "-" else "-" for ch in stem)[:60] or "proposal"
+
+
+def _rounds_agy(proposal: str, agy) -> tuple[str, str]:
+    r1 = agy(f"{INSTRUCTION}\n\n{proposal}", AGY_ROUND1_MODEL)
+    r2 = agy(
+        f"{CROSS}\n\nProposal:\n{proposal}\n\nOther critique:\n{r1}",
+        AGY_ROUND2_MODEL,
+    )
+    return r1, r2
+
+
+def _note_agy(proposal: str, rounds: tuple[str, str], decision: str) -> str:
+    r1, r2 = rounds
+    return (
+        "# Challenge\n\n"
+        f"- **Date:** {datetime.now(UTC).strftime('%Y-%m-%d')}\n"
+        f"- **Backend:** agy ({AGY_ACCOUNT})\n"
+        f"- **Models:** {AGY_ROUND1_MODEL} (round 1), {AGY_ROUND2_MODEL} (round 2)\n\n"
+        "## Decision\n\n"
+        f"{decision.strip()}\n\n"
+        "## Proposal\n\n"
+        f"{proposal.strip()}\n\n"
+        f"## Round 1 ({AGY_ROUND1_MODEL})\n\n"
+        f"{r1.strip()}\n\n"
+        f"## Round 2 ({AGY_ROUND2_MODEL})\n\n"
+        f"{r2.strip()}\n"
+    )
 
 
 def _rounds(proposal: str, glm, deepseek) -> tuple[str, str, str, str]:
@@ -182,12 +243,24 @@ def publish(note_body: str, product_root: Path, slug: str, vault: Path | None) -
         decisions.write_text("# Decisions\n\n" + pointer, encoding="utf-8")
 
 
-def main(argv: list[str] | None = None, *, glm=call_glm, deepseek=call_deepseek) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    glm=call_glm,
+    deepseek=call_deepseek,
+    agy=call_agy,
+) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--proposal", default="-")
     ap.add_argument("--decision")
     ap.add_argument("--root", type=Path, default=Path.cwd())
     ap.add_argument("--vault", type=Path, default=None)
+    ap.add_argument(
+        "--backend",
+        choices=("agy", "api"),
+        default="agy",
+        help="Model backend: 'agy' (default, local Antigravity CLI) or 'api' (GLM/Deepseek fallback)",
+    )
     ap.add_argument("--check", action="store_true",
                     help="resolve the target note and exit; calls no model")
     args = ap.parse_args(argv)
@@ -221,20 +294,28 @@ def main(argv: list[str] | None = None, *, glm=call_glm, deepseek=call_deepseek)
 
     artifact = product / ".agents" / "artifacts" / "CHALLENGE.md"
     try:
-        rounds = _rounds(proposal, glm, deepseek)
+        if args.backend == "agy":
+            agy_rounds = _rounds_agy(proposal, agy)
+        else:
+            api_rounds = _rounds(proposal, glm, deepseek)
     except ModelError as exc:
         print(str(exc), file=sys.stderr)
         return 1
 
+    def _render(dec: str) -> str:
+        if args.backend == "agy":
+            return _note_agy(proposal, agy_rounds, dec)
+        return _note(proposal, api_rounds, dec)
+
     if not args.decision:
         artifact.parent.mkdir(parents=True, exist_ok=True)
-        artifact.write_text(_note(proposal, rounds, "(decision not written yet)"), encoding="utf-8")
+        artifact.write_text(_render("(decision not written yet)"), encoding="utf-8")
         print(artifact)
         print("both critiques recorded; pass --decision to file the vault note", file=sys.stderr)
         return 2
 
     decision = Path(args.decision).read_text(encoding="utf-8")
-    body = _note(proposal, rounds, decision)
+    body = _render(decision)
     artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_text(body, encoding="utf-8")
     print(body)
