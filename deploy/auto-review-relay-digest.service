@@ -1,0 +1,7 @@
+[Unit]
+Description=Auto-review relay: daily digest line
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/catalyxt/ops/auto-review-relay.py --digest

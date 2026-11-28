@@ -1,116 +1,72 @@
-# PR Draft: Harness top-50 completion — decisions, prototype, review rigor, retro, stacked execution
+# PR Draft: Auto-review relay, Hermes billing-only fallback gate, and ops closeout plan
 
 **Range:** `origin/main...HEAD`
 
-**Spec:** `.agents/specs/2026-11-27-harness-top50-completion.md`
-**Plan:** `.agents/specs/2026-11-27-harness-top50-completion-plan.md`
-**Tickets:** `.agents/specs/2026-11-27-harness-top50-completion/tickets`
+**Spec:** `.agents/specs/2026-11-27-auto-review-relay.md`
+**Plan:** `.agents/specs/2026-11-27-outstanding-ops-plan.md`
+**Tickets:** `.agents/specs/2026-11-27-auto-review-relay/tickets`
 
 ## What Problem This Solves
 
-Thirty-five improvements from the 2026-11-21 harness scorecard were still prose
-or absent. Operators lost decisions between sessions, shape questions were settled
-by debate, review depth was flat, retros did not read their own evidence, and a
-large stack needed manual merging and ticket-by-ticket babysitting.
+Grok approval cards in tmux panes could stall unattended overnight runs without notifying the operator, and Hermes fallback routing could trigger on non-billing errors. Additionally, outstanding ops closeout items needed a deadline-ordered plan.
 
 ## Why This Change Was Made
 
-The first fifteen scorecard items shipped in v1.4.57. The remainder is mostly
-independent and already has partial helpers (`prototype_variants.py`,
-`agent_transcript.py`, `check_comment_audit.py`, `session_context.py`,
-`context_pack.py`, `stack_plan.py`). This ship wires those helpers and adds the
-missing gate or template beside each one, so every item becomes checkable instead
-of advisory prose.
+Adds a deterministic tmux/hook-based auto-review relay (`deploy/auto-review-relay.py`), systemd units (`deploy/auto-review-relay-watch.service`, `deploy/auto-review-relay-digest.{service,timer}`), a hook wrapper (`deploy/hooks/grok-auto-review-relay.sh`), a billing-only gate patch for Hermes (`deploy/patches/hermes-fallback-when.patch`), and the ops closeout plan.
 
 ## User Impact
 
-- `/spec` reads ADRs, records reserved versus delegated decisions, offers
-  prototype variants for shape questions, writes a compact grill handoff, and can
-  run a read-only research subagent.
-- Review reports a comment ratio, adds a Process lens, and requires a
-  reproduction for defect fixes; the PR template carries door-aware fields.
-- Retro ingests local transcripts and PR comments and classifies findings.
-- `merge_stack.py` and `run_tickets.py` land a stack in order and run the
-  unblocked frontier in parallel.
-- Feature flags are required for user-visible large ships; token and context cost
-  are recorded per ship.
+- Operators receive Signal notifications for Grok approval cards and a daily `00:00 UTC` digest line.
+- Hermes fallback lane triggers only on billing/credits errors.
+- No changes to existing harness core gates; all additions live under `deploy/`, `.agents/specs/`, and `tests/`.
 
 ## Evidence
 
-- `python3 -m pytest tests/ -q`
-- `python3 scripts/validate.py full`
-- `python3 scripts/hard_gates.py --diff origin/main...HEAD`
-- `python3 scripts/product_smoke.py --root .`
-- `python3 scripts/check_ticket_dag.py .agents/specs/2026-11-27-harness-top50-completion/tickets`
-- `python3 scripts/stack_plan.py --tickets .agents/specs/2026-11-27-harness-top50-completion/tickets`
-- `python3 scripts/check_adr.py --root .`
-- `python3 scripts/check_docs_patterns.py --root .`
-- `python3 scripts/check_comment_audit.py --diff origin/main...HEAD --strict`
+- `python3 -m pytest tests/ -q` (`619 passed, 3 skipped, 11 subtests passed`)
+- `python3 scripts/validate.py full` (`9/9 gates passed`)
+- `python3 scripts/check_secrets_diff.py --base origin/main --head HEAD` (clean)
+- `python3 deploy/auto-review-relay.py --digest --dry` (exit 0)
 
 ## Merge Danger
 
-**Door:** one-way
-**Blast Radius:** Harness-wide. Every skill and several gates change, and the
-agent-harness PR also adds new scripts. Reverting is a normal revert of the squash
-commit, but a partial revert leaves skills pointing at commands that no longer
-exist.
+**Door:** two-way
+**Blast Radius:** Low. Additive `deploy/` scripts, systemd unit templates, patch file, specs, and unit tests. Reverting removes the new `deploy/` and `tests/test_auto_review_*.py` files cleanly.
 
 ## Threat notes
 
-**Tags:** secrets, supply-chain
+**Tags:** secrets, subprocess
 
-- **Assets:** the harness itself, tokens and session paths read by the cost and
-  transcript helpers, and the operator's PRs that the stack merger acts on.
-- **Abuse cases:** a crafted ticket or transcript injects secrets into an
-  artifact; a stack runner merges a PR whose checks are red; an ADR check is
-  passed by a placeholder body. Ingest replaces `AKIA…`/`ghp_…`/`xox…` tokens in
-  transcripts and PR comments, the merger stops on any non-success check, and the
-  ADR check requires all three parts.
-- **Boundaries:** no new network calls in the default path; `--gh` stays behind an
-  explicit flag; auto-merge stays opt-in. `run_tickets.py` splits the executor
-  command with `shlex` and runs it in a fresh worktree, with no shell.
+- **Assets:** Signal notification target, tmux pane text, hook JSON payloads.
+- **Abuse cases:** Secret leakage from pane text or crafted hook JSON causing shell injection. Subprocess calls use argument lists without shell interpolation, and secrets scan is clean.
+- **Boundaries:** No new network listeners; `--dry` flag prevents live Signal sends during tests.
 
 ## Traceability
 
 | AC | Test / command |
 |----|----------------|
-| AC-1 | `tests/test_decisions_and_review.py`, `scripts/check_adr.py`, `scripts/check_ticket_dag.py` |
-| AC-2 | `tests/test_prototype_and_handoff.py`, `scripts/check_prototype_fidelity.py` |
-| AC-3 | `tests/test_comment_and_docs.py`, `scripts/check_comment_audit.py --ratio` |
-| AC-4 | `tests/test_retro_ingest.py`, `scripts/retro_job.py --transcripts` |
-| AC-5 | `tests/test_stack_runners.py`, `scripts/merge_stack.py`, `scripts/run_tickets.py` |
-| AC-6 | workflow-harness PR #13: `specs/adr/`, `framework/tickets.py`, `framework/canary.py`, `tools/check_adr.py`, `check_canary.py`, `check_ticket_order.py`, `retro_runs.py` (212 tests) |
-| Smoke | `python3 scripts/validate.py full`, `bash scripts/smoke_unit.sh` |
+| AC-1 | `tests/test_auto_review_relay.py` |
+| AC-2 | `tests/test_auto_review_watch.py` |
+| AC-3 | `tests/test_auto_review_hook_wrapper.py` |
+| AC-4 | `tests/test_auto_review_units.py` |
+| Smoke | `python3 deploy/auto-review-relay.py --digest --dry`, `python3 scripts/validate.py full` |
 
 ## Red-proof
 
 ```text
-red_cmd: git cat-file -e origin/main:scripts/check_adr.py
-green_cmd: python3 -m pytest tests/test_decisions_and_review.py -q
+red_cmd: git cat-file -e origin/main:deploy/auto-review-relay.py
+green_cmd: python3 -m pytest tests/test_auto_review_relay.py tests/test_auto_review_watch.py tests/test_auto_review_units.py tests/test_auto_review_hook_wrapper.py -q
 ```
 
-Red exits 128 on the base: the checker and the decisions folder do not exist
-there. Green runs the twelve tests that now cover the spine, the tier table, the
-prefactor edge and the diamond case.
+Red exits 128 on `origin/main` because `deploy/auto-review-relay.py` does not exist on the base. Green runs the four auto-review test suites.
 
 ## Evidence pack
 
-- hard_gates: run on `origin/main...HEAD` before review.
-- pytest: 584 passed, 3 skipped.
-- validate: `python3 scripts/validate.py full` → 9/9 gates.
-- smoke: `python3 scripts/product_smoke.py --root .` → 2/2.
-- ticket DAG: 19 tickets, valid, frontier `01, 07, 10, 12, 16, 17`.
-- stack plan: 3 layers / 3 chunks.
-- companion: workflow-harness PR #13, 212 tests, its three gates green.
+- `hard_gates`: run via `python3 scripts/hard_gates.py --diff origin/main...HEAD`.
+- `pytest`: `619 passed, 3 skipped, 11 subtests passed in 52.61s`.
+- `validate`: `python3 scripts/validate.py full` → `9/9 gates passed`.
 
 ## Things that look bad but are actually fine
 
-- The diff is large. It is one epic with a ticket per scorecard item and a
-  chunked review; each chunk maps to a batch.
-- Several checks are advisory unless `--strict` is passed. That keeps product
-  repos without a declared surface from failing on fields they do not use; this
-  repo runs them with `--strict`.
-- `retro_job.py` reads local session files best-effort. When nothing is found it
-  writes `unknown` rather than failing the retro.
-- The workflow-harness changes ship in a separate PR so the two suites stay
-  independent.
+1. `deploy/patches/hermes-fallback-when.patch` is stored as a patch under `deploy/patches/` because `hermes-agent` lives in a separate repository.
+2. `deploy/auto-review-relay.py` uses `--dry` for CLI verification so dry runs never send live Signal messages.
+3. `.agents/specs/2026-11-27-outstanding-ops-plan.md` is included in this branch as the post-challenge closeout plan for the ops items.

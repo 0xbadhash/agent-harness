@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/debian/.grok/hooks/auto-review-relay.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

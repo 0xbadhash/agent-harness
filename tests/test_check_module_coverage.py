@@ -86,3 +86,24 @@ def test_soft_if_missing_run(tmp_path: Path, monkeypatch):
     # Point ROOT-less by only using --from-json soft path via --run soft
     rc = cov.main(["--config", str(cfg), "--run", "--soft-if-missing"])
     assert rc == 0
+
+
+def test_run_pytest_coverage_isolates_coverage_file(tmp_path: Path, monkeypatch):
+    seen_env: dict[str, str] = {}
+
+    class _FakeProc:
+        returncode = 0
+        stdout = "ok\n"
+        stderr = ""
+
+    def _fake_run(cmd, cwd=None, capture_output=None, text=None, env=None, check=None):
+        seen_env.update(env or {})
+        return _FakeProc()
+
+    monkeypatch.setattr(cov.subprocess, "run", _fake_run)
+    out_json = tmp_path / "artifacts" / "coverage.json"
+    rc, _ = cov.run_pytest_coverage("python3", {"source": ["scripts"]}, out_json)
+    assert rc == 0
+    cov_file = seen_env.get("COVERAGE_FILE")
+    assert cov_file, "COVERAGE_FILE must be set so .coverage is not left in repo root"
+    assert not Path(cov_file).is_relative_to(cov.ROOT)

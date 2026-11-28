@@ -1,0 +1,160 @@
+diff --git a/agent/chat_completion_helpers.py b/agent/chat_completion_helpers.py
+index 0806bfaedd..2901e4650e 100644
+--- a/agent/chat_completion_helpers.py
++++ b/agent/chat_completion_helpers.py
+@@ -1984,6 +1984,23 @@ def _rescope_fallback_extra_body(agent, old_model: str, old_provider: str, old_b
+         logger.debug("Failed to resolve extra_body for fallback %s; keeping current: %s", agent.model, _eb_err)
+ 
+ 
++def _fallback_entry_allows_reason(fb: dict[str, Any], reason: FailoverReason | None) -> bool:
++    """Honor an optional per-entry ``when:`` gate.
++
++    ``when`` lists the :class:`FailoverReason` values this entry may serve. Absent or
++    empty keeps the historical behavior (every reason). Any other reason skips the
++    entry, so a chain can be limited to, for example, credit exhaustion only.
++    """
++    wanted = fb.get("when")
++    if not isinstance(wanted, list) or not wanted:
++        return True
++    names = {str(x).strip().lower() for x in wanted if isinstance(x, str)}
++    if not names:
++        return True
++    current = str(getattr(reason, "value", reason) or "").lower()
++    return current in names
++
++
+ def try_activate_fallback(agent, reason: FailoverReason | None = None, reset_at=None) -> bool:
+     """Switch to the next fallback model/provider in the chain; False when exhausted. Swaps client,
+     model slug and provider in place so the retry loop continues on the new backend; client
+@@ -1993,10 +2010,24 @@ def try_activate_fallback(agent, reason: FailoverReason | None = None, reset_at=
+     if switch_deferred_by_reset(agent, reason, reset_at):
+         return False
+     cooldown_seconds = _arm_rate_limit_cooldown(agent, reason, reset_at=reset_at)
++    gated_at: int | None = None
+     while True:
+         if agent._fallback_index >= len(agent._fallback_chain):
++            if gated_at is not None:
++                # Leave a ``when:``-gated entry in place: a later attempt with a
++                # matching reason (for example billing) can still use it.
++                agent._fallback_index = gated_at
+             return _fallback_chain_exhausted(agent, reason)
+         fb = agent._fallback_chain[agent._fallback_index]
++        if not _fallback_entry_allows_reason(fb, reason):
++            if gated_at is None:
++                gated_at = agent._fallback_index
++            agent._fallback_index += 1
++            logger.info(
++                "Fallback skip: %s gated to when=%s (reason=%s)",
++                _fallback_entry_key(fb), fb.get("when"), getattr(reason, "value", reason),
++            )
++            continue
+         agent._fallback_index += 1
+         fb_key = _fallback_entry_key(fb)
+         if getattr(agent, "_unavailable_fallback_keys", None) is None:
+diff --git a/tests/agent/test_fallback_when_gate.py b/tests/agent/test_fallback_when_gate.py
+new file mode 100644
+index 0000000000..b4138f8062
+--- /dev/null
++++ b/tests/agent/test_fallback_when_gate.py
+@@ -0,0 +1,101 @@
++"""Per-entry ``when:`` gate on the fallback chain.
++
++A fallback entry may list the ``FailoverReason`` values it is allowed to serve:
++
++    fallback_providers:
++      - provider: venice
++        model: deepseek-v4-1-flash-uncensored
++        when: [billing]
++
++Absent or empty ``when`` keeps the historical behavior (every reason). These tests
++pin that a gated entry is skipped for other reasons, is left in place so a later
++billing attempt can still use it, and that an ungated entry is unaffected.
++"""
++
++from unittest.mock import MagicMock, patch
++
++from run_agent import AIAgent
++from agent.error_classifier import FailoverReason
++
++
++def _make_agent(fallback_model=None):
++    with (
++        patch("model_tools.get_tool_definitions", return_value=[]),
++        patch("model_tools.check_toolset_requirements", return_value={}),
++        patch("agent.process_bootstrap.OpenAI"),
++    ):
++        agent = AIAgent(
++            api_key="test-key",
++            base_url="https://openrouter.ai/api/v1",
++            quiet_mode=True,
++            skip_context_files=True,
++            skip_memory=True,
++            fallback_model=fallback_model,
++        )
++        agent.client = MagicMock()
++        return agent
++
++
++def _mock_client(base_url="https://openrouter.ai/api/v1", api_key="fb-key"):
++    mock = MagicMock()
++    mock.base_url = base_url
++    mock.api_key = api_key
++    return mock
++
++
++BILLING_ONLY = [
++    {"provider": "deepseek", "model": "deepseek-v4-1-flash-uncensored", "when": ["billing"]},
++]
++
++
++class TestWhenGate:
++    def test_rate_limit_does_not_switch_a_billing_only_entry(self):
++        agent = _make_agent(fallback_model=BILLING_ONLY)
++        with patch(
++            "agent.auxiliary_client.resolve_provider_client",
++            return_value=(_mock_client(), "resolved"),
++        ):
++            assert agent._try_activate_fallback(reason=FailoverReason.rate_limit) is False
++            # The gated entry must stay available for the next attempt.
++            assert agent._fallback_index == 0
++            assert agent._try_activate_fallback(reason=FailoverReason.billing) is True
++
++    def test_other_reasons_stay_on_the_primary(self):
++        agent = _make_agent(fallback_model=BILLING_ONLY)
++        with patch(
++            "agent.auxiliary_client.resolve_provider_client",
++            return_value=(_mock_client(), "resolved"),
++        ):
++            for reason in (
++                FailoverReason.timeout,
++                FailoverReason.server_error,
++                FailoverReason.overloaded,
++                FailoverReason.upstream_rate_limit,
++            ):
++                assert agent._try_activate_fallback(reason=reason) is False
++
++    def test_missing_reason_is_blocked_by_the_gate(self):
++        agent = _make_agent(fallback_model=BILLING_ONLY)
++        assert agent._try_activate_fallback() is False
++
++    def test_ungated_entry_keeps_switching_on_rate_limit(self):
++        chain = [{"provider": "openai", "model": "gpt-4o"}]
++        agent = _make_agent(fallback_model=chain)
++        with patch(
++            "agent.auxiliary_client.resolve_provider_client",
++            return_value=(_mock_client(), "resolved"),
++        ):
++            assert agent._try_activate_fallback(reason=FailoverReason.rate_limit) is True
++
++    def test_gate_skips_forward_to_a_later_allowed_entry(self):
++        chain = [
++            {"provider": "deepseek", "model": "deepseek-v4-1-flash-uncensored", "when": ["billing"]},
++            {"provider": "openai", "model": "gpt-4o", "when": ["rate_limit"]},
++        ]
++        agent = _make_agent(fallback_model=chain)
++        with patch(
++            "agent.auxiliary_client.resolve_provider_client",
++            return_value=(_mock_client(), "resolved"),
++        ):
++            assert agent._try_activate_fallback(reason=FailoverReason.rate_limit) is True
++            assert agent.provider == "openai"
