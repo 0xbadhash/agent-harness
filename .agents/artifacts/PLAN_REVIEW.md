@@ -1,42 +1,40 @@
-# Plan review — harness top-50 completion
+# PLAN-REVIEW — runner-label gate and follow-ups
 
 **Marker:** PLAN-REVIEW
-**Spec:** `.agents/specs/2026-11-27-harness-top50-completion.md`
-**Plan:** `.agents/specs/2026-11-27-harness-top50-completion-plan.md`
-**Tickets:** `.agents/specs/2026-11-27-harness-top50-completion/tickets`
+**Plan:** `.agents/specs/2026-11-28-runner-label-gate-plan.md`
 
-## Verdict
+## Coverage
 
-APPROVE. The plan covers all thirty-five remaining scorecard items and the two
-P2 follow-ups with one ticket per mechanism. Each ticket names the script or gate
-that makes the item observable, so none of the work can collapse into policy
-prose. The four review chunks are balanced (860 / 1500 / 490 estimated LOC), and
-the dependency layers have a real ready frontier.
+- AC-1 and AC-2 map to `check_workflow_runners.check()` and the five fixture
+  tests. The skip paths (no workflows, no allowlist) are explicit, so the gate
+  cannot fail an unrelated product on first install.
+- AC-3 maps to the `hard_gates.py` registration. The gate is scoped to the
+  workflow and allowlist paths in the diff; a full-tree run still checks because
+  the findings are cheap.
+- AC-4 maps to the workflow-harness workflow edit and its local test. The
+  permissions block and `GITHUB_TOKEN` are asserted, because those are the two
+  things a hosted-runner move could break.
+- AC-5 and AC-6 are reports. The plan pins the commits and fixes the verdict
+  vocabulary, which is the weakness the challenge named in the first scorecard.
+
+## Risks
+
+- The allowlist is a declaration, not a registry read. A repo can declare a label
+  it does not have. The gate message states this limit, and the check still
+  catches the common case: a label copied from another repo.
+- `runs-on` expressions are skipped as unresolved. A matrix expression that
+  resolves to an undeclared label would pass. Resolving expressions statically
+  is out of scope; the plan says so.
+- The reports are a point-in-time audit. Pinned commits make them reproducible
+  and stale by design.
 
 ## Findings
 
-1. **Estimate realism.** The epic estimates 2,850 LOC, above the single-PR
-   comfort zone. Mitigation: chunked review and one agent-harness PR plus one
-   workflow-harness PR. Accepted.
-2. **Advisory gates.** Feature-flag, token/cost, and comment-ratio checks report
-   without failing for repos that declare no surface. Mitigation: this repo runs
-   them with `--strict`. Accepted.
-3. **External repo.** Batch F touches workflow-harness, whose local checkout is
-   dirty from another session. Mitigation: cut a clean worktree from
-   `origin/main`. Accepted.
-4. **Live actions.** `--auto-merge` and `--gh` can act on GitHub. Mitigation: both
-   stay opt-in and are covered by dry-run tests. Accepted.
+- P1: none.
+- P2: the gate adds PyYAML as an import in a script that `hard_gates.py` calls
+  in-process. PyYAML is already a test dependency and is installed in CI, but a
+  product that vendors the script without PyYAML would fail at import. The
+  implementation imports yaml lazily inside `check()` and returns a finding that
+  says the dependency is missing, rather than crashing the whole gate run.
 
-## Gate checks
-
-- Spec AC-1..AC-6 are checkable.
-- Ticket DAG valid (19 tickets); ready frontier `01, 07, 10, 12, 16, 17`.
-- Stack plan: 3 layers, 3 review chunks, no cycles or missing dependencies.
-- Reserved versus delegated decisions are recorded in the spec and plan
-  templates, and no decision is delegated to the agent that the operator has not
-  seen.
-
-## Handoff
-
-✅ PLAN-REVIEW DONE
-NEXT_SKILL=/execute_dev
+**Verdict:** approve.

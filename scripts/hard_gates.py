@@ -684,6 +684,23 @@ def evaluate(
                 )
         except Exception as e:  # pragma: no cover
             violations.append(f"hard_gates: type_ignores error: {e}")
+
+        try:
+            from check_workflow_runners import check as _runner_check
+
+            rr = _runner_check(root)
+            if not rr.ok:
+                for finding in rr.findings:
+                    violations.append(
+                        f"hard_gates: workflow_runners — {finding.workflow}:"
+                        f"{finding.job} uses runner {finding.label} "
+                        f"({finding.reason})"
+                    )
+            else:
+                detail = rr.skip or f"{rr.workflows} workflow(s) declared"
+                skipped.append(f"workflow_runners ({detail})")
+        except ImportError as e:  # pragma: no cover
+            violations.append(f"hard_gates: workflow_runners error: {e}")
     else:
         skipped.append("lint_ratchet (prose-only)")
         skipped.append("comment_audit (prose-only)")
@@ -691,6 +708,7 @@ def evaluate(
         skipped.append("repo_hygiene (prose-only)")
         skipped.append("markdown_audit (prose-only)")
         skipped.append("type_ignores (prose-only)")
+        skipped.append("workflow_runners (prose-only)")
 
     return HardGatesResult(
         ok=len(violations) == 0,
