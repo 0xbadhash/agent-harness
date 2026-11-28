@@ -65,7 +65,7 @@ Red exits 128 on `origin/main` because `deploy/auto-review-relay.py` does not ex
 - `pytest`: `619 passed, 3 skipped, 11 subtests passed in 52.61s`.
 - `validate`: `python3 scripts/validate.py full` → `9/9 gates passed`.
 
-## §9 — Intentional Oddities
+## Things that look bad but are actually fine
 
 1. `deploy/patches/hermes-fallback-when.patch` is stored as a patch under `deploy/patches/` because `hermes-agent` lives in a separate repository.
 2. `deploy/auto-review-relay.py` uses `--dry` for CLI verification so dry runs never send live Signal messages.
