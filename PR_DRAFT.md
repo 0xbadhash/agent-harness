@@ -1,113 +1,68 @@
-# PR Draft: Runner-label gate, workflow-harness fix, re-score and PR triage
+# PR Draft: Un-defer Codex and Claude Code lanes in auto-review relay
 
 **Range:** `origin/main...HEAD`
 
-**Spec:** `.agents/specs/2026-11-28-runner-label-gate.md`
-**Plan:** `.agents/specs/2026-11-28-runner-label-gate-plan.md`
-**Tickets:** `.agents/specs/2026-11-28-runner-label-gate/tickets`
+**Spec:** `.agents/specs/2026-11-27-auto-review-relay.md`
+**Plan:** `.agents/specs/2026-11-27-outstanding-ops-plan.md`
+**Tickets:** `.agents/specs/2026-11-27-auto-review-relay/tickets`
 
 ## What Problem This Solves
 
-workflow-harness defined both review-tier jobs with `runs-on: self-hosted`. No
-self-hosted runner is attached, so the auto-merge job queued forever on the last
-two PRs and merged anyway because the check is not required. The harness had no
-way to catch a runner label that no machine provides. Separately, the v1.5.0
-release claim about the top-50 items had not been checked against the shipped
-commits, and four open PRs predate that ship.
+Codex and Claude Code panes were previously marked deferred in the auto-review relay spec, and `STRONG_OPTION` in `deploy/auto-review-relay.py` did not match Codex's `›` (`U+203A`) selection glyph.
 
 ## Why This Change Was Made
 
-The queued job is a dead gate: amber on every PR, ignored by everyone. The cause
-is a declared runner label with no runner, which is a class of mistake a small
-deterministic check can catch. The re-score and triage are read-only proof, so
-the completion claim and the PR backlog stop living in a chat summary.
+Un-defers Codex and Claude Code under the single-writer tmux `--watch` rule (`HOOKED_HARNESSES = {"grok"}`), adds `›` support to `STRONG_OPTION`, and adds fixture-based tests (`tests/fixtures/auto_review/claude_card.txt`, `codex_card.txt`) proving `--watch --once --dry` detects both harnesses without duplicate-send risk.
 
 ## User Impact
 
-- A PR that names an undeclared runner label fails at PR time with the workflow,
-  job, and label named.
-- workflow-harness review-tier jobs complete on a hosted runner instead of
-  queueing.
-- The top-50 scorecard has a dated re-score against pinned commits, with the
-  runnable check and exit code recorded per item.
-- The four open PRs get a supersession verdict and a close/revive recommendation.
+- Operators receive Signal + Boss notifications when `claude` or `codex` tmux panes raise an approval card.
+- Single-writer rule prevents duplicate hook+watcher sends (`HOOKED_HARNESSES` remains `{"grok"}`).
+
+## Evidence
+
+- `python3 -m pytest -q tests/test_auto_review_*.py` (`36 passed`)
+- `python3 scripts/validate.py full`
+- `python3 scripts/check_secrets_diff.py --base origin/main --head HEAD`
 
 ## Merge Danger
 
 **Door:** two-way
-**Blast Radius:** Harness-wide gate registration and one workflow file. Reverting
-the commit removes the gate and restores the workflow; repos without an allowlist
-are skipped, so no existing product changes behavior.
-
-**Rollback:** revert the squash commits for agent-harness and workflow-harness
-together. The reports under `/srv/boxdrop/out/` are additive.
+**Blast Radius:** Low. One-character regex addition in `deploy/auto-review-relay.py` plus two fixture files, one test function, and spec/backlog doc updates.
 
 ## Threat notes
 
-**Tags:** secrets, supply-chain
+**Tags:** secrets, injection
 
-- **Assets:** `.github/workflows/*.yml` and `.github/allowed-runners.txt` in the
-  checked tree; both are read as data and never executed.
-- **Abuse cases:** a workflow that names an undeclared runner is reported, not
-  silently accepted; a `runs-on` expression is reported as unresolved so a
-  crafted expression cannot smuggle a label past the gate.
-- **Supply chain:** no new package is added; the checker imports PyYAML, which
-  the test environment and CI already install.
-
-`check_workflow_runners.py` reads workflow YAML and a text allowlist only. It
-runs no shell command from the files it reads, makes no network call, and writes
-nothing. The workflow-harness change keeps `secrets.GITHUB_TOKEN` and the
-existing `permissions:` block; no custom secret is introduced.
-
-## Things that look bad but are actually fine
-
-1. A repo with workflows but no `.github/allowed-runners.txt` is skipped, so the
-   gate does not fire there. This is deliberate opt-in: the allowlist is the
-   repo's statement of which runners exist, and docs/ci-matrix.md states it.
-2. `runs-on: ${{ ... }}` is reported as `unresolved` and does not fail. A matrix
-   expression can expand to a declared label, so treating the raw text as a
-   finding would produce false positives.
-3. The `except ImportError` around the checker registration looks like a
-   swallowed failure. It covers a partial install where the module is absent and
-   appends a hard-gate violation with the error text.
-4. The reports under `/srv/boxdrop/out/` are outside the repo and carry no tests.
-   They are read-only evidence with a recorded command and exit code per row.
+- **Assets:** tmux pane capture text, Signal/Boss relay messages.
+- **Abuse cases:** Secret leakage or false-positive spam from pane text. `redact()` strips tokens/paths and `--dry` prevents live sends in tests.
+- **Boundaries:** No new hooks or network listeners; watcher-only single writer for `claude` and `codex`.
 
 ## Traceability
 
-- AC-1 → `tests/test_workflow_runners.py::test_declared_label_passes` and
-  `::test_undeclared_label_fails_with_names`
-- AC-2 → `::test_no_workflows_skips`, `::test_no_allowlist_skips`,
-  `::test_empty_allowlist_fails`
-- AC-3 → `::test_hard_gate_runs_on_workflow_diff` and
-  `::test_hard_gate_skips_unrelated_diff`
-- AC-4 → workflow-harness `tests/test_workflow_runners.py`
-- AC-5 → `/srv/boxdrop/out/SCORECARD-GROKBUILD-HARNESS-TOP50-RESCORE-2026-11-28.md`
-- AC-6 → `/srv/boxdrop/out/TRIAGE-PRS-2026-11-28.md`
-
-## Evidence pack
-
-- hard_gates: `python3 scripts/hard_gates.py --diff origin/main...HEAD` → pass
-  (workflow_runners: 2 workflows declared)
-- pytest: `python3 -m pytest -q` → 636 passed, 2 skipped, 11 subtests
-- validate: `python3 scripts/validate.py full` → 9/9 gates
-- smoke: `python3 scripts/product_smoke.py --root .` → 2/2 steps
-- workflow-harness: `python3 -m pytest tests -q --ignore=tests/enhancement_specs`
-  → 226 passed
-
-The two read-only reports are written:
-
-- `/srv/boxdrop/out/SCORECARD-GROKBUILD-HARNESS-TOP50-RESCORE-2026-11-28.md`
-  (41 present / 6 partial / 3 missing, pinned `7f955f5` / `2bc3331`)
-- `/srv/boxdrop/out/TRIAGE-PRS-2026-11-28.md` (three open PRs; close
-  recommended, no action taken)
+| AC | Test / command |
+|----|----------------|
+| AC-Claude/Codex watcher | `tests/test_auto_review_watch.py::test_detects_claude_and_codex_fixture_cards` |
+| AC-Single writer | `tests/test_auto_review_watch.py::test_skips_hooked_shell_and_viewer_panes` |
+| Smoke | `python3 scripts/validate.py full` |
 
 ## Red-proof
 
 ```text
-red_cmd: git cat-file -e origin/main:scripts/check_workflow_runners.py
-green_cmd: python3 -m pytest tests/test_workflow_runners.py -q
+red_cmd: git show origin/main:deploy/auto-review-relay.py | python3 -c "import sys; sys.exit(0 if '\u203a' in sys.stdin.read() else 1)"
+green_cmd: python3 -m pytest -q tests/test_auto_review_watch.py
 ```
 
-The red command exits 128 because the gate does not exist on the base commit;
-the green command covers the new checker.
+Red exits 1 on `origin/main` (prior to adding `›` to `STRONG_OPTION`). Green runs `tests/test_auto_review_watch.py` including `test_detects_claude_and_codex_fixture_cards`.
+
+## Evidence pack
+
+- `hard_gates`: `python3 scripts/hard_gates.py --diff origin/main...HEAD`
+- `pytest`: `36 passed` on `tests/test_auto_review_*.py`
+- `validate`: `python3 scripts/validate.py full`
+
+## Things that look bad but are actually fine
+
+1. `codex` CLI is not installed on this host (`codex: command not found`), so its card fixture is derived from recorded CLI prompt layout and tested via `AUTO_REVIEW_TMUX_FIXTURE`.
+2. `HOOKED_HARNESSES` intentionally remains `{"grok"}` so `--watch` acts as the single writer for both `claude` and `codex`.
+3. `.agents/artifacts/PORTFOLIO_INSTALL_REPORT.md` and `REMAINING.md` were updated during the `v1.5.1` portfolio rollout.

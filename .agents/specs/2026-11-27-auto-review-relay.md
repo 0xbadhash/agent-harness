@@ -56,7 +56,7 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 - Script: `/opt/catalyxt/ops/auto-review-relay.py`; SoT copy in `agent-harness/deploy/auto-review-relay.py` plus the two unit files.
 - State: `/var/lib/pilot/auto-review-relay/` (`state.json`, `relay.log`, `posted/`, `DISABLED`).
 - Units (user): `auto-review-relay-watch.service` (long-running watcher) and `auto-review-relay-digest.timer` (08:00 HKT, one Signal line).
-- Hook wrapper under `~/.grok/hooks/`. Codex and Claude are deferred (see Out of Scope).
+- Hook wrapper under `~/.grok/hooks/`. Codex and Claude Code are covered by the 20 s tmux `--watch` fallback as the single writer (`HOOKED_HARNESSES = {"grok"}` so no duplicate sends occur).
 
 **Non-goals that affect the experience.** No approval from Signal, no keystroke ever, no OpenBot transport (no sender exists), no replacement of the end-of-job scorecard hook, no transcript or file contents in the message.
 
@@ -90,9 +90,8 @@ The same event is POSTed to Boss as `kind=auto-review-card`, so a dashboard can 
 - Replacing or re-enabling `pilot-pane-poll.timer` job-done detection.
 - OpenBot relay.
 - Harness-internal changes (Grok source or config beyond the hook entry).
-- The Codex lane: no hook entry and no watcher coverage until its `notify` argv shape is confirmed.
-- The Claude lane: deferred with Codex; no hook entry and no watcher coverage in this build.
 - Multi-host rollout; this is pilot-vps first.
+- Native hook wrappers for Codex (`codex` CLI not yet installed on this host) and Claude Code: both use the tmux `--watch` single-writer lane instead of hooks.
 
 ## Grill-me
 

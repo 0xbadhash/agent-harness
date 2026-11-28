@@ -60,7 +60,7 @@ SKIP_COMMANDS = {
 }
 SKIP_WINDOWS = {"herdr", "viewer"}
 WATCH_INTERVAL = 20
-STRONG_OPTION = re.compile(r"^\s*(?:[❯>]\s*)?\d+\s*[.)]?\s*(?:yes|no)\b", re.IGNORECASE)
+STRONG_OPTION = re.compile(r"^\s*(?:[❯›>]\s*)?\d+\s*[.)]?\s*(?:yes|no)\b", re.IGNORECASE)
 YES_NO_PROMPT = re.compile(r"\[[yYnN]/[yYnN]\]|\([yYnN]/[yYnN]\)")
 FOOTER_LINE = re.compile(r"^\s*(?:\d/\d+:\w+|esc\b|enter\b|tab\b|↑/↓|space\b)", re.IGNORECASE)
 BORDER_LINE = re.compile(r"^[\s─━═╭╮╰╯┌┐└┘│|+*_=-]+$")

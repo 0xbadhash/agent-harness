@@ -148,3 +148,19 @@ def test_card_at_top_of_pane_still_reports(tmp_path: Path) -> None:
     text = "  1 Yes, proceed\n  2 No\n"
     proc = run_watch(tmp_path, write_panes(tmp_path, [pane(text=text)]))
     assert len(signals(proc.stdout)) == 1
+
+
+def test_detects_claude_and_codex_fixture_cards(tmp_path: Path) -> None:
+    fixtures = REPO / "tests" / "fixtures" / "auto_review"
+    claude_text = (fixtures / "claude_card.txt").read_text(encoding="utf-8")
+    codex_text = (fixtures / "codex_card.txt").read_text(encoding="utf-8")
+    panes = [
+        pane(command="claude", text=claude_text, pane_id="%6", window="6", window_name="claude"),
+        pane(command="codex", text=codex_text, pane_id="%7", window="7", window_name="codex"),
+    ]
+    proc = run_watch(tmp_path, write_panes(tmp_path, panes))
+    assert proc.returncode == 0
+    lines = signals(proc.stdout)
+    assert len(lines) == 2
+    assert any("grok-build:6 claude - approval needed:" in line for line in lines), lines
+    assert any("grok-build:7 codex - approval needed:" in line for line in lines), lines
