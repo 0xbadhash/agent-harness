@@ -1,12 +1,12 @@
 # PUSH_PROOF
 
-_Generated 2026-11-28 06:12 UTC by finish_ship.py_
+_Generated 2026-11-28 07:30 UTC by finish_ship.py_
 
-**ok:** `False`
+**ok:** `True`
 **phase:** `shipped`
 **branch:** `main`
-**dirty:** `True`
-**remote_sync:** `ahead`
+**dirty:** `False`
+**remote_sync:** `ok`
 **tag_hint:** `True`
 
 ## NEXT_SKILL plan (run in order — agent executes skills)
@@ -16,12 +16,20 @@ _Generated 2026-11-28 06:12 UTC by finish_ship.py_
 
 ## Missing / blockers
 
-- ❌ working tree dirty (commit or stash before push proof)
-- ❌ require-push: cannot push/verify while dirty
+- (none)
 
 ## Notes
 
-- —
+- git push origin HEAD → rc=0
+- branch 'main' set up to track 'origin/main'.
+Everything up-to-date
+- git push origin --tags → rc=0
+- To https://github.com/0xbadhash/agent-harness.git
+ * [new tag]         v1.5.3 -> v1.5.3
+- ok: fetched origin --tags
+- ok: de7bd2f17e79 ⊆ origin/main
+- ok: origin has tag v1.5.3
+- ok: release_origin_gate PASS
 
 ## Operator
 

@@ -1,6 +1,6 @@
 {
   "card_id": null,
-  "phase": "shipped",
+  "phase": "init",
   "remediation": [],
   "score": 100.0,
   "spec_id": ".agents/specs/2026-11-28-runner-label-gate.md",
