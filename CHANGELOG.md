@@ -1,3 +1,13 @@
+## v1.5.2 — 2026-11-28
+
+### feat(gates): fail a workflow job that names an undeclared runner label
+
+- `scripts/check_workflow_runners.py` compares every `runs-on` label in `.github/workflows/*.yml` with `.github/allowed-runners.txt`; an undeclared label fails with the workflow, job, and label named.
+- The gate is registered in `hard_gates.py` as `workflow_runners`; a repo without workflows or without an allowlist skips with a stated reason, and a `runs-on` expression is reported unresolved rather than failed.
+- `docs/ci-matrix.md` gains J17 and a runner-label section.
+- workflow-harness v0.3.3 moves both review-tier jobs to `ubuntu-latest` and adds its own allowlist and contract test.
+- Read-only evidence: a top-50 re-score (41 present / 6 partial / 3 missing) and a three-PR triage under `/srv/boxdrop/out/`.
+
 ## v1.5.0 — 2026-11-27
 
 ### feat(harness): finish the top-50 scorecard — decisions, prototype, review, retro, stacks
