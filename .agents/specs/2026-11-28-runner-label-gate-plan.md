@@ -17,7 +17,16 @@ names it; the gate fails on a used-but-undeclared label, so the deletion order i
 workflow first, allowlist second. The script itself is deleted only with its
 tests and its `hard_gates.py` registration in the same change.
 
-## Shape
+## Approach
+
+The gate is a pure read: parse workflow YAML, parse the allowlist, and compare
+the two sets. It runs inside `hard_gates.py` as a non-prose check, so it shares
+the existing diff scope and failure reporting. There is no network call, no
+shell execution, and no write. The workflow-harness fix uses the same contract
+in reverse: its own test asserts that every label it names is declared in its
+own allowlist, so the two repos cannot drift.
+
+## Architecture
 
 ### 1. Harness script (`scripts/check_workflow_runners.py`)
 
@@ -62,12 +71,12 @@ exit 1: one line per finding, "workflow:job uses runner <label> (not declared)"
 ### 5. Reports (read-only)
 
 - `/srv/boxdrop/out/SCORECARD-GROKBUILD-HARNESS-TOP50-RESCORE-2026-11-28.md`
-  with pinned commits `f1547d3` / `58f5a56`, a per-item verdict table, the
+  with pinned commits `7f955f5` / `2bc3331`, a per-item verdict table, the
   runnable check and exit code where one exists, and a delta column.
 - `/srv/boxdrop/out/TRIAGE-PRS-2026-11-28.md` with per-PR supersession evidence
   and a close/revive recommendation.
 
-## Order
+## Implementation sequence
 
 1. Script + tests (TDD: failing test first).
 2. Gate registration + docs.

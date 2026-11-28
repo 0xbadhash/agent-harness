@@ -46,6 +46,14 @@ together. The reports under `/srv/boxdrop/out/` are additive.
 
 **Tags:** secrets, supply-chain
 
+- **Assets:** `.github/workflows/*.yml` and `.github/allowed-runners.txt` in the
+  checked tree; both are read as data and never executed.
+- **Abuse cases:** a workflow that names an undeclared runner is reported, not
+  silently accepted; a `runs-on` expression is reported as unresolved so a
+  crafted expression cannot smuggle a label past the gate.
+- **Supply chain:** no new package is added; the checker imports PyYAML, which
+  the test environment and CI already install.
+
 `check_workflow_runners.py` reads workflow YAML and a text allowlist only. It
 runs no shell command from the files it reads, makes no network call, and writes
 nothing. The workflow-harness change keeps `secrets.GITHUB_TOKEN` and the
