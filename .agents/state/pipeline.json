@@ -1,8 +1,8 @@
 {
   "card_id": null,
-  "phase": "ready_for_review",
+  "phase": "init",
   "remediation": [],
-  "score": 75,
+  "score": 100.0,
   "spec_id": ".agents/specs/2026-11-27-auto-review-relay.md",
   "task": "T2088U harness top-50 completion (v1.5.0)",
   "updated_at": "2026-08-19T01:08Z",

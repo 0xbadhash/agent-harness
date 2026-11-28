@@ -1,12 +1,12 @@
 # PUSH_PROOF
 
-_Generated 2026-11-27 10:04 UTC by finish_ship.py_
+_Generated 2026-11-28 06:12 UTC by finish_ship.py_
 
-**ok:** `True`
+**ok:** `False`
 **phase:** `shipped`
 **branch:** `main`
-**dirty:** `False`
-**remote_sync:** `ok`
+**dirty:** `True`
+**remote_sync:** `ahead`
 **tag_hint:** `True`
 
 ## NEXT_SKILL plan (run in order — agent executes skills)
@@ -16,19 +16,12 @@ _Generated 2026-11-27 10:04 UTC by finish_ship.py_
 
 ## Missing / blockers
 
-- (none)
+- ❌ working tree dirty (commit or stash before push proof)
+- ❌ require-push: cannot push/verify while dirty
 
 ## Notes
 
-- git push origin HEAD → rc=0
-- branch 'main' set up to track 'origin/main'.
-Everything up-to-date
-- git push origin --tags → rc=0
-- Everything up-to-date
-- ok: fetched origin --tags
-- ok: dff37ba526a2 ⊆ origin/main
-- ok: origin has tag v1.5.0
-- ok: release_origin_gate PASS
+- —
 
 ## Operator
 
