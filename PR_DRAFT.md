@@ -78,7 +78,7 @@ green_cmd: python3 -m pytest -q
 |------|--------|
 | hard_gates | `python3 scripts/hard_gates.py --diff origin/main...HEAD` → ok |
 | smoke | `python3 scripts/product_smoke.py --root .` → 2/2 |
-| pytest | 664 passed, 2 skipped, 11 subtests |
+| pytest | 665 passed, 2 skipped, 11 subtests |
 | validate | `python3 scripts/validate.py full` → 9/9 |
 | workflow-harness | 229 passed |
 
