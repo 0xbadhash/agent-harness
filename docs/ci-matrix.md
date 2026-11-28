@@ -23,6 +23,24 @@
 | **J14 property tests** | plugin `property_tests:` + pytest | **Yes** as unit tests | modules listed in plugin |
 | **J15 night_shift** | VPS timer | **Yes** (ops) | schedule |
 | **J16 protect SoT pin** | `check_protect_sot_pin` | **Warn** | portfolio report |
+| **J17 runner labels** | `check_workflow_runners.py` | **Yes** when allowlist present | PR / ship |
+
+## Runner labels
+
+A workflow job that names a runner label no machine provides does not fail; it
+queues. GitHub exposes runner registration only through an admin-scoped API, so
+the repo declares its labels instead:
+
+```text
+.github/allowed-runners.txt
+  ubuntu-latest
+```
+
+`check_workflow_runners.py` compares every `runs-on` label in
+`.github/workflows/*.yml` with that file. An undeclared label fails with the
+workflow, job, and label named. `runs-on` expressions are reported as
+unresolved, because a matrix value cannot be read statically. A repo with no
+allowlist is skipped, so adopting the file is opt-in.
 
 ## Repo × job matrix
 

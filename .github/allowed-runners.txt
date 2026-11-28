@@ -1,0 +1,3 @@
+# Runner labels this repository may use.
+# Add a label only after a runner with that label is registered for the repo.
+ubuntu-latest
