@@ -1,10 +1,10 @@
 {
   "card_id": null,
-  "phase": "approved",
+  "phase": "init",
   "remediation": [],
-  "score": 100,
+  "score": 100.0,
   "spec_id": ".agents/specs/2026-11-28-runner-label-gate.md",
   "task": "T2088U runner-label gate (v1.5.2)",
-  "updated_at": "2026-11-28T06:57Z",
+  "updated_at": "2026-11-28T07:05Z",
   "waiver": null
 }
