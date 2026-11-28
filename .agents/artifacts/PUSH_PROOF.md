@@ -1,6 +1,6 @@
 # PUSH_PROOF
 
-_Generated 2026-11-28 07:30 UTC by finish_ship.py_
+_Generated 2026-11-28 12:53 UTC by finish_ship.py_
 
 **ok:** `True`
 **phase:** `shipped`
@@ -25,10 +25,10 @@ _Generated 2026-11-28 07:30 UTC by finish_ship.py_
 Everything up-to-date
 - git push origin --tags → rc=0
 - To https://github.com/0xbadhash/agent-harness.git
- * [new tag]         v1.5.3 -> v1.5.3
+ * [new tag]         v1.5.5 -> v1.5.5
 - ok: fetched origin --tags
-- ok: de7bd2f17e79 ⊆ origin/main
-- ok: origin has tag v1.5.3
+- ok: f994e5e291c9 ⊆ origin/main
+- ok: origin has tag v1.5.5
 - ok: release_origin_gate PASS
 
 ## Operator
