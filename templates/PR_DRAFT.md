@@ -32,6 +32,7 @@ Who notices, and how? (desk operator, agent session, ops, none if harness-only).
 **Feature flag:** <name and off-path | not-applicable (state why)>
 **Prototype:** <`.agents/prototypes/<slug>` | none>
 **Prototype verdict:** <chosen variant and why | not-applicable>
+**Prototype use:** <reference | not-applicable> — shipped code reimplements the shape
 
 ## Evidence
 

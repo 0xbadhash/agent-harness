@@ -1,26 +1,50 @@
-# CODE-REVIEW
+# CODE-REVIEW — top-50 gap closure
 
-- **Command / Scope:** `python3 scripts/review_scope.py --base origin/main --head HEAD --json` (1 line in `deploy/auto-review-relay.py`, 2 fixtures, 1 test, spec/backlog/PR_DRAFT)
-- **Secrets Scan:** `python3 scripts/check_secrets_diff.py --base origin/main --head HEAD` → clean
-- **Comment Audit:** `comment ratio: 1187 comment / 35699 code lines = 0.03`; `--strict` clean
-- **P0 (Blockers):** 0
-- **Follow-ups:** 0
+**Marker:** CODE-REVIEW
+**Command / Scope:** `python3 scripts/review_scope.py --base origin/main --head HEAD --json`
+→ 33 files, 1168 insertions, 139 deletions, `prose_only: false`
+**Base:** `origin/main` `348ef6f`
+**Head:** `HEAD` (branch `fix/top50-gaps`)
 
 ## Standards
-- Regex `STRONG_OPTION` in `deploy/auto-review-relay.py` extended by 1 character (`›`) to match Codex selection prompts; no duplicated logic, no blind exceptions added, no shell interpolation.
-- Fixture tests in `tests/test_auto_review_watch.py` load `claude_card.txt` and `codex_card.txt` from `tests/fixtures/auto_review/`.
 
-## Spec
-- Matches `.agents/specs/2026-11-27-auto-review-relay.md` single-writer rule: `HOOKED_HARNESSES = {"grok"}` keeps `--watch` as the sole writer for `claude` and `codex` panes.
+- **Naming.** `check_glossary.Report` and `Comment finding`/`Comment route` match
+  the glossary. `route_comment`, `classify_constraint`, `background_argv`, and
+  `record_session` state the action and the object.
+- **Duplication.** The none-with-a-note rule lives in `check_ticket_dag._ids` and
+  `spec_gate.check_ticket_blocking_edges`; both are three lines and read the same
+  template phrase, so a shared module would add an import across a portable
+  script boundary.
+- **Complexity.** `main` in `check_comment_audit.py` gained one branch for
+  `--classify`/`--constraints`; the diff-scoped row helpers keep the two modes on
+  one row shape. No new suppression.
+- **Error handling.** `check_glossary` returns a `Report` with `skip` or
+  `findings`; `hard_gates` appends a violation or a skip reason. `weekly_retro`
+  returns 0 with a printed reason when no run records exist.
+- **Types.** `mypy scripts tests` reports no issues after the row-shape and
+  optional-path fixes.
 
 ## Findings
-- Accepted: none
-- Rejected: none
+
+- **P1 (fixed before review close):** `mypy` rejected the early `rows` binding in
+  `check_comment_audit.main` because it reused the name for two tuple shapes.
+  Renamed to `comment_rows`.
+- **P1 (fixed before review close):** `check_glossary.main` read `report.path.name`
+  without narrowing the optional path. Added a guard.
+- **P2 (accepted):** `--constraints` is noisy on a whole-tree run (110 comments).
+  It is opt-in and intended for a ship diff; the spec records promotion as out of
+  scope.
+- **P2 (accepted):** `background_argv` strips `--background` by exact match. The
+  flag is `store_true`, so there is no `--background=value` form to carry.
 
 ## Correction checks
 
-- none (no accepted findings)
+- P1 tuple-shape mypy error → `python3 -m mypy scripts tests` and
+  `python3 scripts/validate.py full`
+- P1 optional-path mypy error → `python3 -m mypy scripts tests`
+- P2 `--constraints` whole-tree noise → `tests/test_comment_audit.py::TestConstraintCheck`
+- P2 `--background` argument stripping → `tests/test_stack_runners.py::test_background_argv_drops_only_the_flag`
 
-## Tests / Smoke Run
-- `python3 -m pytest -q tests/test_auto_review_*.py` → `36 passed`
-- `python3 scripts/validate.py full` → `9/9 gates passed`
+## Verdict
+
+Approve. Tests, mypy, lint ratchet, hard gates, and `validate.py full` are green.

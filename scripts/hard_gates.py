@@ -701,6 +701,19 @@ def evaluate(
                 skipped.append(f"workflow_runners ({detail})")
         except ImportError as e:  # pragma: no cover
             violations.append(f"hard_gates: workflow_runners error: {e}")
+
+        try:
+            from check_glossary import check as _glossary_check
+
+            gr = _glossary_check(root)
+            if not gr.ok:
+                for term_finding in gr.findings:
+                    violations.append(f"hard_gates: glossary — {term_finding}")
+            else:
+                detail = gr.skip or f"{gr.terms} term(s)"
+                skipped.append(f"glossary ({detail})")
+        except ImportError as e:  # pragma: no cover
+            violations.append(f"hard_gates: glossary error: {e}")
     else:
         skipped.append("lint_ratchet (prose-only)")
         skipped.append("comment_audit (prose-only)")
@@ -709,6 +722,7 @@ def evaluate(
         skipped.append("markdown_audit (prose-only)")
         skipped.append("type_ignores (prose-only)")
         skipped.append("workflow_runners (prose-only)")
+        skipped.append("glossary (prose-only)")
 
     return HardGatesResult(
         ok=len(violations) == 0,

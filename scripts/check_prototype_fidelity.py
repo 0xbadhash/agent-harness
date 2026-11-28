@@ -5,10 +5,12 @@ Rules (E22/E23):
 
 - ``**Prototype:** none`` skips the check.
 - A named prototype must carry ``**Prototype verdict:**`` that selects a variant
-  or records that the directory was deleted.
+  or records that the directory was deleted, plus ``**Prototype use:**``
+  ``reference``.
 - Every ``variant-*.md`` still present must say ``DO NOT SHIP``.
 - A prototype path may not point into an implementation directory.
-- Source files may not contain the prototype header or marker.
+- Source files may not contain the prototype header or marker, and may not
+  import ``prototypes``.
 
 Usage::
 
@@ -24,6 +26,11 @@ from pathlib import Path
 
 PROTO_RE = re.compile(r"\*\*Prototype:\*\*\s*(.+)", re.IGNORECASE)
 VERDICT_RE = re.compile(r"\*\*Prototype verdict:\*\*\s*(.+)", re.IGNORECASE)
+USE_RE = re.compile(r"\*\*Prototype use:\*\*\s*(.+)", re.IGNORECASE)
+IMPORT_RE = re.compile(
+    r"(?m)^\s*(?:from|import)\s+[\w.]*\bprototypes\b"
+    r"|require\(\s*['\"][^'\"]*\bprototypes\b"
+)
 HEADER_RE = re.compile(r"^#\s+Prototype\s+\S+\s+—\s+variant\s+[abc]\b", re.MULTILINE)
 MARKER = "DO NOT SHIP"
 SOURCE_DIRS = ("scripts", "src", "app", "lib", "bin", "skills")
@@ -78,6 +85,14 @@ def check(root: Path, *, spec: Path | None = None) -> tuple[bool, list[str]]:
             "implementation directories are not prototypes"
         )
 
+    use_match = USE_RE.search(text)
+    use = _clean(use_match.group(1)) if use_match else ""
+    if not use.lower().startswith("reference"):
+        failures.append(
+            "missing **Prototype use:** reference — the prototype is a reference; "
+            "the shipped code is reimplemented"
+        )
+
     verdict_match = VERDICT_RE.search(text)
     verdict = _clean(verdict_match.group(1)) if verdict_match else ""
     if not verdict or verdict.lower() in {"none", "n/a", "na", "-"}:
@@ -115,6 +130,11 @@ def check(root: Path, *, spec: Path | None = None) -> tuple[bool, list[str]]:
                 failures.append(
                     f"{path.relative_to(root)} contains prototype code — copy the "
                     "shape, not the sketch"
+                )
+            if IMPORT_RE.search(body):
+                failures.append(
+                    f"{path.relative_to(root)} imports the prototype — reimplement "
+                    "the shape instead of linking the sketch"
                 )
 
     if failures:

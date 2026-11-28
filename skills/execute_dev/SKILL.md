@@ -95,6 +95,9 @@ When invoked with `/execute_dev`:
    - Run **smoke** commands from `.agents/product_plugin.yaml` (or the product's documented health check).
    - Plus targeted unit/integration tests for the module under change (tooling from the product's stack).
    - **Behavior ≠ source:** green unit tests are not enough if runtime surface changed — smoke must pass.
+   - **Prototype reference:** when the spec names a prototype, read the chosen
+     variant and reimplement its shape in product source. Never import from
+     `.agents/prototypes/`; record `**Prototype use:** reference` in `PR_DRAFT.md`.
 6. **Validate (diff-first):**
    - `scripts/validate full` (and hygiene as needed)
    - Prefer: `python3 scripts/check_secrets_diff.py --base HEAD~1 --head HEAD` on code ships

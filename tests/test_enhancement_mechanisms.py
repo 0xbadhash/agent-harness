@@ -382,6 +382,20 @@ class TestSpecGateAdditions(unittest.TestCase):
             self.assertFalse(ok)
             self.assertIn("cycle", "\n".join(msgs))
 
+    def test_none_with_a_note_is_not_a_blocking_edge(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            tickets = root / "tickets"
+            tickets.mkdir()
+            spec = root / ".agents" / "specs" / "x.md"
+            spec.parent.mkdir(parents=True)
+            spec.write_text("**Tickets:** tickets\n", encoding="utf-8")
+            (tickets / "01-a.md").write_text(
+                "**Blocked by:** None — can start immediately\n", encoding="utf-8"
+            )
+            ok, msgs = sg.check_ticket_blocking_edges(root, spec, spec.read_text())
+            self.assertTrue(ok, msgs)
+
 
 if __name__ == "__main__":
     unittest.main()

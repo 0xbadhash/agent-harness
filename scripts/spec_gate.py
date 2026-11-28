@@ -44,11 +44,13 @@ TRADEOFF_RE = re.compile(r"trade[-\s]?off", re.IGNORECASE)
 UPPER_TERM_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,}\b")
 GLOSSARY_ALLOW = frozenset(
     {
-        "AC", "ADR", "API", "CI", "CLI", "JSON", "HTTP", "HTTPS", "LLM", "N/A",
-        "PDF", "PR", "README", "TDD", "TODO", "UI", "URL", "UX", "UUID", "YAML",
+        "AC", "ADR", "AGENTS", "API", "BACKLOG", "CHALLENGE", "CHANGELOG", "CI", "CLI",
+        "FSM", "GROKBUILD", "HARNESS", "JSON", "JSONL", "HTTP", "HTTPS", "LLM",
+        "N/A", "NOT", "PDF", "PID", "PR", "PRS", "README", "RESCORE", "SCORECARD",
+        "SHIP", "SKILL", "TDD", "TODO", "TOP50", "TRIAGE", "UI", "URL", "UX", "UUID", "YAML",
     }
 )
-GLOSSARY_PATHS = ("GLOSSARY.md", "docs/GLOSSARY.md")
+GLOSSARY_PATHS = ("GLOSSARY.md", "docs/GLOSSARY.md", "docs/glossary.md")
 
 # E16: tickets carry blocking edges so the build order is explicit.
 TICKETS_LINE_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.IGNORECASE)
@@ -298,7 +300,9 @@ def check_ticket_blocking_edges(
             continue
         deps: set[str] = set()
         for raw in edges:
-            for token in re.split(r"[,\s]+", raw.strip()):
+            # The template's "None — can start immediately" means no edge.
+            raw = re.sub(r"\s+(?:—|–|-{1,2})\s+.*$", "", raw.strip())
+            for token in re.split(r"[,\s]+", raw):
                 token = token.strip("`[]()").rstrip(".")
                 if not token or token.lower() in {"none", "n/a", "na", "-", "none."}:
                     continue

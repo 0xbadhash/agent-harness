@@ -29,7 +29,7 @@ if str(SCRIPTS) not in sys.path:
 from gate_conventions import SPEC_RE  # noqa: E402
 
 TICKETS_RE = re.compile(r"\*\*Tickets:\*\*\s*(\S+)", re.IGNORECASE)
-GLOSSARY_PATHS = ("GLOSSARY.md", "docs/GLOSSARY.md")
+GLOSSARY_PATHS = ("GLOSSARY.md", "docs/GLOSSARY.md", "docs/glossary.md")
 
 
 def _tickets(root: Path, draft: str, spec_path: Path | None) -> list[Path]:
@@ -70,7 +70,7 @@ def check(root: Path, pr_draft: Path | None = None) -> tuple[bool, list[str]]:
 
     glossary = next((root / rel for rel in GLOSSARY_PATHS if (root / rel).is_file()), None)
     if glossary is None:
-        missing.append("no GLOSSARY.md — define domain terms before compaction")
+        missing.append("no glossary file — define domain terms before compaction")
 
     if missing:
         return False, ["compact blocked: " + item for item in missing]

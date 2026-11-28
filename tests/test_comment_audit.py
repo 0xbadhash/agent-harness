@@ -120,5 +120,70 @@ class TestJustificationAudit(unittest.TestCase):
             self.assertTrue(ok, msgs)
 
 
+class TestCommentRoutes(unittest.TestCase):
+    def test_history_and_dead_code_are_deleted(self):
+        self.assertEqual(cca.route_comment("# previously returned None"), "delete")
+        self.assertEqual(cca.route_comment("# def old_handler():"), "delete")
+
+    def test_decision_language_moves_to_adr(self):
+        line = "# temporary shim; the rationale is the trade-off we chose"
+        self.assertEqual(cca.route_comment(line), "move-to-ADR")
+
+    def test_constraint_language_moves_to_test_name(self):
+        line = "# temporary until the API lands; must run before the cache warms"
+        self.assertEqual(cca.route_comment(line), "move-to-test-name")
+
+    def test_other_findings_are_rewritten(self):
+        self.assertEqual(cca.route_comment("# safe to ignore"), "rewrite")
+
+    def test_clean_comment_has_no_route(self):
+        self.assertIsNone(cca.route_comment("# keep sorted for bisect"))
+
+
+class TestConstraintCheck(unittest.TestCase):
+    def test_unbounded_constraint_fails(self):
+        self.assertEqual(
+            cca.classify_constraint("# must run before the cache warms"),
+            "unbounded_constraint",
+        )
+
+    def test_test_name_bounds_the_constraint(self):
+        line = "# must run before the cache warms; test_must_run_before_cache_warm"
+        self.assertIsNone(cca.classify_constraint(line))
+
+    def test_check_reference_bounds_the_constraint(self):
+        line = "# never retry twice; see scripts/check_retry_budget.py"
+        self.assertIsNone(cca.classify_constraint(line))
+
+    def test_waiver_bounds_the_constraint(self):
+        line = "# always drain the queue; waive: upstream limit, tracked in #42"
+        self.assertIsNone(cca.classify_constraint(line))
+
+    def test_non_constraint_comment_is_ignored(self):
+        self.assertIsNone(cca.classify_constraint("# keep sorted for bisect"))
+
+    def test_constraints_flag_fails_main(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.py").write_text("# must run twice\nx = 1\n", encoding="utf-8")
+            self.assertEqual(cca.main(["--root", str(root), "--constraints"]), 1)
+            (root / "a.py").write_text(
+                "# must run twice; test_run_twice\nx = 1\n", encoding="utf-8"
+            )
+            self.assertEqual(cca.main(["--root", str(root), "--constraints"]), 0)
+
+    def test_classify_prints_routes(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "a.py").write_text(
+                "# previously returned None\n# must run before cache warms\nx = 1\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                cca.main(["--root", str(root), "--path", "a.py", "--classify", "--strict"]),
+                1,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

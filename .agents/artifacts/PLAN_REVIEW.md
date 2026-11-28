@@ -1,40 +1,36 @@
-# PLAN-REVIEW — runner-label gate and follow-ups
+# PLAN-REVIEW — close the remaining top-50 gaps
 
 **Marker:** PLAN-REVIEW
-**Plan:** `.agents/specs/2026-11-28-runner-label-gate-plan.md`
+**Plan:** `.agents/specs/2026-11-28-top50-gap-closure-plan.md`
 
 ## Coverage
 
-- AC-1 and AC-2 map to `check_workflow_runners.check()` and the five fixture
-  tests. The skip paths (no workflows, no allowlist) are explicit, so the gate
-  cannot fail an unrelated product on first install.
-- AC-3 maps to the `hard_gates.py` registration. The gate is scoped to the
-  workflow and allowlist paths in the diff; a full-tree run still checks because
-  the findings are cheap.
-- AC-4 maps to the workflow-harness workflow edit and its local test. The
-  permissions block and `GITHUB_TOKEN` are asserted, because those are the two
-  things a hosted-runner move could break.
-- AC-5 and AC-6 are reports. The plan pins the commits and fixes the verdict
-  vocabulary, which is the weakness the challenge named in the first scorecard.
-
-## Risks
-
-- The allowlist is a declaration, not a registry read. A repo can declare a label
-  it does not have. The gate message states this limit, and the check still
-  catches the common case: a label copied from another repo.
-- `runs-on` expressions are skipped as unresolved. A matrix expression that
-  resolves to an undeclared label would pass. Resolving expressions statically
-  is out of scope; the plan says so.
-- The reports are a point-in-time audit. Pinned commits make them reproducible
-  and stale by design.
+- AC-1 and AC-4 (glossary data) map to `docs/glossary.md`, the standalone
+  `check_glossary.py`, and the two existing path lists. The gate skips when the
+  file is absent, so installing the harness in a product does not fail it.
+- AC-2 and AC-3 map to `check_comment_audit.py --classify` and `--constraints`.
+  The constraint rule is opt-in; the plan explains why a hard gate would fail
+  existing source.
+- AC-4 and AC-5 map to the ticket template and `run_tickets.record_session`.
+  The plan also fixes `_ids` so `None — can start immediately` is no longer read
+  as five dependency ids.
+- AC-6 maps to the detached re-exec. A unit test covers the argv builder and a
+  dry run covers the unchanged path.
+- AC-7 maps to the prototype field and the import scan.
+- AC-8 maps to `tools/weekly_retro.py` and the scheduled workflow.
 
 ## Findings
 
-- P1: none.
-- P2: the gate adds PyYAML as an import in a script that `hard_gates.py` calls
-  in-process. PyYAML is already a test dependency and is installed in CI, but a
-  product that vendors the script without PyYAML would fail at import. The
-  implementation imports yaml lazily inside `check()` and returns a finding that
-  says the dependency is missing, rather than crashing the whole gate run.
+- **P1 (accepted):** the ticket DAG parser treats the template's
+  `None — can start immediately` as dependency ids. Without a fix the new
+  tickets have no ready frontier. Folded into ticket 03.
+- **P2 (accepted):** `--constraints` will flag many existing comments. The plan
+  keeps it opt-in and names the waiver; no hard-gate change.
+- **P2 (rejected):** run the merge in a supervised daemon. A detached process
+  with a log is enough for one merge command and avoids a second state model.
 
-**Verdict:** approve.
+## Verdict
+
+**Approve.** The plan is additive, each acceptance criterion has a command, and
+the two accepted findings are inside the ticket boundaries. No reserved
+decision is taken without the operator.

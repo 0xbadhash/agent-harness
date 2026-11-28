@@ -15,13 +15,20 @@ import context_pack  # noqa: E402
 import spec_gate  # noqa: E402
 
 
-def _spec(tmp_path: Path, *, verdict: str = "variant a — least code", proto: str = ".agents/prototypes/slug") -> Path:
+def _spec(
+    tmp_path: Path,
+    *,
+    verdict: str = "variant a — least code",
+    proto: str = ".agents/prototypes/slug",
+    use: str = "reference",
+) -> Path:
     path = tmp_path / ".agents" / "specs" / "demo.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "# Demo\n\n"
         f"**Prototype:** `{proto}`\n"
         f"**Prototype verdict:** {verdict}\n"
+        f"**Prototype use:** {use}\n"
         "**Reserved decisions:** release\n"
         "**Delegated decisions:** names\n",
         encoding="utf-8",
@@ -83,6 +90,27 @@ def test_copied_prototype_code_fails(tmp_path: Path) -> None:
     ok, msgs = check_prototype_fidelity.check(tmp_path, spec=spec)
     assert not ok
     assert any("prototype code" in m for m in msgs)
+
+
+def test_missing_prototype_use_fails(tmp_path: Path) -> None:
+    spec = _spec(tmp_path, use="none")
+    _variants(tmp_path)
+    ok, msgs = check_prototype_fidelity.check(tmp_path, spec=spec)
+    assert not ok
+    assert any("Prototype use" in m for m in msgs)
+
+
+def test_source_importing_prototypes_fails(tmp_path: Path) -> None:
+    spec = _spec(tmp_path)
+    _variants(tmp_path)
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    (scripts / "cache.py").write_text(
+        "from prototypes.slug import cache\n", encoding="utf-8"
+    )
+    ok, msgs = check_prototype_fidelity.check(tmp_path, spec=spec)
+    assert not ok
+    assert any("imports the prototype" in m for m in msgs)
 
 
 def test_prototype_must_live_under_prototypes(tmp_path: Path) -> None:

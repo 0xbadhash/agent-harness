@@ -1,11 +1,18 @@
-# BEHAVIOR-REPORT
+# BEHAVIOR-REPORT — top-50 gap closure
 
-- **Target:** `deploy/auto-review-relay.py` CLI and tmux watcher surface (source-blind)
-- **Date:** 2026-11-28
+**Marker:** BEHAVIOR-REPORT
+**Contract:** `.agents/artifacts/BEHAVIOR_CONTRACT.md`
+**Method:** source-blind CLI calls on temporary fixtures under `/tmp`; no source
+was opened to decide a verdict.
 
-| Clause | Check | Result |
-|--------|-------|--------|
-| CLI help | `python3 deploy/auto-review-relay.py --help` | `pass` (exits 0) |
-| Digest dry-run | `python3 deploy/auto-review-relay.py --digest --dry` | `pass` (exits 0, no Signal sent) |
-| Claude & Codex watch dry-run | `python3 -m pytest -q tests/test_auto_review_watch.py -k claude_and_codex` | `pass` (`--watch --once --dry` detects `claude` and `codex` fixtures) |
-| Live watch daemon | `systemctl --user status auto-review-relay-watch.service` | `pass` (`active (running)`) |
+| Clause | Verdict | Evidence |
+|--------|---------|----------|
+| B1 | pass | `ok: 29 glossary term(s) in glossary.md` exit 0; duplicate fixture: `'Door' collides with 'door'` exit 1 |
+| B2 | pass | classify: `history: # previously returned None → delete`; constraints: unbounded exit 1, `test_run_first` exit 0 |
+| B3 | pass | `ticket DAG valid (2 tickets); ready frontier: 01` exit 0 |
+| B4 | pass | `✅ would merge 01 (PR ?)` and `02` |
+| B5 | pass | missing reference exit 1 with the named failure; recorded reference skips |
+| B6 | pass | `no run records; nothing to retro` exit 0 |
+| B7 | pass | `2 smoke step(s) passed`; `9/9 gates passed` |
+
+No clause is `fail`, `blocked`, or `out_of_scope`.

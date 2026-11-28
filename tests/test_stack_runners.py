@@ -155,6 +155,26 @@ def test_run_records_session_ids(tmp_path: Path) -> None:
     assert '"session": "abc"' in log
 
 
+def test_background_argv_drops_only_the_flag() -> None:
+    argv = ["--tickets", "t", "--background", "--auto-merge", "--json"]
+    assert merge_stack.background_argv(argv) == [
+        "--tickets",
+        "t",
+        "--auto-merge",
+        "--json",
+    ]
+
+
+def test_background_dry_run_keeps_the_foreground_output(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    tickets = _tickets(tmp_path)
+    assert merge_stack.main(["--tickets", str(tickets), "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert "would merge 01" in out
+    assert "pid=" not in out
+
+
 def test_ci_scans_every_ticket_root() -> None:
     ci = (ROOT / ".github/workflows/daytime-gates.yml").read_text(encoding="utf-8")
     assert "find .agents/specs -type d -name tickets" in ci

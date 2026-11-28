@@ -55,6 +55,18 @@ TODO_RE = re.compile(r"\bTODO\b")
 TODO_OK_RE = re.compile(r"TODO\s*(?:\([^)]*\)|:\s*(?:#|https?://)|#\s*\d+)")
 COMMENT_RE = re.compile(r"^\s*(?:#|//|/\*|\*)\s?(.*)$")
 SOURCE_SUFFIXES = {".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".sh"}
+CONSTRAINT_RE = re.compile(
+    r"\b(must|always|never|required|cannot|can't|should not|must not|"
+    r"order|before|after|invariant)\b",
+    re.IGNORECASE,
+)
+TEST_NAME_RE = re.compile(r"\btest_[A-Za-z0-9_]+\b")
+WAIVE_RE = re.compile(r"\bwaive:\s*\S+", re.IGNORECASE)
+ADR_RE = re.compile(
+    r"\b(decision|decided|chose|chosen|trade-?off|rationale|alternative|"
+    r"why we)\b",
+    re.IGNORECASE,
+)
 
 
 def classify_comment(line: str) -> str | None:
@@ -74,6 +86,43 @@ def classify_comment(line: str) -> str | None:
     if TODO_RE.search(body) and not TODO_OK_RE.search(body):
         return "todo"
     return None
+
+
+def _comment_body(line: str) -> str | None:
+    match = COMMENT_RE.match(line)
+    if not match:
+        return None
+    body = match.group(1).strip()
+    return body or None
+
+
+def _route(kind: str, body: str) -> str:
+    if kind in ("history", "commented_code"):
+        return "delete"
+    if ADR_RE.search(body):
+        return "move-to-ADR"
+    if CONSTRAINT_RE.search(body):
+        return "move-to-test-name"
+    return "rewrite"
+
+
+def route_comment(line: str) -> str | None:
+    """Return the disposition for a finding: delete, move-to-ADR,
+    move-to-test-name, or rewrite. None when the line is not a finding."""
+    kind = classify_comment(line)
+    if kind is None:
+        return None
+    return _route(kind, _comment_body(line) or "")
+
+
+def classify_constraint(line: str) -> str | None:
+    """Flag a constraint comment with no test name, check reference, or waiver."""
+    body = _comment_body(line)
+    if body is None or not CONSTRAINT_RE.search(body):
+        return None
+    if TEST_NAME_RE.search(body) or CHECK_REF_RE.search(body) or WAIVE_RE.search(body):
+        return None
+    return "unbounded_constraint"
 
 
 def audit_text(text: str, *, name: str = "<text>") -> list[str]:
@@ -135,13 +184,49 @@ def _findings_from_diff(stdout: str) -> list[str]:
         if line.startswith("+++ b/"):
             path = line[6:]
         elif line.startswith("+") and not line.startswith("+++"):
+            if Path(path).suffix.lower() not in SOURCE_SUFFIXES:
+                continue
             kind = classify_comment(line[1:])
             if kind:
                 findings.append(f"{path}: {kind}: {line[1:].strip()[:160]}")
     return findings
 
 
-def audit_diff(diff: str = "HEAD~1...HEAD", root: Path = ROOT) -> list[str]:
+def _comment_rows_from_paths(
+    root: Path, paths: list[Path]
+) -> list[tuple[str, str | None, str]]:
+    """Return (location, kind-or-None, raw-line) for every comment line."""
+    rows: list[tuple[str, str | None, str]] = []
+    for path in _source_paths(root, paths):
+        try:
+            rel = path.relative_to(root).as_posix()
+        except ValueError:
+            rel = str(path)
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for number, line in enumerate(text.splitlines(), 1):
+            if _comment_body(line) is None:
+                continue
+            rows.append((f"{rel}:{number}", classify_comment(line), line))
+    return rows
+
+
+def _comment_rows_from_diff(stdout: str) -> list[tuple[str, str | None, str]]:
+    rows: list[tuple[str, str | None, str]] = []
+    path = ""
+    for line in stdout.splitlines():
+        if line.startswith("+++ b/"):
+            path = line[6:]
+        elif line.startswith("+") and not line.startswith("+++"):
+            if Path(path).suffix.lower() not in SOURCE_SUFFIXES:
+                continue
+            raw = line[1:]
+            if _comment_body(raw) is None:
+                continue
+            rows.append((path, classify_comment(raw), raw))
+    return rows
+
+
+def _diff_stdout(diff: str, root: Path) -> str:
     run = subprocess.run(
         ["git", "diff", "-U0", diff],
         cwd=str(root),
@@ -149,9 +234,11 @@ def audit_diff(diff: str = "HEAD~1...HEAD", root: Path = ROOT) -> list[str]:
         text=True,
         check=False,
     )
-    if run.returncode != 0:
-        return []
-    return _findings_from_diff(run.stdout)
+    return run.stdout if run.returncode == 0 else ""
+
+
+def audit_diff(diff: str = "HEAD~1...HEAD", root: Path = ROOT) -> list[str]:
+    return _findings_from_diff(_diff_stdout(diff, root))
 
 
 def check(root: Path, base: str = "HEAD~1", head: str = "HEAD") -> tuple[bool, list[str]]:
@@ -223,6 +310,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--path", action="append", default=[], help="File to audit (repeatable)")
     ap.add_argument("--diff", default=None, help="Git range to audit (added lines only)")
     ap.add_argument("--strict", action="store_true", help="Exit 1 when findings exist")
+    ap.add_argument(
+        "--classify",
+        action="store_true",
+        help="Print a route (delete, move-to-ADR, move-to-test-name, rewrite) per finding",
+    )
+    ap.add_argument(
+        "--constraints",
+        action="store_true",
+        help="Fail a constraint comment with no test name, check reference, or waive: reason",
+    )
     ap.add_argument("--baseline", type=Path, default=None, help="Ratchet counts JSON")
     ap.add_argument(
         "--update-baseline", action="store_true", help="Write current counts as the floor"
@@ -254,18 +351,48 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    if args.path or args.diff:
+    if args.path or args.diff or args.constraints:
         if args.path:
-            findings = audit_paths([root / p for p in args.path], root=root)
+            comment_rows = _comment_rows_from_paths(
+                root, [root / p for p in args.path]
+            )
+        elif args.diff:
+            comment_rows = _comment_rows_from_diff(_diff_stdout(args.diff, root))
         else:
-            findings = audit_diff(args.diff, root)
-        for finding in findings:
-            print(f"⚠️  {finding}")
+            targets = [
+                p
+                for p in root.rglob("*")
+                if p.suffix.lower() in SOURCE_SUFFIXES
+                and ".venv" not in p.parts
+                and ".git" not in p.parts
+                and "__pycache__" not in p.parts
+            ]
+            comment_rows = _comment_rows_from_paths(root, targets)
+
+        findings = [(loc, kind, raw) for loc, kind, raw in comment_rows if kind]
+        for loc, kind, raw in findings:
+            suffix = ""
+            if args.classify:
+                suffix = f" → {_route(kind, _comment_body(raw) or '')}"
+            print(f"⚠️  {loc}: {kind}: {raw.strip()[:160]}{suffix}")
         if not findings:
             print("✅ comment audit: no history/dead-code/TODO findings")
-            return 0
-        print(f"comment audit: {len(findings)} finding(s)")
-        return 1 if args.strict else 0
+
+        constraints = [
+            (loc, raw) for loc, _, raw in comment_rows if classify_constraint(raw)
+        ]
+        for loc, raw in constraints:
+            print(
+                f"⚠️  {loc}: unbounded_constraint: {raw.strip()[:160]}"
+                " — add a test name, check reference, or `waive: <reason>`"
+            )
+
+        failed = bool(constraints) or (bool(findings) and args.strict)
+        if constraints:
+            print(f"comment audit: {len(constraints)} unbounded constraint(s)")
+        if findings:
+            print(f"comment audit: {len(findings)} finding(s)")
+        return 1 if failed else 0
 
     paths = [
         p
