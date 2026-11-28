@@ -88,11 +88,19 @@ existing `permissions:` block; no custom secret is introduced.
 ## Evidence pack
 
 - hard_gates: `python3 scripts/hard_gates.py --diff origin/main...HEAD` → pass
-- pytest: `python3 -m pytest -q` → 596+ passed, 3 skipped
+  (workflow_runners: 2 workflows declared)
+- pytest: `python3 -m pytest -q` → 636 passed, 2 skipped, 11 subtests
 - validate: `python3 scripts/validate.py full` → 9/9 gates
 - smoke: `python3 scripts/product_smoke.py --root .` → 2/2 steps
 - workflow-harness: `python3 -m pytest tests -q --ignore=tests/enhancement_specs`
-  → 219 passed
+  → 226 passed
+
+The two read-only reports are written:
+
+- `/srv/boxdrop/out/SCORECARD-GROKBUILD-HARNESS-TOP50-RESCORE-2026-11-28.md`
+  (41 present / 6 partial / 3 missing, pinned `7f955f5` / `2bc3331`)
+- `/srv/boxdrop/out/TRIAGE-PRS-2026-11-28.md` (three open PRs; close
+  recommended, no action taken)
 
 ## Red-proof
 
