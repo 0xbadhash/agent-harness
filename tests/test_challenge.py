@@ -41,7 +41,8 @@ class ChallengeTests(unittest.TestCase):
                 return "ds:" + prompt[:12]
 
             code = challenge.main(
-                ["--proposal", str(proposal), "--decision", str(decision), "--root", str(root), "--vault", str(vault)],
+                ["--backend", "api", "--proposal", str(proposal), "--decision", str(decision),
+                 "--root", str(root), "--vault", str(vault)],
                 glm=glm,
                 deepseek=deepseek,
             )
@@ -81,7 +82,7 @@ class ChallengeTests(unittest.TestCase):
                 return "ds " + prompt[:8]
 
             code = challenge.main(
-                ["--proposal", str(proposal), "--root", str(root), "--vault", str(vault)],
+                ["--backend", "api", "--proposal", str(proposal), "--root", str(root), "--vault", str(vault)],
                 glm=glm,
                 deepseek=deepseek,
             )
@@ -107,8 +108,8 @@ class ChallengeTests(unittest.TestCase):
             decision.write_text("Accept; keep {a,b} as literals.\n", encoding="utf-8")
 
             code = challenge.main(
-                ["--proposal", str(proposal), "--decision", str(decision), "--root", str(root),
-                 "--vault", str(Path(tmp) / "vault")],
+                ["--backend", "api", "--proposal", str(proposal), "--decision", str(decision),
+                 "--root", str(root), "--vault", str(Path(tmp) / "vault")],
                 glm=lambda prompt: "glm says {x}",
                 deepseek=lambda prompt: "ds says {y}",
             )
@@ -228,3 +229,61 @@ class ChallengeVaultExistsTests(unittest.TestCase):
                     locked.chmod(0o700)
         self.assertEqual(rc, 1)
         self.assertEqual(calls, [])
+
+
+class ChallengeAgyBackendTests(unittest.TestCase):
+    def test_agy_default_backend_uses_recorded_fixture(self) -> None:
+        import json
+
+        fixture_path = ROOT / "tests" / "fixtures" / "challenge_agy_recorded.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        expected_rounds = fixture["rounds"]
+        seen_calls: list[tuple[str, str]] = []
+
+        def fake_agy(prompt: str, model: str) -> str:
+            idx = len(seen_calls)
+            seen_calls.append((prompt, model))
+            return expected_rounds[idx]["output"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "product"
+            vault = Path(tmp) / "vault"
+            (root / ".agents").mkdir(parents=True)
+            (root / ".agents" / "product_plugin.yaml").write_text(
+                "vault:\n  enabled: true\n  project_label: demo\n",
+                encoding="utf-8",
+            )
+            proposal = Path(tmp) / "proposal.md"
+            proposal.write_text(fixture["proposal"] + "\n", encoding="utf-8")
+            decision = Path(tmp) / "decision.md"
+            decision.write_text(fixture["decision"] + "\n", encoding="utf-8")
+
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                rc = challenge.main(
+                    ["--proposal", str(proposal), "--decision", str(decision),
+                     "--root", str(root), "--vault", str(vault)],
+                    agy=fake_agy,
+                )
+
+            self.assertEqual(rc, 0)
+            self.assertEqual([m for _, m in seen_calls], [r["model"] for r in expected_rounds])
+            self.assertIn(expected_rounds[0]["output"], seen_calls[1][0])
+            artifact = (root / ".agents" / "artifacts" / "CHALLENGE.md").read_text(encoding="utf-8")
+            self.assertIn(fixture["account"], artifact)
+            self.assertIn(fixture["decision"], artifact)
+            for r in expected_rounds:
+                self.assertIn(r["model"], artifact)
+                self.assertIn(r["output"], artifact)
+
+    def test_call_agy_missing_binary_raises_model_error(self) -> None:
+        saved = os.environ.get("CHALLENGE_AGY_BIN")
+        os.environ["CHALLENGE_AGY_BIN"] = "/nonexistent/agy-bin"
+        try:
+            with self.assertRaises(challenge.ModelError):
+                challenge.call_agy("hello")
+        finally:
+            if saved is None:
+                os.environ.pop("CHALLENGE_AGY_BIN", None)
+            else:
+                os.environ["CHALLENGE_AGY_BIN"] = saved

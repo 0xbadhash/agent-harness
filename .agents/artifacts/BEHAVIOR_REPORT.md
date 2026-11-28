@@ -1,18 +1,11 @@
-# BEHAVIOR-REPORT — top-50 gap closure
+# BEHAVIOR-REPORT
 
-**Marker:** BEHAVIOR-REPORT
-**Contract:** `.agents/artifacts/BEHAVIOR_CONTRACT.md`
-**Method:** source-blind CLI calls on temporary fixtures under `/tmp`; no source
-was opened to decide a verdict.
+- **Target:** `scripts/challenge.py` CLI and `product_smoke.py` (source-blind)
+- **Date:** 2026-11-28
 
-| Clause | Verdict | Evidence |
-|--------|---------|----------|
-| B1 | pass | `ok: 29 glossary term(s) in glossary.md` exit 0; duplicate fixture: `'Door' collides with 'door'` exit 1 |
-| B2 | pass | classify: `history: # previously returned None → delete`; constraints: unbounded exit 1, `test_run_first` exit 0 |
-| B3 | pass | `ticket DAG valid (2 tickets); ready frontier: 01` exit 0 |
-| B4 | pass | `✅ would merge 01 (PR ?)` and `02` |
-| B5 | pass | missing reference exit 1 with the named failure; recorded reference skips |
-| B6 | pass | `no run records; nothing to retro` exit 0 |
-| B7 | pass | `2 smoke step(s) passed`; `9/9 gates passed` |
-
-No clause is `fail`, `blocked`, or `out_of_scope`.
+| Clause | Check | Result |
+|--------|-------|--------|
+| CLI help & default backend | `python3 scripts/challenge.py --help` | `pass` (exits 0; documents `--backend {agy,api}` with default `agy`) |
+| Empty proposal guard | `printf '' \| python3 scripts/challenge.py --proposal -` | `pass` (exits 1 with `empty proposal`, no model call) |
+| Preflight `--check` | `printf '# test proposal\n' \| python3 scripts/challenge.py --proposal - --vault /opt/second-brain/vault --check` | `pass` (exits 0; resolves note and decisions paths without calling models) |
+| Product smoke | `python3 scripts/product_smoke.py --root .` | `pass` (`2/2` steps: `hardcodes`, `unit`) |

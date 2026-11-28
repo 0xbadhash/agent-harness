@@ -1,0 +1,15 @@
+{
+  "account": "jeanclaude.mansart@gmail.com",
+  "proposal": "Switch /challenge default backend to local agy print mode.",
+  "decision": "Use agy backend by default; keep --backend api as explicit fallback.",
+  "rounds": [
+    {
+      "model": "gemini-4-carbon-high",
+      "output": "Round 1 critique: verify agy CLI availability and non-empty stdout."
+    },
+    {
+      "model": "gemini-4-hydrogen-high",
+      "output": "Round 2 counter-critique: keep --backend api fallback for CI/headless hosts."
+    }
+  ]
+}

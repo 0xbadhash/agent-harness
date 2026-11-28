@@ -1,9 +1,9 @@
 ---
 name: challenge
 description: >
-  Send a proposal to GLM 5.3 flash and Deepseek, have each attack the
-  other's critique, then file one local decision. Does not edit the repo
-  or replace the ship reviews.
+  Send a proposal through two adversarial critique rounds via local
+  Antigravity CLI (agy, default) or GLM/Deepseek (--backend api fallback),
+  then file one local decision. Does not edit the repo or replace ship reviews.
 disable-model-invocation: true
 user-invocable: true
 metadata:
@@ -60,6 +60,11 @@ written to `.agents/artifacts/CHALLENGE.md` and the vault note is lost.
 
 ## Models
 
-GLM is `z-ai-glm-5-3-flash` through `/home/debian/hermes/scripts/ask_glm.py`. Deepseek is `deepseek-chat`. Keys stay in the Hermes env and are never printed.
+Default backend (`--backend agy`): routes both rounds exclusively through the local Antigravity CLI (`agy -p`, authed as `jeanclaude.mansart@gmail.com` for higher weekly/global limits):
 
-GLM is `z-ai-glm-5-3-flash` via `ask_glm.py` and Deepseek `deepseek-v4-flash` via Venice (`https://api.venice.ai/api/v1/chat/completions`, key `VENICE_API_KEY`). Do not call `api.deepseek.com`.
+- **Round 1:** `gemini-4-carbon-high` (current top-model pick; pending final CEO choice between `neon`/`carbon`)
+- **Round 2:** `gemini-4-hydrogen-high`
+
+Fallback backend (`--backend api`, explicit opt-in only):
+
+- GLM is `z-ai-glm-5-3-flash` via `/home/debian/hermes/scripts/ask_glm.py` and Deepseek `deepseek-v4-flash` via Venice (`https://api.venice.ai/api/v1/chat/completions`, key `VENICE_API_KEY`). Keys stay in the Hermes env and are never printed. Do not call `api.deepseek.com`.
