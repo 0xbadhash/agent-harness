@@ -59,6 +59,20 @@ runs no shell command from the files it reads, makes no network call, and writes
 nothing. The workflow-harness change keeps `secrets.GITHUB_TOKEN` and the
 existing `permissions:` block; no custom secret is introduced.
 
+## Things that look bad but are actually fine
+
+1. A repo with workflows but no `.github/allowed-runners.txt` is skipped, so the
+   gate does not fire there. This is deliberate opt-in: the allowlist is the
+   repo's statement of which runners exist, and docs/ci-matrix.md states it.
+2. `runs-on: ${{ ... }}` is reported as `unresolved` and does not fail. A matrix
+   expression can expand to a declared label, so treating the raw text as a
+   finding would produce false positives.
+3. The `except ImportError` around the checker registration looks like a
+   swallowed failure. It covers a partial install where the module is absent and
+   appends a hard-gate violation with the error text.
+4. The reports under `/srv/boxdrop/out/` are outside the repo and carry no tests.
+   They are read-only evidence with a recorded command and exit code per row.
+
 ## Traceability
 
 - AC-1 → `tests/test_workflow_runners.py::test_declared_label_passes` and
